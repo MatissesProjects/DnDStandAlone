@@ -1,14 +1,13 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from websocket_manager import manager
-import uuid
 
 app = FastAPI()
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -24,11 +23,12 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
     try:
         while True:
             data = await websocket.receive_text()
-            # Broadcast received message to everyone
-            await manager.broadcast(f"Client {client_id}: {data}")
+            # Broadcast raw data so clients can parse it (e.g., JSON)
+            await manager.broadcast(data)
     except WebSocketDisconnect:
         manager.disconnect(client_id)
-        await manager.broadcast(f"Client {client_id} disconnected")
+        # Optional: broadcast disconnection
+        # await manager.broadcast(f"DISCONNECT:{client_id}")
 
 if __name__ == "__main__":
     import uvicorn
