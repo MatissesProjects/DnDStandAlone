@@ -2,7 +2,8 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql://user:password@localhost/vtt_db"
+    # Default to SQLite for easy local development without Docker
+    DATABASE_URL: str = "sqlite:///./vtt.db"
     
     # Discord OAuth2
     DISCORD_CLIENT_ID: Optional[str] = None
