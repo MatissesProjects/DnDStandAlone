@@ -1,3 +1,4 @@
+import json
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
 from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,37 +14,46 @@ try:
     print("Database tables created successfully")
 except Exception as e:
     print(f"Error connecting to database: {e}")
-    print("Ensure PostgreSQL is running or SQLite is configured correctly")
 
 app = FastAPI()
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Adjust in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include Authentication Router
 app.include_router(auth.router)
 
 @app.get("/health")
-async def health_check(
-    db: Session = Depends(get_db),
-    current_user: Optional[models.User] = Depends(auth.get_current_user if False else lambda: None)
-):
+async def health_check(db: Session = Depends(get_db)):
     return {"status": "ok", "db_connected": True}
 
 @app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: str):
-    await manager.connect(websocket, client_id)
+async def websocket_endpoint(websocket: WebSocket, client_id: str, role: str = "player"):
+    # For now, we accept 'role' as a query param until frontend auth is fully wired
+    await manager.connect(websocket, client_id, role)
     try:
         while True:
             data = await websocket.receive_text()
-            # Broadcast raw data so clients can parse it (e.g., JSON)
-            await manager.broadcast(data)
+            try:
+                message_json = json.loads(data)
+                # Check if it's a subtle roll
+                if message_json.get("isSubtle") is True:
+                    # Only broadcast to GMs
+                    await manager.broadcast(data, role_limit="gm")
+                    # Also send back to the sender if they're not a GM (to confirm)
+                    if role != "gm":
+                        await manager.send_personal_message(data, client_id)
+                else:
+                    # Regular broadcast to everyone
+                    await manager.broadcast(data)
+            except json.JSONDecodeError:
+                # If not JSON, just broadcast as is
+                await manager.broadcast(data)
     except WebSocketDisconnect:
         manager.disconnect(client_id)
 

@@ -11,7 +11,7 @@
 - [x] Initialize FastAPI project and setup CORS.
 - [x] Setup WebSocket manager to handle active connections and broadcast messages.
 - [x] Create Discord OAuth2 login flow.
-- [ ] Build logic to separate GM WebSocket events from Player WebSocket events (for subtle rolls).
+- [x] Build logic to separate GM WebSocket events from Player WebSocket events (for subtle rolls).
 
 ## Track C: Data & World State (Database)
 - [x] Spin up a local PostgreSQL database (via docker-compose).
