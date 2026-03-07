@@ -21,25 +21,17 @@ function App() {
     if (lastMessage) {
       try {
         let jsonStr = lastMessage;
-        // Strip out "Client xxx: " prefix if it's there
-        if (lastMessage.includes(": ROLL:")) {
-           jsonStr = lastMessage.split(": ROLL:")[1];
-        } else if (lastMessage.startsWith("ROLL:")) {
-           jsonStr = lastMessage.substring(5);
-        } else if (lastMessage.includes(": {")) {
-           // Handle generic client prefix
+        if (lastMessage.includes(": {")) {
            const firstBrace = lastMessage.indexOf('{');
            jsonStr = lastMessage.substring(firstBrace);
         }
 
         const data = JSON.parse(jsonStr);
-        // Only add if it looks like a dice roll
         if (data.result && data.die) {
           setRecentRolls(prev => [data, ...prev].slice(0, 50));
         }
       } catch (e) {
-        // Not JSON or wrong format, ignore
-        console.log("WebSocket text message received:", lastMessage);
+        // Not a roll JSON, ignore
       }
     }
   }, [lastMessage]);
@@ -62,18 +54,18 @@ function App() {
   return (
     <div className="flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none">
       {/* Left Sidebar: Dice */}
-      <aside className="w-[300px] h-full flex-none border-r border-gray-800 p-5 flex flex-col bg-gray-950 z-10 overflow-hidden">
+      <aside className="w-[300px] h-full flex-none border-r border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
         <div className="flex justify-between items-center border-b border-gray-800 pb-4 shrink-0">
-          <h2 className="text-xl font-bold tracking-tight text-gray-100">Dice Roller</h2>
+          <h2 className="text-xl font-black tracking-tighter text-gray-100">DND STANDALONE</h2>
           <div 
-            className={`h-3 w-3 rounded-full transition-shadow duration-500 ${isConnected ? 'bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.8)]' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)]'}`} 
+            className={`h-3 w-3 rounded-full transition-all duration-500 ${isConnected ? 'bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.8)]' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)]'}`} 
             title={isConnected ? 'Connected' : 'Disconnected'}
           ></div>
         </div>
 
         <div className="flex flex-col gap-4 py-6 shrink-0">
           <div className="flex justify-between items-center">
-            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Dice Types</h3>
+            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Dice Roller</h3>
             <label className="flex items-center gap-2 cursor-pointer">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Subtle</span>
               <div className="relative">
@@ -101,15 +93,15 @@ function App() {
         </div>
 
         <div className="flex-1 flex flex-col min-h-0 pt-4 border-t border-gray-800/50">
-          <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4 shrink-0">Roll History</h3>
+          <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4 shrink-0">Recent Activity</h3>
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
             {recentRolls.length === 0 ? (
-              <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-900 rounded-2xl">
-                <p className="text-sm text-gray-700 font-medium">No activity yet</p>
+              <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-900/50 rounded-2xl">
+                <p className="text-sm text-gray-800 font-medium">No activity yet</p>
               </div>
             ) : (
               recentRolls.map(roll => (
-                <div key={roll.id} className={`p-4 rounded-xl border transition-all ${roll.isSubtle ? 'bg-indigo-950/20 border-indigo-900/50' : 'bg-gray-900/40 border-gray-800'}`}>
+                <div key={roll.id} className={`p-4 rounded-xl border transition-all ${roll.isSubtle ? 'bg-indigo-950/30 border-indigo-900/50' : 'bg-gray-900/40 border-gray-800'}`}>
                   <div className="flex justify-between items-start mb-2">
                     <span className={`text-[10px] font-black uppercase tracking-widest ${roll.isSubtle ? 'text-indigo-400' : 'text-blue-500'}`}>
                       {roll.die} {roll.isSubtle && '• Subtle'}
@@ -126,8 +118,7 @@ function App() {
       </aside>
 
       {/* Main Area: Excalidraw */}
-      <main className="flex-1 min-w-0 bg-gray-900 relative">
-        <div className="absolute inset-0">
+      <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
           <Excalidraw 
             theme="dark" 
             UIOptions={{
@@ -139,22 +130,21 @@ function App() {
               }
             }}
           />
-        </div>
       </main>
 
       {/* Right Sidebar: GM Tools */}
-      <aside className="w-[320px] h-full flex-none border-l border-gray-800 p-5 flex flex-col bg-gray-950 z-10 overflow-hidden">
-        <h2 className="text-xl font-bold border-b border-gray-800 pb-4 shrink-0 tracking-tight text-gray-100">GM Toolbox</h2>
+      <aside className="w-[320px] h-full flex-none border-l border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
+        <h2 className="text-xl font-black border-b border-gray-800 pb-4 shrink-0 tracking-tighter text-gray-100 uppercase">GM Toolbox</h2>
         
         <div className="flex-1 overflow-y-auto space-y-8 pr-1 custom-scrollbar">
           <div className="space-y-4 pt-4">
-            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Generation</h3>
+            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">AI Weaver</h3>
             <div className="grid gap-3">
               <button className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 active:scale-[0.98] text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest">
-                Generate Enemy
+                Manifest Enemy
               </button>
               <button className="w-full bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 active:scale-[0.98] text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-indigo-500/20 text-xs uppercase tracking-widest">
-                Generate Lore
+                Script Lore
               </button>
             </div>
           </div>
@@ -165,7 +155,7 @@ function App() {
               <div>
                 <p className="text-[9px] text-gray-600 uppercase font-black mb-1.5 tracking-tighter">Current Location</p>
                 <p className="text-sm font-bold text-gray-100">The Dark Forest</p>
-                <p className="text-xs text-gray-500 font-medium leading-relaxed">Whispering Grove, Tier 2 Danger</p>
+                <p className="text-xs text-gray-500 font-medium leading-relaxed italic">Whispering Grove, Tier 2</p>
               </div>
               <div>
                 <p className="text-[9px] text-gray-600 uppercase font-black mb-2.5 tracking-tighter">Danger Potential</p>
@@ -186,16 +176,16 @@ function App() {
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Active NPCs</h3>
             <div className="space-y-2">
               <div className="bg-gray-900/40 p-3 rounded-xl border border-gray-800 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-900/50 border border-blue-700/50 flex items-center justify-center text-[10px] font-bold">OG</div>
+                <div className="w-8 h-8 rounded-full bg-blue-900/50 border border-blue-700/50 flex items-center justify-center text-[10px] font-black">OG</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold truncate">Old Gaffer</p>
                   <p className="text-[9px] text-gray-500">NPC • Friendly</p>
                 </div>
               </div>
               <div className="bg-gray-900/40 p-3 rounded-xl border border-gray-800 flex items-center gap-3 opacity-60">
-                <div className="w-8 h-8 rounded-full bg-red-900/50 border border-red-700/50 flex items-center justify-center text-[10px] font-bold">SK</div>
+                <div className="w-8 h-8 rounded-full bg-red-900/50 border border-red-700/50 flex items-center justify-center text-[10px] font-black">SK</div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold truncate">Shadow Knight</p>
+                  <p className="text-xs font-bold truncate tracking-tight">Shadow Knight</p>
                   <p className="text-[9px] text-gray-500">Enemy • Unknown</p>
                 </div>
               </div>
