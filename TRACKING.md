@@ -10,7 +10,7 @@
 ## Track B: Backend API & Real-time (Python / FastAPI)
 - [x] Initialize FastAPI project and setup CORS.
 - [x] Setup WebSocket manager to handle active connections and broadcast messages.
-- [ ] Create Discord OAuth2 login flow.
+- [x] Create Discord OAuth2 login flow.
 - [ ] Build logic to separate GM WebSocket events from Player WebSocket events (for subtle rolls).
 
 ## Track C: Data & World State (Database)

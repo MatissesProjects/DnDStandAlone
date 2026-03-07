@@ -1,9 +1,10 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import engine, get_db, Base
 from websocket_manager import manager
 import models
+import auth
 
 # Create database tables
 try:
@@ -11,21 +12,28 @@ try:
     print("Database tables created successfully")
 except Exception as e:
     print(f"Error connecting to database: {e}")
-    print("Ensure PostgreSQL is running (e.g., via docker-compose up)")
+    print("Ensure PostgreSQL is running or SQLite is configured correctly")
 
 app = FastAPI()
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # Adjust in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Include Authentication Router
+app.include_router(auth.router)
+
 @app.get("/health")
-async def health_check(db: Session = Depends(get_db)):
+async def health_check(
+    db: Session = Depends(get_db),
+    current_user: Optional[models.User] = Depends(auth.get_current_user if False else lambda: None)
+):
+    # The 'if False' is a placeholder, normally you'd use a real dependency check
     return {"status": "ok", "db_connected": True}
 
 @app.websocket("/ws/{client_id}")

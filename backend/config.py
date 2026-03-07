@@ -5,9 +5,15 @@ class Settings(BaseSettings):
     # Default to SQLite for easy local development without Docker
     DATABASE_URL: str = "sqlite:///./vtt.db"
     
+    # Auth
+    SECRET_KEY: str = "your-secret-key-change-this-in-production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 1 week
+    
     # Discord OAuth2
-    DISCORD_CLIENT_ID: Optional[str] = None
-    DISCORD_CLIENT_SECRET: Optional[str] = None
+    # Get these from https://discord.com/developers/applications
+    DISCORD_CLIENT_ID: str = ""
+    DISCORD_CLIENT_SECRET: str = ""
     DISCORD_REDIRECT_URI: str = "http://localhost:8000/auth/callback"
     
     # AI
