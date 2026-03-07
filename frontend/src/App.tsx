@@ -1,4 +1,5 @@
 import { Excalidraw } from "@excalidraw/excalidraw";
+import "@excalidraw/excalidraw/index.css";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useMemo, useState, useEffect } from "react";
 
@@ -56,7 +57,7 @@ function App() {
       {/* Left Sidebar: Dice */}
       <aside className="w-[300px] h-full flex-none border-r border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
         <div className="flex justify-between items-center border-b border-gray-800 pb-4 shrink-0">
-          <h2 className="text-xl font-black tracking-tighter text-gray-100">DND STANDALONE</h2>
+          <h2 className="text-xl font-black tracking-tighter text-gray-100 uppercase">DND Master</h2>
           <div 
             className={`h-3 w-3 rounded-full transition-all duration-500 ${isConnected ? 'bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.8)]' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)]'}`} 
             title={isConnected ? 'Connected' : 'Disconnected'}
@@ -96,8 +97,8 @@ function App() {
           <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4 shrink-0">Recent Activity</h3>
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
             {recentRolls.length === 0 ? (
-              <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-900/50 rounded-2xl">
-                <p className="text-sm text-gray-800 font-medium">No activity yet</p>
+              <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-900/50 rounded-2xl text-center p-4">
+                <p className="text-xs text-gray-700 font-bold uppercase tracking-widest">No Rolls Recorded</p>
               </div>
             ) : (
               recentRolls.map(roll => (
@@ -151,10 +152,10 @@ function App() {
 
           <div className="space-y-4 pt-2">
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Manifest</h3>
-            <div className="bg-gray-900/80 p-5 rounded-2xl border border-gray-800 shadow-inner space-y-5">
+            <div className="bg-gray-900/80 p-5 rounded-2xl border border-gray-800 shadow-inner space-y-5 text-gray-100">
               <div>
                 <p className="text-[9px] text-gray-600 uppercase font-black mb-1.5 tracking-tighter">Current Location</p>
-                <p className="text-sm font-bold text-gray-100">The Dark Forest</p>
+                <p className="text-sm font-bold">The Dark Forest</p>
                 <p className="text-xs text-gray-500 font-medium leading-relaxed italic">Whispering Grove, Tier 2</p>
               </div>
               <div>
@@ -167,7 +168,7 @@ function App() {
               </div>
               <div className="pt-1 flex items-center justify-between">
                 <p className="text-[9px] text-gray-600 uppercase font-black tracking-tighter">Party Level</p>
-                <span className="bg-gray-800 text-gray-300 text-[10px] font-black px-2 py-0.5 rounded-md border border-gray-700">LVL 5</span>
+                <span className="bg-gray-800 text-gray-300 text-[10px] font-black px-2 py-0.5 rounded-md border border-gray-700 uppercase">LVL 5</span>
               </div>
             </div>
           </div>
@@ -179,14 +180,14 @@ function App() {
                 <div className="w-8 h-8 rounded-full bg-blue-900/50 border border-blue-700/50 flex items-center justify-center text-[10px] font-black">OG</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold truncate">Old Gaffer</p>
-                  <p className="text-[9px] text-gray-500">NPC • Friendly</p>
+                  <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">NPC • Friendly</p>
                 </div>
               </div>
               <div className="bg-gray-900/40 p-3 rounded-xl border border-gray-800 flex items-center gap-3 opacity-60">
                 <div className="w-8 h-8 rounded-full bg-red-900/50 border border-red-700/50 flex items-center justify-center text-[10px] font-black">SK</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold truncate tracking-tight">Shadow Knight</p>
-                  <p className="text-[9px] text-gray-500">Enemy • Unknown</p>
+                  <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Enemy • Unknown</p>
                 </div>
               </div>
             </div>
