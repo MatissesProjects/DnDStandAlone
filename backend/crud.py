@@ -2,15 +2,30 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 
+import uuid
+import string
+import random
+
+def generate_room_id(length=6):
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
 # Campaign CRUD
 def get_campaign(db: Session, campaign_id: int):
     return db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
+
+def get_campaign_by_room(db: Session, room_id: str):
+    return db.query(models.Campaign).filter(models.Campaign.room_id == room_id).first()
 
 def get_campaigns(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Campaign).offset(skip).limit(limit).all()
 
 def create_campaign(db: Session, campaign: schemas.CampaignCreate, gm_id: int):
-    db_campaign = models.Campaign(**campaign.dict(), gm_id=gm_id)
+    room_id = generate_room_id()
+    # Ensure uniqueness
+    while db.query(models.Campaign).filter(models.Campaign.room_id == room_id).first():
+        room_id = generate_room_id()
+        
+    db_campaign = models.Campaign(**campaign.dict(), gm_id=gm_id, room_id=room_id)
     db.add(db_campaign)
     db.commit()
     db.refresh(db_campaign)

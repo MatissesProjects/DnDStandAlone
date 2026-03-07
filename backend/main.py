@@ -50,6 +50,13 @@ def create_campaign(
         raise HTTPException(status_code=403, detail="Only GMs can create campaigns")
     return crud.create_campaign(db=db, campaign=campaign, gm_id=current_user.id)
 
+@app.get("/campaigns/join/{room_id}", response_model=schemas.Campaign)
+def join_campaign(room_id: str, db: Session = Depends(get_db)):
+    campaign = crud.get_campaign_by_room(db, room_id=room_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return campaign
+
 # Location Endpoints
 @app.get("/campaigns/{campaign_id}/locations", response_model=List[schemas.Location])
 def read_locations(campaign_id: int, db: Session = Depends(get_db)):
@@ -65,24 +72,25 @@ def create_location(
         raise HTTPException(status_code=403, detail="Only GMs can create locations")
     return crud.create_location(db=db, location=location)
 
-@app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: str, role: str = "player"):
-    await manager.connect(websocket, client_id, role)
+@app.websocket("/ws/{room_id}/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str, role: str = "player"):
+    await manager.connect(websocket, client_id, room_id, role)
     try:
         while True:
             data = await websocket.receive_text()
             try:
                 message_json = json.loads(data)
                 if message_json.get("isSubtle") is True:
-                    await manager.broadcast(data, role_limit="gm")
+                    # Subtle rolls in a room only go to GMs in that room
+                    await manager.broadcast(data, room_id, role_limit="gm")
                     if role != "gm":
                         await manager.send_personal_message(data, client_id)
                 else:
-                    await manager.broadcast(data)
+                    await manager.broadcast(data, room_id)
             except json.JSONDecodeError:
-                await manager.broadcast(data)
+                await manager.broadcast(data, room_id)
     except WebSocketDisconnect:
-        manager.disconnect(client_id)
+        manager.disconnect(client_id, room_id)
 
 if __name__ == "__main__":
     import uvicorn
