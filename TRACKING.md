@@ -14,8 +14,8 @@
 - [ ] Build logic to separate GM WebSocket events from Player WebSocket events (for subtle rolls).
 
 ## Track C: Data & World State (Database)
-- [ ] Spin up a local PostgreSQL database.
-- [ ] Define SQLAlchemy (or similar ORM) models.
+- [x] Spin up a local PostgreSQL database (via docker-compose).
+- [x] Define SQLAlchemy (or similar ORM) models.
 - [ ] Write CRUD endpoints for the GM to update the world state.
 
 ## Track D: AI Pipeline (Gemini)

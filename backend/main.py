@@ -1,6 +1,17 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from database import engine, get_db, Base
 from websocket_manager import manager
+import models
+
+# Create database tables
+try:
+    models.Base.metadata.create_all(bind=engine)
+    print("Database tables created successfully")
+except Exception as e:
+    print(f"Error connecting to database: {e}")
+    print("Ensure PostgreSQL is running (e.g., via docker-compose up)")
 
 app = FastAPI()
 
@@ -14,8 +25,8 @@ app.add_middleware(
 )
 
 @app.get("/health")
-async def health_check():
-    return {"status": "ok"}
+async def health_check(db: Session = Depends(get_db)):
+    return {"status": "ok", "db_connected": True}
 
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
@@ -27,8 +38,6 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             await manager.broadcast(data)
     except WebSocketDisconnect:
         manager.disconnect(client_id)
-        # Optional: broadcast disconnection
-        # await manager.broadcast(f"DISCONNECT:{client_id}")
 
 if __name__ == "__main__":
     import uvicorn
