@@ -2,6 +2,9 @@ import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useMemo, useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import LoginCallback from "./components/LoginCallback";
 
 interface DiceRoll {
   id: string;
@@ -12,9 +15,15 @@ interface DiceRoll {
   user: string;
 }
 
-function App() {
-  const clientId = useMemo(() => Math.random().toString(36).substring(7), []);
-  const { isConnected, lastMessage, sendMessage } = useWebSocket(`ws://localhost:8000/ws/${clientId}`);
+function VTTApp() {
+  const { user, isAuthenticated, logout, isGM } = useAuth();
+  const clientId = useMemo(() => user?.discord_id || Math.random().toString(36).substring(7), [user]);
+  
+  // Pass role to WebSocket so server knows who is GM
+  const { isConnected, lastMessage, sendMessage } = useWebSocket(
+    `ws://localhost:8000/ws/${clientId}?role=${isGM ? 'gm' : 'player'}`
+  );
+  
   const [recentRolls, setRecentRolls] = useState<DiceRoll[]>([]);
   const [isSubtleMode, setIsSubtleMode] = useState(false);
 
@@ -37,6 +46,14 @@ function App() {
     }
   }, [lastMessage]);
 
+  const handleLogin = () => {
+    fetch('http://localhost:8000/auth/login')
+      .then(res => res.json())
+      .then(data => {
+        window.location.href = data.url;
+      });
+  };
+
   const rollDie = (die: string) => {
     const sides = parseInt(die.substring(1));
     const result = Math.floor(Math.random() * sides) + 1;
@@ -46,7 +63,7 @@ function App() {
       result,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       isSubtle: isSubtleMode,
-      user: `Player ${clientId.substring(0, 4)}`
+      user: user ? user.username : `Player ${clientId.substring(0, 4)}`
     };
 
     sendMessage(JSON.stringify(newRoll));
@@ -57,11 +74,21 @@ function App() {
       {/* Left Sidebar: Dice */}
       <aside className="w-[300px] h-full flex-none border-r border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
         <div className="flex justify-between items-center border-b border-gray-800 pb-4 shrink-0">
-          <h2 className="text-xl font-black tracking-tighter text-gray-100 uppercase">DND Master</h2>
-          <div 
-            className={`h-3 w-3 rounded-full transition-all duration-500 ${isConnected ? 'bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.8)]' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)]'}`} 
-            title={isConnected ? 'Connected' : 'Disconnected'}
-          ></div>
+          <div>
+            <h2 className="text-xl font-black tracking-tighter text-gray-100 uppercase">DND Master</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <div 
+                className={`h-2 w-2 rounded-full transition-all duration-500 ${isConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`} 
+              ></div>
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{isConnected ? 'Online' : 'Offline'}</span>
+            </div>
+          </div>
+          
+          {isAuthenticated ? (
+            <button onClick={logout} className="text-[10px] bg-gray-900 hover:bg-red-900/30 border border-gray-800 px-2 py-1 rounded transition-colors uppercase font-bold">Logout</button>
+          ) : (
+            <button onClick={handleLogin} className="text-[10px] bg-indigo-600 hover:bg-indigo-500 px-2 py-1 rounded transition-colors uppercase font-bold">Login</button>
+          )}
         </div>
 
         <div className="flex flex-col gap-4 py-6 shrink-0">
@@ -98,7 +125,7 @@ function App() {
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
             {recentRolls.length === 0 ? (
               <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-900/50 rounded-2xl text-center p-4">
-                <p className="text-xs text-gray-700 font-bold uppercase tracking-widest">No Rolls Recorded</p>
+                <p className="text-xs text-gray-700 font-bold uppercase tracking-widest">No Activity</p>
               </div>
             ) : (
               recentRolls.map(roll => (
@@ -135,43 +162,65 @@ function App() {
 
       {/* Right Sidebar: GM Tools */}
       <aside className="w-[320px] h-full flex-none border-l border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
-        <h2 className="text-xl font-black border-b border-gray-800 pb-4 shrink-0 tracking-tighter text-gray-100 uppercase">GM Toolbox</h2>
+        <h2 className="text-xl font-black border-b border-gray-800 pb-4 shrink-0 tracking-tighter text-gray-100 uppercase">
+          {isGM ? 'GM Toolbox' : 'Player Info'}
+        </h2>
         
         <div className="flex-1 overflow-y-auto space-y-8 pr-1 custom-scrollbar">
-          <div className="space-y-4 pt-4">
-            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">AI Weaver</h3>
-            <div className="grid gap-3">
-              <button className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 active:scale-[0.98] text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest">
-                Manifest Enemy
-              </button>
-              <button className="w-full bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 active:scale-[0.98] text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-indigo-500/20 text-xs uppercase tracking-widest">
-                Script Lore
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-4 pt-2">
-            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Manifest</h3>
-            <div className="bg-gray-900/80 p-5 rounded-2xl border border-gray-800 shadow-inner space-y-5 text-gray-100">
-              <div>
-                <p className="text-[9px] text-gray-600 uppercase font-black mb-1.5 tracking-tighter">Current Location</p>
-                <p className="text-sm font-bold">The Dark Forest</p>
-                <p className="text-xs text-gray-500 font-medium leading-relaxed italic">Whispering Grove, Tier 2</p>
-              </div>
-              <div>
-                <p className="text-[9px] text-gray-600 uppercase font-black mb-2.5 tracking-tighter">Danger Potential</p>
-                <div className="flex gap-1.5 h-1.5">
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <div key={i} className={`flex-1 rounded-full ${i <= 3 ? 'bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.4)]' : 'bg-gray-800'}`}></div>
-                  ))}
+          {isGM ? (
+            <>
+              <div className="space-y-4 pt-4">
+                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">AI Weaver</h3>
+                <div className="grid gap-3">
+                  <button className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 active:scale-[0.98] text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest">
+                    Manifest Enemy
+                  </button>
+                  <button className="w-full bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 active:scale-[0.98] text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-indigo-500/20 text-xs uppercase tracking-widest">
+                    Script Lore
+                  </button>
                 </div>
               </div>
-              <div className="pt-1 flex items-center justify-between">
-                <p className="text-[9px] text-gray-600 uppercase font-black tracking-tighter">Party Level</p>
-                <span className="bg-gray-800 text-gray-300 text-[10px] font-black px-2 py-0.5 rounded-md border border-gray-700 uppercase">LVL 5</span>
+
+              <div className="space-y-4 pt-2">
+                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Manifest</h3>
+                <div className="bg-gray-900/80 p-5 rounded-2xl border border-gray-800 shadow-inner space-y-5 text-gray-100">
+                  <div>
+                    <p className="text-[9px] text-gray-600 uppercase font-black mb-1.5 tracking-tighter">Current Location</p>
+                    <p className="text-sm font-bold">The Dark Forest</p>
+                    <p className="text-xs text-gray-500 font-medium leading-relaxed italic">Whispering Grove, Tier 2</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-gray-600 uppercase font-black mb-2.5 tracking-tighter">Danger Potential</p>
+                    <div className="flex gap-1.5 h-1.5">
+                      {[1, 2, 3, 4, 5].map(i => (
+                        <div key={i} className={`flex-1 rounded-full ${i <= 3 ? 'bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.4)]' : 'bg-gray-800'}`}></div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="pt-1 flex items-center justify-between">
+                    <p className="text-[9px] text-gray-600 uppercase font-black tracking-tighter">Party Level</p>
+                    <span className="bg-gray-800 text-gray-300 text-[10px] font-black px-2 py-0.5 rounded-md border border-gray-700 uppercase">LVL 5</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="pt-4 text-center">
+              <div className="bg-gray-900/40 p-6 rounded-2xl border border-gray-800">
+                <div className="w-16 h-16 bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/30">
+                  <span className="text-xl font-black">{user ? user.username.substring(0, 2).toUpperCase() : '??'}</span>
+                </div>
+                <h3 className="font-black text-gray-100 uppercase tracking-tighter mb-1">
+                  {isAuthenticated ? user?.username : 'Guest Adventurer'}
+                </h3>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-6">Player Level 5</p>
+                <div className="h-px bg-gray-800 w-full mb-6"></div>
+                <p className="text-xs text-gray-400 font-medium leading-relaxed italic italic">
+                  The GM has control over the world manifest and AI generation tools.
+                </p>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-4 pt-2">
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Active NPCs</h3>
@@ -195,6 +244,19 @@ function App() {
         </div>
       </aside>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<VTTApp />} />
+          <Route path="/auth/callback" element={<LoginCallback />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 
