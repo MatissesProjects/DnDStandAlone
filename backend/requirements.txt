@@ -10,3 +10,6 @@ pydantic-settings
 httpx
 python-jose[cryptography]
 passlib[bcrypt]
+pytest
+pytest-asyncio
+pytest-mock
