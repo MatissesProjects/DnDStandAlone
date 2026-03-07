@@ -1,4 +1,5 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Optional
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
+from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import engine, get_db, Base
@@ -33,7 +34,6 @@ async def health_check(
     db: Session = Depends(get_db),
     current_user: Optional[models.User] = Depends(auth.get_current_user if False else lambda: None)
 ):
-    # The 'if False' is a placeholder, normally you'd use a real dependency check
     return {"status": "ok", "db_connected": True}
 
 @app.websocket("/ws/{client_id}")
