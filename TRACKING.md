@@ -19,7 +19,7 @@
 - [x] Write CRUD endpoints for the GM to update the world state.
 
 ## Track D: AI Pipeline (Gemini)
-- [ ] Get Gemini API key and set up the Python client.
-- [ ] Draft a master prompt template with placeholders.
-- [ ] Build a utility function that pulls history and formats them.
-- [ ] Ensure Gemini outputs response in a strictly formatted structure (JSON).
+- [x] Get Gemini API key and set up the Python client.
+- [x] Draft a master prompt template with placeholders.
+- [x] Build a utility function that pulls history and formats them.
+- [x] Ensure Gemini outputs response in a strictly formatted structure (JSON).

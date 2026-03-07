@@ -9,6 +9,7 @@ import models
 import auth
 import schemas
 import crud
+from ai_service import ai_service
 
 # Create database tables
 try:
@@ -72,6 +73,51 @@ def create_location(
         raise HTTPException(status_code=403, detail="Only GMs can create locations")
     return crud.create_location(db=db, location=location)
 
+# AI Endpoints
+@app.post("/campaigns/{campaign_id}/generate-enemy")
+async def generate_enemy(
+    campaign_id: int,
+    location_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can generate enemies")
+    
+    location = db.query(models.Location).filter(models.Location.id == location_id).first()
+    if not location:
+        raise HTTPException(status_code=404, detail="Location not found")
+        
+    history = crud.get_history(db, campaign_id, limit=5)
+    enemy_data = await ai_service.generate_enemy(location, history)
+    return enemy_data
+
+@app.post("/campaigns/{campaign_id}/generate-lore")
+async def generate_lore(
+    campaign_id: int,
+    location_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can generate lore")
+    
+    location = db.query(models.Location).filter(models.Location.id == location_id).first()
+    if not location:
+        raise HTTPException(status_code=404, detail="Location not found")
+        
+    history = crud.get_history(db, campaign_id, limit=5)
+    lore_text = await ai_service.generate_lore(location, history)
+    
+    # Save to history log
+    crud.create_history_log(db, schemas.HistoryLogCreate(
+        campaign_id=campaign_id,
+        event_type="lore_update",
+        content=f"AI Lore: {lore_text}"
+    ))
+    
+    return {"lore": lore_text}
+
 @app.websocket("/ws/{room_id}/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str, role: str = "player"):
     await manager.connect(websocket, client_id, room_id, role)
@@ -81,7 +127,6 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
             try:
                 message_json = json.loads(data)
                 if message_json.get("isSubtle") is True:
-                    # Subtle rolls in a room only go to GMs in that room
                     await manager.broadcast(data, room_id, role_limit="gm")
                     if role != "gm":
                         await manager.send_personal_message(data, client_id)
