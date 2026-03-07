@@ -25,7 +25,7 @@ def create_campaign(db: Session, campaign: schemas.CampaignCreate, gm_id: int):
     while db.query(models.Campaign).filter(models.Campaign.room_id == room_id).first():
         room_id = generate_room_id()
         
-    db_campaign = models.Campaign(**campaign.dict(), gm_id=gm_id, room_id=room_id)
+    db_campaign = models.Campaign(**campaign.model_dump(), gm_id=gm_id, room_id=room_id)
     db.add(db_campaign)
     db.commit()
     db.refresh(db_campaign)
@@ -36,7 +36,7 @@ def get_locations(db: Session, campaign_id: int):
     return db.query(models.Location).filter(models.Location.campaign_id == campaign_id).all()
 
 def create_location(db: Session, location: schemas.LocationCreate):
-    db_location = models.Location(**location.dict())
+    db_location = models.Location(**location.model_dump())
     db.add(db_location)
     db.commit()
     db.refresh(db_location)
@@ -47,7 +47,7 @@ def get_entities(db: Session, location_id: int):
     return db.query(models.Entity).filter(models.Entity.location_id == location_id).all()
 
 def create_entity(db: Session, entity: schemas.EntityCreate):
-    db_entity = models.Entity(**entity.dict())
+    db_entity = models.Entity(**entity.model_dump())
     db.add(db_entity)
     db.commit()
     db.refresh(db_entity)
@@ -61,7 +61,7 @@ def get_history(db: Session, campaign_id: int, limit: int = 10):
         .limit(limit).all()
 
 def create_history_log(db: Session, log: schemas.HistoryLogCreate):
-    db_log = models.HistoryLog(**log.dict())
+    db_log = models.HistoryLog(**log.model_dump())
     db.add(db_log)
     db.commit()
     db.refresh(db_log)

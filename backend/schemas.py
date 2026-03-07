@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -10,8 +10,7 @@ class UserBase(BaseModel):
 
 class User(UserBase):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Campaign Schemas
 class CampaignBase(BaseModel):
@@ -23,8 +22,8 @@ class CampaignCreate(CampaignBase):
 class Campaign(CampaignBase):
     id: int
     gm_id: int
-    class Config:
-        from_attributes = True
+    room_id: str
+    model_config = ConfigDict(from_attributes=True)
 
 # Location Schemas
 class LocationBase(BaseModel):
@@ -38,8 +37,7 @@ class LocationCreate(LocationBase):
 class Location(LocationBase):
     id: int
     campaign_id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Entity Schemas
 class EntityBase(BaseModel):
@@ -53,8 +51,7 @@ class EntityCreate(EntityBase):
 class Entity(EntityBase):
     id: int
     location_id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # HistoryLog Schemas
 class HistoryLogBase(BaseModel):
@@ -68,5 +65,4 @@ class HistoryLog(HistoryLogBase):
     id: int
     campaign_id: int
     timestamp: datetime
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

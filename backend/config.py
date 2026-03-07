@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -14,12 +14,12 @@ class Settings(BaseSettings):
     # Get these from https://discord.com/developers/applications
     DISCORD_CLIENT_ID: str = ""
     DISCORD_CLIENT_SECRET: str = ""
-    DISCORD_REDIRECT_URI: str = "http://localhost:8000/auth/callback"
+    # REDIRECT_URI should point to the FRONTEND route
+    DISCORD_REDIRECT_URI: str = "http://localhost:5173/auth/callback"
     
     # AI
     GEMINI_API_KEY: Optional[str] = None
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()
