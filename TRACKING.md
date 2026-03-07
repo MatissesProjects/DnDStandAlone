@@ -16,7 +16,7 @@
 ## Track C: Data & World State (Database)
 - [x] Spin up a local PostgreSQL database (via docker-compose).
 - [x] Define SQLAlchemy (or similar ORM) models.
-- [ ] Write CRUD endpoints for the GM to update the world state.
+- [x] Write CRUD endpoints for the GM to update the world state.
 
 ## Track D: AI Pipeline (Gemini)
 - [ ] Get Gemini API key and set up the Python client.

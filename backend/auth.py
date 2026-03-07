@@ -47,7 +47,7 @@ async def get_current_user(token: str, db: Session = Depends(get_db)):
 @router.get("/login")
 async def login():
     # Construct the Discord authorization URL
-    scopes = "identify email"
+    scopes = "identify"
     auth_url = (
         f"https://discord.com/api/oauth2/authorize"
         f"?client_id={settings.DISCORD_CLIENT_ID}"
