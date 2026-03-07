@@ -4,7 +4,7 @@
 - [x] Initialize React + Vite project.
 - [x] Install and render `@excalidraw/excalidraw`.
 - [x] Build the layout skeleton (Canvas area, Dice Sidebar, GM Tools Sidebar).
-- [ ] Create UI for standard and "subtle" dice rolls.
+- [x] Create UI for standard and "subtle" dice rolls.
 - [ ] Build the AI generation interface (loading states, accepting/rejecting generated enemies).
 
 ## Track B: Backend API & Real-time (Python / FastAPI)
