@@ -5,6 +5,7 @@ import { useMemo, useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginCallback from "./components/LoginCallback";
+import SetupScreen from "./components/SetupScreen";
 
 interface DiceRoll {
   id: string;
@@ -43,15 +44,12 @@ function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token } = useAuth();
   const clientId = useMemo(() => user?.discord_id || Math.random().toString(36).substring(7), [user]);
   
-  const [activeCampaignId] = useState(1);
+  // Room State
+  const [activeCampaign, setActiveCampaign] = useState<{id: number, roomId: string} | null>(null);
   const [activeLocationId] = useState(1);
   
-  // Presence and Roll Requirement state
-  const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
-  const [rollRequirement, setRollRequirement] = useState<{die: string, label: string} | null>(null);
-  
   const { isConnected, lastMessage, sendMessage } = useWebSocket(
-    `ws://localhost:8000/ws/ROOM1/${clientId}?role=${isGM ? 'gm' : 'player'}&username=${user?.username || 'Guest'}`
+    activeCampaign ? `ws://localhost:8000/ws/${activeCampaign.roomId}/${clientId}?role=${isGM ? 'gm' : 'player'}&username=${user?.username || 'Guest'}` : ''
   );
   
   const [recentRolls, setRecentRolls] = useState<DiceRoll[]>([]);
@@ -65,24 +63,19 @@ function VTTApp() {
     if (lastMessage) {
       try {
         const data = JSON.parse(lastMessage);
-        
-        // Handle Presence updates
         if (data.type === "presence") {
           setActiveUsers(data.users);
-        } 
-        // Handle GM Roll Requests
-        else if (data.type === "request_roll") {
+        } else if (data.type === "request_roll") {
           setRollRequirement({ die: data.die, label: data.label });
-        }
-        // Handle Dice Rolls
-        else if (data.result && data.die) {
+        } else if (data.result && data.die) {
           setRecentRolls(prev => [data, ...prev].slice(0, 50));
         }
-      } catch (e) {
-        // Not JSON or other message type
-      }
+      } catch (e) {}
     }
   }, [lastMessage]);
+
+  const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
+  const [rollRequirement, setRollRequirement] = useState<{die: string, label: string} | null>(null);
 
   const handleLogin = () => {
     fetch('http://localhost:8000/auth/login')
@@ -103,65 +96,68 @@ function VTTApp() {
       isSubtle: isSubtleMode,
       user: user ? user.username : `Player ${clientId.substring(0, 4)}`
     };
-
     sendMessage(JSON.stringify(newRoll));
     if (rollRequirement) setRollRequirement(null);
   };
 
   const requestPlayerRoll = (targetId: string, die: string, label: string) => {
-    sendMessage(JSON.stringify({
-      type: "request_roll",
-      target_id: targetId,
-      die,
-      label
-    }));
+    sendMessage(JSON.stringify({ type: "request_roll", target_id: targetId, die, label }));
   };
 
   const handleGenerateEnemy = async () => {
-    if (!token) return;
+    if (!token || !activeCampaign) return;
     setIsGenerating(true);
     setGeneratedLore(null);
     try {
-      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaignId}/generate-enemy?location_id=${activeLocationId}`, {
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/generate-enemy?location_id=${activeLocationId}`, {
         method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({})
       });
       const data = await res.json();
       if (!data.stats) data.stats = {};
       setGeneratedEnemy(data);
-    } catch (e) {
-      console.error("AI Generation failed", e);
-    } finally {
-      setIsGenerating(false);
-    }
+    } catch (e) { console.error(e); } finally { setIsGenerating(false); }
   };
 
   const handleGenerateLore = async () => {
-    if (!token) return;
+    if (!token || !activeCampaign) return;
     setIsGenerating(true);
     setGeneratedEnemy(null);
     try {
-      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaignId}/generate-lore?location_id=${activeLocationId}`, {
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/generate-lore?location_id=${activeLocationId}`, {
         method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({})
       });
       const data = await res.json();
       setGeneratedLore(data.lore);
-    } catch (e) {
-      console.error("AI Generation failed", e);
-    } finally {
-      setIsGenerating(false);
-    }
+    } catch (e) { console.error(e); } finally { setIsGenerating(false); }
   };
 
+  // 1. If not authenticated, show login UI
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-950 text-white">
+        <div className="text-center space-y-6">
+          <h1 className="text-4xl font-black italic tracking-tighter text-gray-100">DND STANDALONE</h1>
+          <button 
+            onClick={handleLogin}
+            className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black uppercase tracking-widest transition-all shadow-2xl shadow-indigo-900/40"
+          >
+            Authenticate with Discord
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. If authenticated but no room joined, show setup
+  if (!activeCampaign) {
+    return <SetupScreen onJoin={(id, roomId) => setActiveCampaign({id, roomId})} />;
+  }
+
+  // 3. Main App
   return (
     <div className="flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none">
       {/* Left Sidebar: Dice & Presence */}
@@ -174,11 +170,7 @@ function VTTApp() {
               <span className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.1em]">{isConnected ? 'Link Active' : 'Link Severed'}</span>
             </div>
           </div>
-          {isAuthenticated ? (
-            <button onClick={logout} className="text-[10px] bg-gray-900 hover:bg-red-900/30 border border-gray-800 px-2 py-1 rounded transition-all uppercase font-bold tracking-tighter active:scale-95">Logout</button>
-          ) : (
-            <button onClick={handleLogin} className="text-[10px] bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 px-2 py-1 rounded transition-all uppercase font-bold tracking-tighter active:scale-95 shadow-lg shadow-indigo-900/20">Login</button>
-          )}
+          <button onClick={() => {logout(); setActiveCampaign(null);}} className="text-[10px] bg-gray-900 hover:bg-red-900/30 border border-gray-800 px-2 py-1 rounded transition-all uppercase font-bold tracking-tighter active:scale-95">Logout</button>
         </div>
 
         {/* Dynamic Roll Requirement for Players */}
@@ -281,15 +273,11 @@ function VTTApp() {
                         <button 
                           onClick={() => requestPlayerRoll(u.id, 'd20', 'Perception')}
                           className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-2 rounded-lg font-black uppercase transition-all tracking-tighter border border-gray-700 active:scale-95"
-                        >
-                          Perception
-                        </button>
+                        > Perception </button>
                         <button 
                           onClick={() => requestPlayerRoll(u.id, 'd20', 'Stealth')}
                           className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-2 rounded-lg font-black uppercase transition-all tracking-tighter border border-gray-700 active:scale-95"
-                        >
-                          Stealth
-                        </button>
+                        > Stealth </button>
                       </div>
                     </div>
                   ))}
@@ -365,18 +353,24 @@ function VTTApp() {
           <div className="space-y-4 pt-4 border-t border-gray-800/50">
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Manifest</h3>
             <div className="bg-gray-900/80 p-5 rounded-3xl border border-gray-800 shadow-2xl space-y-6 text-gray-100">
-              <div>
-                <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Current Locale</p>
-                <p className="text-sm font-black tracking-tight text-gray-100 uppercase">The Dark Forest</p>
-                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1 opacity-90">Whispering Grove, Tier 2</p>
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Room Code</p>
+                  <p className="text-sm font-black tracking-tight text-indigo-400 font-mono">{activeCampaign.roomId}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Threat</p>
+                  <div className="flex gap-1 justify-end">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <div key={i} className={`w-1.5 h-1.5 rounded-full ${i <= 3 ? 'bg-red-600 shadow-[0_0_5px_rgba(220,38,38,0.4)]' : 'bg-gray-800'}`}></div>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div>
-                <p className="text-[9px] text-gray-600 uppercase font-black mb-3 tracking-tighter opacity-80">Threat Intensity</p>
-                <div className="flex gap-2 h-1.5">
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <div key={i} className={`flex-1 rounded-full transition-all duration-1000 ${i <= 3 ? 'bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]' : 'bg-gray-800'}`}></div>
-                  ))}
-                </div>
+                <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Current Locale</p>
+                <p className="text-sm font-black tracking-tight text-gray-100 uppercase truncate">The Dark Forest</p>
+                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1 opacity-90">Whispering Grove</p>
               </div>
             </div>
           </div>
