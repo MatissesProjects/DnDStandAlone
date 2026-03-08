@@ -60,6 +60,13 @@ def read_campaigns(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
         logger.error(f"Error reading campaigns: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/users/me/campaigns", response_model=List[schemas.Campaign])
+def read_my_campaigns(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    return crud.get_user_campaigns(db, user_id=current_user.id)
+
 @app.post("/campaigns", response_model=schemas.Campaign)
 def create_campaign(
     campaign: schemas.CampaignCreate, 

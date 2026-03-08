@@ -19,6 +19,9 @@ def get_campaign_by_room(db: Session, room_id: str):
 def get_campaigns(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Campaign).offset(skip).limit(limit).all()
 
+def get_user_campaigns(db: Session, user_id: int):
+    return db.query(models.Campaign).filter(models.Campaign.gm_id == user_id).all()
+
 def create_campaign(db: Session, campaign: schemas.CampaignCreate, gm_id: int):
     room_id = generate_room_id()
     # Ensure uniqueness
