@@ -154,6 +154,18 @@ def update_entity(
         raise HTTPException(status_code=403, detail="Only GMs can update entities")
     return crud.update_entity(db=db, entity_id=entity_id, entity_update=entity_update)
 
+@app.delete("/entities/{entity_id}")
+def delete_entity(
+    entity_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can delete entities")
+    if crud.delete_entity(db=db, entity_id=entity_id):
+        return {"status": "ok"}
+    raise HTTPException(status_code=404, detail="Entity not found")
+
 @app.post("/locations", response_model=schemas.Location)
 def create_location(
     location: schemas.LocationCreate, 
@@ -163,6 +175,29 @@ def create_location(
     if current_user.role != "gm":
         raise HTTPException(status_code=403, detail="Only GMs can create locations")
     return crud.create_location(db=db, location=location)
+
+@app.patch("/locations/{location_id}", response_model=schemas.Location)
+def update_location(
+    location_id: int,
+    location_update: dict,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can update locations")
+    return crud.update_location(db=db, location_id=location_id, location_update=location_update)
+
+@app.delete("/locations/{location_id}")
+def delete_location(
+    location_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can delete locations")
+    if crud.delete_location(db=db, location_id=location_id):
+        return {"status": "ok"}
+    raise HTTPException(status_code=404, detail="Location not found")
 
 # AI Endpoints
 @app.post("/campaigns/{campaign_id}/generate-enemy")

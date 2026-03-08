@@ -63,6 +63,23 @@ def create_location(db: Session, location: schemas.LocationCreate):
     db.refresh(db_location)
     return db_location
 
+def update_location(db: Session, location_id: int, location_update: dict):
+    db_location = db.query(models.Location).filter(models.Location.id == location_id).first()
+    if db_location:
+        for key, value in location_update.items():
+            setattr(db_location, key, value)
+        db.commit()
+        db.refresh(db_location)
+    return db_location
+
+def delete_location(db: Session, location_id: int):
+    db_location = db.query(models.Location).filter(models.Location.id == location_id).first()
+    if db_location:
+        db.delete(db_location)
+        db.commit()
+        return True
+    return False
+
 # Entity CRUD
 def get_entities(db: Session, location_id: int):
     return db.query(models.Entity).filter(models.Entity.location_id == location_id).all()
@@ -82,6 +99,14 @@ def update_entity(db: Session, entity_id: int, entity_update: dict):
         db.commit()
         db.refresh(db_entity)
     return db_entity
+
+def delete_entity(db: Session, entity_id: int):
+    db_entity = db.query(models.Entity).filter(models.Entity.id == entity_id).first()
+    if db_entity:
+        db.delete(db_entity)
+        db.commit()
+        return True
+    return False
 
 # History CRUD
 def get_history(db: Session, campaign_id: int, limit: int = 10):
