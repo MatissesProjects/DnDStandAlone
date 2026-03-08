@@ -114,6 +114,10 @@ def add_campaign_history(
 def read_locations(campaign_id: int, db: Session = Depends(get_db)):
     return crud.get_locations(db, campaign_id=campaign_id)
 
+@app.get("/locations/{location_id}/entities", response_model=List[schemas.Entity])
+def read_entities(location_id: int, db: Session = Depends(get_db)):
+    return crud.get_entities(db, location_id=location_id)
+
 @app.post("/locations", response_model=schemas.Location)
 def create_location(
     location: schemas.LocationCreate, 

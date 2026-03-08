@@ -6,6 +6,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginCallback from "./components/LoginCallback";
 import SetupScreen from "./components/SetupScreen";
+import WorldDashboard from "./components/WorldDashboard";
 
 interface DiceRoll {
   id: string;
@@ -47,12 +48,21 @@ interface MoveProposal {
   originalY: number;
 }
 
+interface Location {
+  id: number;
+  name: string;
+  description: string;
+  danger_level: number;
+}
+
 function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token } = useAuth();
   const clientId = useMemo(() => user?.discord_id || Math.random().toString(36).substring(7), [user]);
   
   const [activeCampaign, setActiveCampaign] = useState<{id: number, roomId: string, canvas_state?: any} | null>(null);
-  const [activeLocationId] = useState(1);
+  const [activeLocation, setActiveLocation] = useState<Location | null>(null);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const isRemoteUpdate = useRef(false);
   const lastSyncTime = useRef(0);
@@ -66,8 +76,6 @@ function VTTApp() {
   const [isSubtleMode, setIsSubtleMode] = useState(false);
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
   const [rollRequirement, setRollRequirement] = useState<{die: string, label: string} | null>(null);
-  
-  // Suggestion State
   const [pendingProposals, setPendingProposals] = useState<MoveProposal[]>([]);
   const localElementsRef = useRef<any[]>([]);
 
@@ -93,6 +101,78 @@ function VTTApp() {
     }
   }, [excalidrawAPI, activeCampaign]);
 
+  // Load History and Current Location on Join
+  useEffect(() => {
+    if (activeCampaign && token) {
+      // Fetch History
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            const formattedHistory: HistoryItem[] = data.map((item: any) => ({
+              id: item.id.toString(),
+              type: item.event_type === 'dice_roll' ? 'roll' : (item.event_type === 'lore_update' ? 'ai' : 'story'),
+              content: item.content,
+              user: "Chronicle",
+              timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }));
+            setHistory(formattedHistory);
+          }
+        });
+
+      // Fetch Locations to find current one
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/locations`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setActiveLocation(data[0]); // Default to first location for now
+          }
+        });
+    }
+  }, [activeCampaign, token]);
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: any) => {
+        let interim = "";
+        let final = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) final += event.results[i][0].transcript;
+          else interim += event.results[i][0].transcript;
+        }
+        if (final) {
+          const storyItem: HistoryItem = {
+            id: Math.random().toString(36).substring(7),
+            type: 'story',
+            content: final,
+            user: user?.username || "GM",
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          sendMessage(JSON.stringify(storyItem));
+          if (activeCampaign && token) {
+            fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ event_type: 'story', content: final, campaign_id: activeCampaign.id })
+            });
+          }
+        }
+        setInterimTranscript(interim);
+      };
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsIsRecording(false);
+      };
+      recognitionRef.current = recognition;
+    }
+  }, [user, sendMessage, activeCampaign, token]);
+
   // Handle incoming WebSocket messages
   useEffect(() => {
     if (lastMessage) {
@@ -112,13 +192,11 @@ function VTTApp() {
         } 
         else if (data.type === "move_proposal" && isGM) {
           setPendingProposals(prev => {
-            // Remove existing proposal for this element if it exists
             const filtered = prev.filter(p => p.elementId !== data.elementId);
             return [...filtered, data];
           });
         }
         else if (data.type === "move_rejected" && data.targetId === clientId) {
-          // Revert the element locally
           if (excalidrawAPI) {
             isRemoteUpdate.current = true;
             const updated = localElementsRef.current.map(el => {
@@ -147,6 +225,23 @@ function VTTApp() {
     }
   }, [lastMessage, excalidrawAPI, clientId, isGM]);
 
+  const persistCanvas = useCallback((elements: any, appState: any) => {
+    if (!isGM || !activeCampaign || !token) return;
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/canvas`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          canvas_state: {
+            elements,
+            appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridSize }
+          }
+        })
+      });
+    }, 3000);
+  }, [isGM, activeCampaign, token]);
+
   const handleCanvasChange = useCallback((elements: any, appState: any) => {
     if (isRemoteUpdate.current) {
       isRemoteUpdate.current = false;
@@ -154,11 +249,9 @@ function VTTApp() {
     }
 
     if (!isGM) {
-      // Find moved elements
       elements.forEach((el: any) => {
         const prev = localElementsRef.current.find(p => p.id === el.id);
         if (prev && (prev.x !== el.x || prev.y !== el.y)) {
-          // Send proposal
           sendMessage(JSON.stringify({
             type: "move_proposal",
             elementId: el.id,
@@ -169,16 +262,13 @@ function VTTApp() {
             senderId: clientId,
             username: user?.username || "Guest"
           }));
-          
-          // Visually mark as pending locally
           el.opacity = 50; 
         }
       });
       localElementsRef.current = elements;
-      return; // Players don't broadcast full updates
+      return;
     }
 
-    // GM Logic: Full broadcast
     const now = Date.now();
     if (now - lastSyncTime.current > 150) {
       lastSyncTime.current = now;
@@ -189,36 +279,17 @@ function VTTApp() {
         appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridSize }
       }));
     }
-
-    // Database Persistence (Debounced)
-    if (isGM && activeCampaign && token) {
-      if (saveTimeout.current) clearTimeout(saveTimeout.current);
-      saveTimeout.current = setTimeout(() => {
-        fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/canvas`, {
-          method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            canvas_state: {
-              elements,
-              appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridSize }
-            }
-          })
-        });
-      }, 3000);
-    }
+    persistCanvas(elements, appState);
     localElementsRef.current = elements;
-  }, [sendMessage, clientId, isGM, activeCampaign, token, user]);
+  }, [sendMessage, clientId, isGM, persistCanvas, user]);
 
   const approveProposal = (prop: MoveProposal) => {
     if (excalidrawAPI) {
       const updatedElements = localElementsRef.current.map(el => {
-        if (el.id === prop.elementId) {
-          return { ...el, x: prop.x, y: prop.y, opacity: 100 };
-        }
+        if (el.id === prop.elementId) return { ...el, x: prop.x, y: prop.y, opacity: 100 };
         return el;
       });
-      
-      isRemoteUpdate.current = false; // Trigger a broadcast
+      isRemoteUpdate.current = false;
       excalidrawAPI.updateScene({ elements: updatedElements });
       setPendingProposals(prev => prev.filter(p => p.elementId !== prop.elementId));
     }
@@ -233,13 +304,6 @@ function VTTApp() {
       originalY: prop.originalY
     }));
     setPendingProposals(prev => prev.filter(p => p.elementId !== prop.elementId));
-  };
-
-  // ... (Speech recognition and AI methods remain the same) ...
-  const handleLogin = () => {
-    fetch('http://localhost:8000/auth/login')
-      .then(res => res.json())
-      .then(data => { window.location.href = data.url; });
   };
 
   const rollDie = (die: string, label?: string) => {
@@ -266,7 +330,7 @@ function VTTApp() {
     setIsGenerating(true);
     setGeneratedLore(null);
     try {
-      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/generate-enemy?location_id=${activeLocationId}`, {
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/generate-enemy?location_id=${activeLocation?.id || 1}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({})
@@ -282,7 +346,7 @@ function VTTApp() {
     setIsGenerating(true);
     setGeneratedEnemy(null);
     try {
-      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/generate-lore?location_id=${activeLocationId}`, {
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/generate-lore?location_id=${activeLocation?.id || 1}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({})
@@ -294,12 +358,16 @@ function VTTApp() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-950 text-white">
-        <div className="text-center space-y-6">
-          <h1 className="text-4xl font-black italic tracking-tighter text-gray-100">DND STANDALONE</h1>
-          <button onClick={handleLogin} className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black uppercase tracking-widest transition-all shadow-2xl shadow-indigo-900/40">
-            Authenticate with Discord
-          </button>
+      <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans">
+        <div className="text-center space-y-8 p-12 bg-gray-900 rounded-[3rem] border border-gray-800 shadow-2xl relative overflow-hidden">
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-600/10 rounded-full blur-3xl"></div>
+          <div className="relative z-10">
+            <h1 className="text-5xl font-black italic tracking-tighter text-gray-100 uppercase">DND Master</h1>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.4em] mt-4 mb-10">The Digital Forge Awaits</p>
+            <button onClick={() => { fetch('http://localhost:8000/auth/login').then(res => res.json()).then(data => { window.location.href = data.url; }); }} className="group relative px-10 py-5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black uppercase tracking-widest transition-all shadow-2xl shadow-indigo-900/40 active:scale-95">
+              <span className="relative z-10">Authenticate via Discord</span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -311,6 +379,21 @@ function VTTApp() {
 
   return (
     <div className="flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none">
+      {isDashboardOpen && (
+        <WorldDashboard 
+          campaignId={activeCampaign.id} 
+          onClose={() => {
+            setIsDashboardOpen(false);
+            // Refresh current location when closing dashboard
+            fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/locations`)
+              .then(res => res.json())
+              .then(data => {
+                if (Array.isArray(data) && data.length > 0) setActiveLocation(data[data.length - 1]);
+              });
+          }} 
+        />
+      )}
+
       {/* Left Sidebar: Chronicle & Dice */}
       <aside className="w-[340px] h-full flex-none border-r border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
         <div className="flex justify-between items-center border-b border-gray-800 pb-4 shrink-0">
@@ -323,6 +406,15 @@ function VTTApp() {
           </div>
           <button onClick={() => {logout(); setActiveCampaign(null);}} className="text-[10px] bg-gray-900 hover:bg-red-900/30 border border-gray-800 px-2 py-1 rounded transition-all uppercase font-bold tracking-tighter active:scale-95">Leave</button>
         </div>
+
+        {!isGM && rollRequirement && (
+          <div className="mt-4 p-4 bg-indigo-900/20 border border-indigo-500/40 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2.5 text-center text-center">Injunction</p>
+            <button onClick={() => rollDie(rollRequirement.die, rollRequirement.label)} className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black py-3 rounded-xl uppercase text-xs tracking-wider transition-all border border-indigo-400/20 active:scale-95">
+              Roll {rollRequirement.die} <span className="opacity-60 ml-1">[{rollRequirement.label}]</span>
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 flex flex-col min-h-0 py-4 overflow-hidden">
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
@@ -382,6 +474,16 @@ function VTTApp() {
           {isGM ? (
             <>
               <div className="space-y-4 pt-4">
+                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Tools</h3>
+                <button 
+                  onClick={() => setIsDashboardOpen(true)}
+                  className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"
+                >
+                  Manage Locations & NPCs
+                </button>
+              </div>
+
+              <div className="space-y-4 pt-2">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Narration</h3>
                 <button onClick={() => { if(isRecording) { recognitionRef.current?.stop(); setIsIsRecording(false); setInterimTranscript(""); } else { recognitionRef.current?.start(); setIsIsRecording(true); } }} className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all border ${isRecording ? 'bg-red-600 border-red-400 shadow-[0_0_20px_rgba(220,38,38,0.3)] animate-pulse' : 'bg-gray-900 border-gray-800 hover:bg-gray-800'}`}>
                   <div className={`h-2.5 w-2.5 rounded-full ${isRecording ? 'bg-white' : 'bg-red-600'}`}></div>
@@ -401,6 +503,14 @@ function VTTApp() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">AI Weaver</h3>
+                <div className="grid gap-3">
+                  <button onClick={handleGenerateEnemy} disabled={isGenerating} className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest shadow-blue-900/20"> Manifest Enemy </button>
+                  <button onClick={handleGenerateLore} disabled={isGenerating} className="w-full bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-indigo-500/20 text-xs uppercase tracking-widest shadow-indigo-900/20"> Script Lore </button>
                 </div>
               </div>
             </>
@@ -427,7 +537,8 @@ function VTTApp() {
               </div>
               <div>
                 <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Current Locale</p>
-                <p className="text-sm font-black tracking-tight text-gray-100 uppercase truncate">The Dark Forest</p>
+                <p className="text-sm font-black tracking-tight text-gray-100 uppercase truncate">{activeLocation?.name || 'Unknown Wilds'}</p>
+                {activeLocation && <p className="text-[10px] text-gray-500 italic mt-1 leading-relaxed opacity-80 truncate">"{activeLocation.description}"</p>}
               </div>
             </div>
           </div>
