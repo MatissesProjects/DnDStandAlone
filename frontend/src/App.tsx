@@ -1,7 +1,7 @@
 import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import { useWebSocket } from "./hooks/useWebSocket";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginCallback from "./components/LoginCallback";
@@ -48,41 +48,84 @@ function VTTApp() {
   const [activeCampaign, setActiveCampaign] = useState<{id: number, roomId: string} | null>(null);
   const [activeLocationId] = useState(1);
   
+  // Excalidraw API and Sync Ref
+  const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
+  const isRemoteUpdate = useRef(false);
+  const lastSyncTime = useRef(0);
+
   const { isConnected, lastMessage, sendMessage } = useWebSocket(
     activeCampaign ? `ws://localhost:8000/ws/${activeCampaign.roomId}/${clientId}?role=${isGM ? 'gm' : 'player'}&username=${user?.username || 'Guest'}` : ''
   );
   
   const [recentRolls, setRecentRolls] = useState<DiceRoll[]>([]);
   const [isSubtleMode, setIsSubtleMode] = useState(false);
+  const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
+  const [rollRequirement, setRollRequirement] = useState<{die: string, label: string} | null>(null);
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEnemy, setGeneratedEnemy] = useState<EnemyData | null>(null);
   const [generatedLore, setGeneratedLore] = useState<string | null>(null);
 
+  // Handle incoming WebSocket messages
   useEffect(() => {
     if (lastMessage) {
       try {
         const data = JSON.parse(lastMessage);
-        if (data.type === "presence") {
+        
+        // 1. Canvas Synchronization
+        if (data.type === "canvas_update" && data.senderId !== clientId) {
+          if (excalidrawAPI) {
+            isRemoteUpdate.current = true;
+            excalidrawAPI.updateScene({
+              elements: data.elements,
+              appState: { ...data.appState, collaboratorPointer: data.appState.collaboratorPointer },
+              commitToHistory: false,
+            });
+          }
+        } 
+        // 2. Presence updates
+        else if (data.type === "presence") {
           setActiveUsers(data.users);
-        } else if (data.type === "request_roll") {
+        } 
+        // 3. GM Roll Requests
+        else if (data.type === "request_roll") {
           setRollRequirement({ die: data.die, label: data.label });
-        } else if (data.result && data.die) {
+        }
+        // 4. Dice Rolls
+        else if (data.result && data.die) {
           setRecentRolls(prev => [data, ...prev].slice(0, 50));
         }
       } catch (e) {}
     }
-  }, [lastMessage]);
+  }, [lastMessage, excalidrawAPI, clientId]);
 
-  const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
-  const [rollRequirement, setRollRequirement] = useState<{die: string, label: string} | null>(null);
+  // Outgoing Canvas Sync
+  const handleCanvasChange = useCallback((elements: any, appState: any) => {
+    if (isRemoteUpdate.current) {
+      isRemoteUpdate.current = false;
+      return;
+    }
+
+    const now = Date.now();
+    // Throttle sync to once every 100ms
+    if (now - lastSyncTime.current > 100) {
+      lastSyncTime.current = now;
+      sendMessage(JSON.stringify({
+        type: "canvas_update",
+        senderId: clientId,
+        elements,
+        appState: {
+          viewBackgroundColor: appState.viewBackgroundColor,
+          gridSize: appState.gridSize,
+        }
+      }));
+    }
+  }, [sendMessage, clientId]);
 
   const handleLogin = () => {
     fetch('http://localhost:8000/auth/login')
       .then(res => res.json())
-      .then(data => {
-        window.location.href = data.url;
-      });
+      .then(data => { window.location.href = data.url; });
   };
 
   const rollDie = (die: string, label?: string) => {
@@ -135,29 +178,28 @@ function VTTApp() {
     } catch (e) { console.error(e); } finally { setIsGenerating(false); }
   };
 
-  // 1. If not authenticated, show login UI
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-950 text-white">
-        <div className="text-center space-y-6">
-          <h1 className="text-4xl font-black italic tracking-tighter text-gray-100">DND STANDALONE</h1>
-          <button 
-            onClick={handleLogin}
-            className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black uppercase tracking-widest transition-all shadow-2xl shadow-indigo-900/40"
-          >
-            Authenticate with Discord
-          </button>
+      <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans">
+        <div className="text-center space-y-8 p-12 bg-gray-900 rounded-[3rem] border border-gray-800 shadow-2xl relative overflow-hidden">
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-600/10 rounded-full blur-3xl"></div>
+          <div className="relative z-10">
+            <h1 className="text-5xl font-black italic tracking-tighter text-gray-100 uppercase">DND Master</h1>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.4em] mt-4 mb-10">The Digital Forge Awaits</p>
+            <button onClick={handleLogin} className="group relative px-10 py-5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black uppercase tracking-widest transition-all shadow-2xl shadow-indigo-900/40 active:scale-95">
+              <span className="relative z-10">Authenticate via Discord</span>
+              <div className="absolute inset-0 bg-white/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // 2. If authenticated but no room joined, show setup
   if (!activeCampaign) {
     return <SetupScreen onJoin={(id, roomId) => setActiveCampaign({id, roomId})} />;
   }
 
-  // 3. Main App
   return (
     <div className="flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none">
       {/* Left Sidebar: Dice & Presence */}
@@ -173,7 +215,6 @@ function VTTApp() {
           <button onClick={() => {logout(); setActiveCampaign(null);}} className="text-[10px] bg-gray-900 hover:bg-red-900/30 border border-gray-800 px-2 py-1 rounded transition-all uppercase font-bold tracking-tighter active:scale-95">Logout</button>
         </div>
 
-        {/* Dynamic Roll Requirement for Players */}
         {!isGM && rollRequirement && (
           <div className="mt-4 p-4 bg-indigo-900/20 border border-indigo-500/40 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl">
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2.5 text-center">Injunction from the Master</p>
@@ -201,11 +242,7 @@ function VTTApp() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             {['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'].map(die => (
-              <button
-                key={die}
-                onClick={() => rollDie(die)}
-                className="bg-gray-900/50 hover:bg-gray-800 active:bg-gray-700 text-sm font-bold py-3.5 px-3 rounded-xl border border-gray-800 hover:border-gray-600 transition-all shadow-sm active:scale-95 text-gray-200"
-              >
+              <button key={die} onClick={() => rollDie(die)} className="bg-gray-900/50 hover:bg-gray-800 active:bg-gray-700 text-sm font-bold py-3.5 px-3 rounded-xl border border-gray-800 hover:border-gray-600 transition-all shadow-sm active:scale-95 text-gray-200">
                 {die}
               </button>
             ))}
@@ -240,6 +277,8 @@ function VTTApp() {
       {/* Main Area: Excalidraw */}
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
           <Excalidraw 
+            excalidrawRef={(api) => setExcalidrawAPI(api)}
+            onChange={handleCanvasChange}
             theme="dark" 
             UIOptions={{
               canvasActions: { toggleTheme: false, export: false, loadScene: false, saveToActiveFile: false }
@@ -270,14 +309,8 @@ function VTTApp() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button 
-                          onClick={() => requestPlayerRoll(u.id, 'd20', 'Perception')}
-                          className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-2 rounded-lg font-black uppercase transition-all tracking-tighter border border-gray-700 active:scale-95"
-                        > Perception </button>
-                        <button 
-                          onClick={() => requestPlayerRoll(u.id, 'd20', 'Stealth')}
-                          className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-2 rounded-lg font-black uppercase transition-all tracking-tighter border border-gray-700 active:scale-95"
-                        > Stealth </button>
+                        <button onClick={() => requestPlayerRoll(u.id, 'd20', 'Perception')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-2 rounded-lg font-black uppercase transition-all tracking-tighter border border-gray-700 active:scale-95"> Perception </button>
+                        <button onClick={() => requestPlayerRoll(u.id, 'd20', 'Stealth')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-2 rounded-lg font-black uppercase transition-all tracking-tighter border border-gray-700 active:scale-95"> Stealth </button>
                       </div>
                     </div>
                   ))}
@@ -369,8 +402,8 @@ function VTTApp() {
               </div>
               <div>
                 <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Current Locale</p>
-                <p className="text-sm font-black tracking-tight text-gray-100 uppercase truncate">The Dark Forest</p>
-                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1 opacity-90">Whispering Grove</p>
+                <p className="text-sm font-black tracking-tight text-gray-100 uppercase truncate">{activeCampaign.id === 1 ? 'The Dark Forest' : 'New Realm'}</p>
+                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1 opacity-90">Exploration Phase</p>
               </div>
             </div>
           </div>
