@@ -83,5 +83,7 @@ python -m pytest tests/
 - [x] **Phase 2:** Discord Auth & Role Separation.
 - [x] **Phase 3:** Room-based Sessions & Join Codes.
 - [x] **Phase 4:** AI Generation Pipeline (Gemini).
-- [ ] **Phase 5:** GM Dashboard for World Management (WIP).
-- [ ] **Phase 6:** Persistent Canvas State saving.
+- [x] **Phase 5:** Persistent Canvas State saving.
+- [ ] **Phase 6:** GM Dashboard for World Management (WIP).
+- [ ] **Phase 7:** Dice Roll 3D/VFX.
+
