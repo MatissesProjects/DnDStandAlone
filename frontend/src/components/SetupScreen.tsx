@@ -47,7 +47,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
       if (!res.ok) throw new Error("Room not found");
       const data = await res.json();
       onJoin(data.id, data.room_id, data);
-    } catch (e: any) {
+      } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
