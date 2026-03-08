@@ -21,6 +21,8 @@ interface UserPresence {
   id: string;
   username: string;
   role: string;
+  class_name?: string;
+  level?: number;
 }
 
 interface EnemyData {
@@ -73,6 +75,11 @@ function VTTApp() {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   
+  // Player Profile State
+  const [playerClass, setPlayerClass] = useState(user?.class_name || "");
+  const [playerLevel, setPlayerLevel] = useState(user?.level || 1);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const isRemoteUpdate = useRef(false);
   const lastSyncTime = useRef(0);
@@ -152,48 +159,6 @@ function VTTApp() {
     }
   }, [activeLocation, token]);
 
-  useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event: any) => {
-        let interim = "";
-        let final = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) final += event.results[i][0].transcript;
-          else interim += event.results[i][0].transcript;
-        }
-        if (final) {
-          const storyItem: HistoryItem = {
-            id: Math.random().toString(36).substring(7),
-            type: 'story',
-            content: final,
-            user: user?.username || "GM",
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          };
-          sendMessage(JSON.stringify(storyItem));
-          if (activeCampaign && token) {
-            fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ event_type: 'story', content: final, campaign_id: activeCampaign.id })
-            });
-          }
-        }
-        setInterimTranscript(interim);
-      };
-      recognition.onerror = (event: any) => {
-        console.error("Speech recognition error", event.error);
-        setIsIsRecording(false);
-      };
-      recognitionRef.current = recognition;
-    }
-  }, [user, sendMessage, activeCampaign, token]);
-
   // Handle incoming WebSocket messages
   useEffect(() => {
     if (lastMessage) {
@@ -221,26 +186,12 @@ function VTTApp() {
               .then(d => setActiveEntities(d));
           }
         }
-        else if (data.type === "move_proposal" && isGM) {
-          setPendingProposals(prev => {
-            const filtered = prev.filter(p => p.elementId !== data.elementId);
-            return [...filtered, data];
-          });
+        else if (data.type === "presence") {
+          setActiveUsers(data.users);
         }
-        else if (data.type === "move_rejected" && data.targetId === clientId) {
-          if (excalidrawAPI) {
-            isRemoteUpdate.current = true;
-            const updated = localElementsRef.current.map(el => {
-              if (el.id === data.elementId) {
-                return { ...el, x: data.originalX, y: data.originalY, opacity: 100 };
-              }
-              return el;
-            });
-            excalidrawAPI.updateScene({ elements: updated, commitToHistory: false });
-          }
+        else if (data.type === "request_roll") {
+          setRollRequirement({ die: data.die, label: data.label });
         }
-        else if (data.type === "presence") setActiveUsers(data.users);
-        else if (data.type === "request_roll") setRollRequirement({ die: data.die, label: data.label });
         else if (data.type === 'story' || (data.result && data.die)) {
           const item: HistoryItem = data.type === 'story' ? data : {
             id: data.id,
@@ -256,22 +207,30 @@ function VTTApp() {
     }
   }, [lastMessage, excalidrawAPI, clientId, isGM, activeLocation, token]);
 
-  const persistCanvas = useCallback((elements: any, appState: any) => {
-    if (!isGM || !activeCampaign || !token) return;
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    saveTimeout.current = setTimeout(() => {
-      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/canvas`, {
+  const handleUpdateProfile = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('http://localhost:8000/users/me', {
         method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          canvas_state: {
-            elements,
-            appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridSize }
-          }
-        })
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ class_name: playerClass, level: playerLevel })
       });
-    }, 3000);
-  }, [isGM, activeCampaign, token]);
+      if (res.ok) {
+        setIsEditingProfile(false);
+        // Sync via WebSocket
+        sendMessage(JSON.stringify({
+          type: "user_update",
+          class_name: playerClass,
+          level: playerLevel
+        }));
+      }
+    } catch (e) {
+      console.error("Profile update failed", e);
+    }
+  };
 
   const handleCanvasChange = useCallback((elements: any, appState: any) => {
     if (isRemoteUpdate.current) {
@@ -412,10 +371,7 @@ function VTTApp() {
 
   const handleSetActiveLocation = (loc: Location) => {
     setActiveLocation(loc);
-    sendMessage(JSON.stringify({
-      type: "location_update",
-      location: loc
-    }));
+    sendMessage(JSON.stringify({ type: "location_update", location: loc }));
   };
 
   const rollForNPC = (entityName: string, label: string, bonus: number = 0) => {
@@ -464,7 +420,6 @@ function VTTApp() {
         />
       )}
 
-      {/* NPC Detail Card Overlay */}
       {selectedEntity && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setSelectedEntity(null)}>
           <div className="bg-gray-900 border border-indigo-500/30 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -475,9 +430,7 @@ function VTTApp() {
                 </button>
               </div>
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-2xl font-black shadow-xl border border-indigo-400/20">
-                  {selectedEntity.name.substring(0, 2).toUpperCase()}
-                </div>
+                <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-2xl font-black shadow-xl border border-indigo-400/20">{selectedEntity.name.substring(0, 2).toUpperCase()}</div>
                 <div>
                   <h3 className="text-2xl font-black tracking-tighter uppercase text-gray-100">{selectedEntity.name}</h3>
                   <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Manifested Presence</p>
@@ -485,32 +438,21 @@ function VTTApp() {
               </div>
             </div>
             <div className="p-8 space-y-6">
-              {/* Interactive Ability Grid */}
               <div className="grid grid-cols-3 gap-2">
                 {Object.entries(selectedEntity.stats || {}).filter(([k]) => k.length === 3).map(([key, val]) => (
-                  <button 
-                    key={key} 
-                    onClick={() => rollForNPC(selectedEntity.name, key.toUpperCase(), Math.floor(((val as number) - 10) / 2))}
-                    className="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center shadow-inner hover:border-indigo-500/50 hover:bg-indigo-900/10 transition-all active:scale-95 group"
-                  >
+                  <button key={key} onClick={() => rollForNPC(selectedEntity.name, key.toUpperCase(), Math.floor(((val as number) - 10) / 2))} className="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center shadow-inner hover:border-indigo-500/50 hover:bg-indigo-900/10 transition-all active:scale-95 group">
                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1 group-hover:text-indigo-400">{key}</p>
                     <p className="text-lg font-black text-white leading-none">{val as number}</p>
                     <p className="text-[8px] text-gray-500 font-bold mt-1">({Math.floor(((val as number) - 10) / 2) >= 0 ? '+' : ''}{Math.floor(((val as number) - 10) / 2)})</p>
                   </button>
                 ))}
               </div>
-
-              {/* Interactive Combat Actions */}
               {selectedEntity.stats?.actions && selectedEntity.stats.actions.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Combat Maneuvers</h4>
                   <div className="grid grid-cols-1 gap-2">
                     {selectedEntity.stats.actions.map((action: string, i: number) => (
-                      <button 
-                        key={i}
-                        onClick={() => rollForNPC(selectedEntity.name, action, 0)}
-                        className="w-full text-left bg-gray-950 p-3 rounded-xl border border-gray-800 hover:border-blue-500/50 hover:bg-blue-900/10 transition-all flex justify-between items-center group"
-                      >
+                      <button key={i} onClick={() => rollForNPC(selectedEntity.name, action, 0)} className="w-full text-left bg-gray-950 p-3 rounded-xl border border-gray-800 hover:border-blue-500/50 hover:bg-blue-900/10 transition-all flex justify-between items-center group">
                         <span className="text-xs font-bold text-gray-300 group-hover:text-blue-400">{action}</span>
                         <span className="text-[10px] bg-gray-900 px-2 py-0.5 rounded border border-gray-800 font-black">ROLL</span>
                       </button>
@@ -518,19 +460,18 @@ function VTTApp() {
                   </div>
                 </div>
               )}
-
               <div className="space-y-2">
                 <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Narrative Essence</h4>
                 <p className="text-sm text-gray-300 leading-relaxed italic opacity-90">"{selectedEntity.backstory}"</p>
               </div>
               <div className="flex gap-3 pt-2">
-                <div className="flex-1 bg-gray-950 p-3 rounded-2xl border border-gray-800">
-                  <p className="text-[8px] font-black text-gray-600 uppercase mb-1 text-center">Health Points</p>
-                  <p className="text-xl font-black text-red-500 text-center">{selectedEntity.stats?.hp || '??'}</p>
+                <div className="flex-1 bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
+                  <p className="text-[8px] font-black text-gray-600 uppercase mb-1">HP</p>
+                  <p className="text-xl font-black text-red-500">{selectedEntity.stats?.hp || '??'}</p>
                 </div>
-                <div className="flex-1 bg-gray-950 p-3 rounded-2xl border border-gray-800">
-                  <p className="text-[8px] font-black text-gray-600 uppercase mb-1 text-center">Armor Class</p>
-                  <p className="text-xl font-black text-blue-400 text-center">{selectedEntity.stats?.ac || '??'}</p>
+                <div className="flex-1 bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
+                  <p className="text-[8px] font-black text-gray-600 uppercase mb-1">AC</p>
+                  <p className="text-xl font-black text-blue-400">{selectedEntity.stats?.ac || '??'}</p>
                 </div>
               </div>
             </div>
@@ -598,7 +539,7 @@ function VTTApp() {
           <Excalidraw excalidrawRef={(api) => setExcalidrawAPI(api)} onChange={handleCanvasChange} theme="dark" UIOptions={{ canvasActions: { toggleTheme: false, export: false, loadScene: false, saveToActiveFile: false } }} />
       </main>
 
-      {/* Right Sidebar: GM Toolbox */}
+      {/* Right Sidebar */}
       <aside className="w-[320px] h-full flex-none border-l border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
         <h2 className="text-xl font-black border-b border-gray-800 pb-4 shrink-0 tracking-tighter text-gray-100 uppercase italic">
           {isGM ? 'Grand Master' : 'Adventurer'}
@@ -626,7 +567,7 @@ function VTTApp() {
             <>
               <div className="space-y-4 pt-4">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Tools</h3>
-                <button onClick={() => setIsDashboardOpen(true)} className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"> Manage Locations & NPCs </button>
+                <button onClick={() => setIsDashboardOpen(true)} className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"> Manage World Manifest </button>
               </div>
 
               <div className="space-y-4 pt-2">
@@ -642,10 +583,16 @@ function VTTApp() {
                 <div className="space-y-3">
                   {activeUsers.filter(u => u.role !== 'gm').map(u => (
                     <div key={u.id} className="bg-gray-900/60 p-4 rounded-2xl border border-gray-800 group">
-                      <p className="text-sm font-black text-gray-100 uppercase mb-3">{u.username}</p>
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="text-sm font-black text-gray-100 uppercase tracking-tighter">{u.username}</p>
+                          <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest">{u.class_name || 'Class Unknown'} • Lvl {u.level || 1}</p>
+                        </div>
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>
+                      </div>
                       <div className="flex gap-2">
-                        <button onClick={() => requestPlayerRoll(u.id, 'd20', 'Perception')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase border border-gray-700"> Perception </button>
-                        <button onClick={() => requestPlayerRoll(u.id, 'd20', 'Stealth')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase border border-gray-700"> Stealth </button>
+                        <button onClick={() => requestPlayerRoll(u.id, 'd20', 'Perception')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all"> Perception </button>
+                        <button onClick={() => requestPlayerRoll(u.id, 'd20', 'Stealth')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all"> Stealth </button>
                       </div>
                     </div>
                   ))}
@@ -692,14 +639,46 @@ function VTTApp() {
               </div>
             </>
           ) : (
-            <div className="pt-4 text-center">
-              <div className="bg-gray-900/40 p-8 rounded-3xl border border-gray-800 shadow-inner">
-                <div className="w-20 h-20 bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-5 border border-indigo-500/30 shadow-2xl relative">
+            <div className="pt-4 space-y-6">
+              <div className="bg-gray-900/40 p-8 rounded-3xl border border-gray-800 text-center shadow-inner">
+                <div className="w-20 h-20 bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-5 border border-indigo-500/30 shadow-2xl relative group">
                   <span className="text-2xl font-black text-indigo-300 relative z-10">{user ? user.username.substring(0, 2).toUpperCase() : '??'}</span>
                 </div>
-                <h3 className="font-black text-gray-100 uppercase tracking-tighter mb-1.5 text-xl">{user?.username}</h3>
-                <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-8">Adventurer • Level 5</p>
-                <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent w-full mb-8 shadow-inner"></div>
+                
+                {isEditingProfile ? (
+                  <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                    <input 
+                      type="text" 
+                      placeholder="Class (e.g. Paladin)" 
+                      value={playerClass} 
+                      onChange={e => setPlayerClass(e.target.value)}
+                      className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50"
+                    />
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-black text-gray-500 uppercase">Level</span>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        max="20" 
+                        value={playerLevel} 
+                        onChange={e => setPlayerLevel(Number(e.target.value))}
+                        className="flex-1 bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={handleUpdateProfile} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Save</button>
+                      <button onClick={() => setIsEditingProfile(false)} className="flex-1 bg-gray-800 hover:bg-gray-700 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-gray-700">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div onClick={() => setIsEditingProfile(true)} className="cursor-pointer group">
+                    <h3 className="font-black text-gray-100 uppercase tracking-tighter mb-1 text-xl group-hover:text-indigo-400 transition-colors">{user?.username}</h3>
+                    <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mb-8">{playerClass || 'Class Unknown'} • Level {playerLevel}</p>
+                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest group-hover:opacity-100 opacity-0 transition-opacity">Click to edit profile</p>
+                  </div>
+                )}
+                
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent w-full my-8 shadow-inner"></div>
                 <p className="text-[10px] text-gray-500 font-bold leading-relaxed italic px-4 uppercase tracking-widest opacity-60">Suggestions are sent to the Master for arbitration.</p>
               </div>
             </div>

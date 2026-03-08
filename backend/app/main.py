@@ -41,6 +41,14 @@ app.include_router(auth.router)
 async def health_check(db: Session = Depends(get_db)):
     return {"status": "ok", "db_connected": True}
 
+@app.patch("/users/me", response_model=schemas.User)
+def update_me(
+    user_update: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    return crud.update_user(db=db, user_id=current_user.id, user_update=user_update)
+
 @app.get("/test-db")
 def test_db(db: Session = Depends(get_db)):
     try:
@@ -197,6 +205,15 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
             data = await websocket.receive_text()
             try:
                 message_json = json.loads(data)
+                
+                # Update user metadata in real-time
+                if message_json.get("type") == "user_update":
+                    await manager.update_user_metadata(client_id, room_id, {
+                        "class_name": message_json.get("class_name"),
+                        "level": message_json.get("level")
+                    })
+                    continue
+
                 if message_json.get("type") == "request_roll" and role == "gm":
                     target_id = message_json.get("target_id")
                     if target_id:

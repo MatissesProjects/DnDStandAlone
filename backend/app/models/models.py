@@ -9,6 +9,8 @@ class User(Base):
     discord_id = Column(String, unique=True, index=True)
     username = Column(String)
     role = Column(String, default="player") # "gm" or "player"
+    class_name = Column(String, nullable=True)
+    level = Column(Integer, default=1)
 
 class Campaign(Base):
     __tablename__ = "campaigns"

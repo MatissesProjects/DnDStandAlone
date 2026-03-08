@@ -9,24 +9,30 @@ class ConnectionManager:
         # room_map[room_id] = set(user_ids)
         self.room_map: Dict[str, Set[str]] = {}
         
-        # user_metadata[user_id] = {"username": str, "role": str, "room_id": str}
-        self.user_metadata: Dict[str, Dict[str, str]] = {}
+        # user_metadata[user_id] = {"username": str, "role": str, "room_id": str, "class_name": str, "level": int}
+        self.user_metadata: Dict[str, Dict[str, any]] = {}
 
-    async def connect(self, websocket: WebSocket, user_id: str, room_id: str, role: str, username: str):
+    async def connect(self, websocket: WebSocket, user_id: str, room_id: str, role: str, username: str, class_name: str = None, level: int = 1):
         await websocket.accept()
         self.active_connections[user_id] = websocket
         self.user_metadata[user_id] = {
             "username": username,
             "role": role,
-            "room_id": room_id
+            "room_id": room_id,
+            "class_name": class_name,
+            "level": level
         }
         
         if room_id not in self.room_map:
             self.room_map[room_id] = set()
         self.room_map[room_id].add(user_id)
         
-        # Broadcast updated user list to the room
         await self.broadcast_user_list(room_id)
+
+    async def update_user_metadata(self, user_id: str, room_id: str, metadata: Dict[str, any]):
+        if user_id in self.user_metadata:
+            self.user_metadata[user_id].update(metadata)
+            await self.broadcast_user_list(room_id)
 
     def disconnect(self, user_id: str, room_id: str):
         if user_id in self.active_connections:
@@ -41,7 +47,6 @@ class ConnectionManager:
             if not self.room_map[room_id]:
                 del self.room_map[room_id]
         
-        # Broadcast updated user list
         import asyncio
         asyncio.create_task(self.broadcast_user_list(room_id))
 
@@ -56,7 +61,9 @@ class ConnectionManager:
                 users.append({
                     "id": u_id,
                     "username": meta["username"],
-                    "role": meta["role"]
+                    "role": meta["role"],
+                    "class_name": meta.get("class_name"),
+                    "level": meta.get("level", 1)
                 })
         
         import json

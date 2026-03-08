@@ -22,6 +22,16 @@ def get_campaigns(db: Session, skip: int = 0, limit: int = 100):
 def get_user_campaigns(db: Session, user_id: int):
     return db.query(models.Campaign).filter(models.Campaign.gm_id == user_id).all()
 
+def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if db_user:
+        update_data = user_update.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_user, key, value)
+        db.commit()
+        db.refresh(db_user)
+    return db_user
+
 def create_campaign(db: Session, campaign: schemas.CampaignCreate, gm_id: int):
     room_id = generate_room_id()
     # Ensure uniqueness

@@ -7,6 +7,12 @@ class UserBase(BaseModel):
     discord_id: str
     username: str
     role: str
+    class_name: Optional[str] = None
+    level: int = 1
+
+class UserUpdate(BaseModel):
+    class_name: Optional[str] = None
+    level: Optional[int] = None
 
 class User(UserBase):
     id: int
