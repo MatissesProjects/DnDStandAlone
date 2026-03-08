@@ -418,6 +418,20 @@ function VTTApp() {
     }));
   };
 
+  const rollForNPC = (entityName: string, label: string, bonus: number = 0) => {
+    const result = Math.floor(Math.random() * 20) + 1;
+    const finalResult = result + bonus;
+    const newRoll = {
+      id: Math.random().toString(36).substring(7),
+      die: `d20 (${label})`,
+      result: finalResult,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isSubtle: isSubtleMode,
+      user: entityName
+    };
+    sendMessage(JSON.stringify(newRoll));
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans">
@@ -471,14 +485,40 @@ function VTTApp() {
               </div>
             </div>
             <div className="p-8 space-y-6">
+              {/* Interactive Ability Grid */}
               <div className="grid grid-cols-3 gap-2">
                 {Object.entries(selectedEntity.stats || {}).filter(([k]) => k.length === 3).map(([key, val]) => (
-                  <div key={key} className="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center shadow-inner">
-                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">{key}</p>
+                  <button 
+                    key={key} 
+                    onClick={() => rollForNPC(selectedEntity.name, key.toUpperCase(), Math.floor(((val as number) - 10) / 2))}
+                    className="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center shadow-inner hover:border-indigo-500/50 hover:bg-indigo-900/10 transition-all active:scale-95 group"
+                  >
+                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1 group-hover:text-indigo-400">{key}</p>
                     <p className="text-lg font-black text-white leading-none">{val as number}</p>
-                  </div>
+                    <p className="text-[8px] text-gray-500 font-bold mt-1">({Math.floor(((val as number) - 10) / 2) >= 0 ? '+' : ''}{Math.floor(((val as number) - 10) / 2)})</p>
+                  </button>
                 ))}
               </div>
+
+              {/* Interactive Combat Actions */}
+              {selectedEntity.stats?.actions && selectedEntity.stats.actions.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Combat Maneuvers</h4>
+                  <div className="grid grid-cols-1 gap-2">
+                    {selectedEntity.stats.actions.map((action: string, i: number) => (
+                      <button 
+                        key={i}
+                        onClick={() => rollForNPC(selectedEntity.name, action, 0)}
+                        className="w-full text-left bg-gray-950 p-3 rounded-xl border border-gray-800 hover:border-blue-500/50 hover:bg-blue-900/10 transition-all flex justify-between items-center group"
+                      >
+                        <span className="text-xs font-bold text-gray-300 group-hover:text-blue-400">{action}</span>
+                        <span className="text-[10px] bg-gray-900 px-2 py-0.5 rounded border border-gray-800 font-black">ROLL</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Narrative Essence</h4>
                 <p className="text-sm text-gray-300 leading-relaxed italic opacity-90">"{selectedEntity.backstory}"</p>
@@ -669,11 +709,7 @@ function VTTApp() {
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Active NPCs</h3>
             <div className="space-y-2">
               {activeEntities.map(ent => (
-                <div 
-                  key={ent.id} 
-                  onClick={() => setSelectedEntity(ent)}
-                  className="bg-gray-900/40 p-3 rounded-xl border border-gray-800 flex items-center gap-3 cursor-pointer hover:bg-indigo-900/10 hover:border-indigo-500/30 transition-all group"
-                >
+                <div key={ent.id} onClick={() => setSelectedEntity(ent)} className="bg-gray-900/40 p-3 rounded-xl border border-gray-800 flex items-center gap-3 cursor-pointer hover:bg-indigo-900/10 hover:border-indigo-500/30 transition-all group">
                   <div className="w-8 h-8 rounded-full bg-blue-900/50 border border-blue-700/50 flex items-center justify-center text-[10px] font-black group-hover:bg-indigo-600 transition-colors">{ent.name.substring(0, 2).toUpperCase()}</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-black truncate text-gray-100 uppercase">{ent.name}</p>
@@ -681,9 +717,6 @@ function VTTApp() {
                   </div>
                 </div>
               ))}
-              {activeEntities.length === 0 && (
-                <p className="text-[10px] text-gray-600 font-bold italic text-center py-4">No entities manifested in this locale</p>
-              )}
             </div>
           </div>
 
