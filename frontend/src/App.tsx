@@ -22,15 +22,15 @@ interface UserPresence {
 }
 
 interface EnemyStats {
-  hp: number;
-  ac: number;
-  str: number;
-  dex: number;
-  con: number;
-  int: number;
-  wis: number;
-  cha: number;
-  actions: string[];
+  hp?: number;
+  ac?: number;
+  str?: number;
+  dex?: number;
+  con?: number;
+  int?: number;
+  wis?: number;
+  cha?: number;
+  actions?: string[];
 }
 
 interface EnemyData {
@@ -127,6 +127,8 @@ function VTTApp() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
+      // Ensure data has stats structure
+      if (!data.stats) data.stats = {};
       setGeneratedEnemy(data);
     } catch (e) {
       console.error("AI Generation failed", e);
@@ -310,12 +312,12 @@ function VTTApp() {
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Entity Manifest</h4>
-                          <span className="text-[10px] bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/20 font-bold">HP {generatedEnemy.stats.hp}</span>
+                          <span className="text-[10px] bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/20 font-bold">HP {generatedEnemy.stats?.hp || '??'}</span>
                         </div>
                         <p className="text-sm font-black text-gray-100 tracking-tight">{generatedEnemy.name}</p>
                         <p className="text-[10px] text-gray-400 leading-relaxed italic">"{generatedEnemy.backstory}"</p>
                         <div className="grid grid-cols-3 gap-1 pt-1">
-                          {Object.entries(generatedEnemy.stats).filter(([k]) => k.length === 3).map(([key, val]) => (
+                          {Object.entries(generatedEnemy.stats || {}).filter(([k]) => k.length === 3).map(([key, val]) => (
                             <div key={key} className="bg-gray-950 p-1.5 rounded-lg border border-gray-800 text-center">
                               <p className="text-[8px] font-black text-gray-600 uppercase tracking-tighter">{key}</p>
                               <p className="text-xs font-black text-white">{val as number}</p>
