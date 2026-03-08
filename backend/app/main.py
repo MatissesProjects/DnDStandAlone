@@ -1,4 +1,5 @@
 import json
+import logging
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, Query
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,22 +12,27 @@ from app.schemas import schemas
 from app.crud import crud
 from app.services.ai_service import ai_service
 
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Create database tables
 try:
     models.Base.metadata.create_all(bind=engine)
-    print("Database tables created successfully")
+    logger.info("Database tables verified/created successfully")
 except Exception as e:
-    print(f"Error connecting to database: {e}")
+    logger.error(f"Error connecting to database: {e}")
 
 app = FastAPI()
 
-# Configure CORS
+# Robust CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 app.include_router(auth.router)
@@ -35,11 +41,24 @@ app.include_router(auth.router)
 async def health_check(db: Session = Depends(get_db)):
     return {"status": "ok", "db_connected": True}
 
+@app.get("/test-db")
+def test_db(db: Session = Depends(get_db)):
+    try:
+        count = db.query(models.User).count()
+        return {"status": "ok", "user_count": count}
+    except Exception as e:
+        logger.error(f"DB Test Error: {e}")
+        return {"status": "error", "message": str(e)}
+
 # Campaign Endpoints
 @app.get("/campaigns", response_model=List[schemas.Campaign])
 def read_campaigns(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    campaigns = crud.get_campaigns(db, skip=skip, limit=limit)
-    return campaigns
+    try:
+        campaigns = crud.get_campaigns(db, skip=skip, limit=limit)
+        return campaigns
+    except Exception as e:
+        logger.error(f"Error reading campaigns: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/campaigns", response_model=schemas.Campaign)
 def create_campaign(
@@ -49,14 +68,24 @@ def create_campaign(
 ):
     if current_user.role != "gm":
         raise HTTPException(status_code=403, detail="Only GMs can create campaigns")
-    return crud.create_campaign(db=db, campaign=campaign, gm_id=current_user.id)
+    try:
+        return crud.create_campaign(db=db, campaign=campaign, gm_id=current_user.id)
+    except Exception as e:
+        logger.error(f"Error creating campaign: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/campaigns/join/{room_id}", response_model=schemas.Campaign)
 def join_campaign(room_id: str, db: Session = Depends(get_db)):
-    campaign = crud.get_campaign_by_room(db, room_id=room_id)
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    return campaign
+    try:
+        campaign = crud.get_campaign_by_room(db, room_id=room_id)
+        if not campaign:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+        return campaign
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error joining campaign: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Location Endpoints
 @app.get("/campaigns/{campaign_id}/locations", response_model=List[schemas.Location])
