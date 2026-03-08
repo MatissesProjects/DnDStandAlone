@@ -118,6 +118,16 @@ def read_locations(campaign_id: int, db: Session = Depends(get_db)):
 def read_entities(location_id: int, db: Session = Depends(get_db)):
     return crud.get_entities(db, location_id=location_id)
 
+@app.post("/entities", response_model=schemas.Entity)
+def create_entity(
+    entity: schemas.EntityCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can materialize entities")
+    return crud.create_entity(db=db, entity=entity)
+
 @app.post("/locations", response_model=schemas.Location)
 def create_location(
     location: schemas.LocationCreate, 

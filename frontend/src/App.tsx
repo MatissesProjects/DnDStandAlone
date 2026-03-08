@@ -55,12 +55,21 @@ interface Location {
   danger_level: number;
 }
 
+interface Entity {
+  id: number;
+  name: string;
+  stats: any;
+  backstory: string;
+  location_id: number;
+}
+
 function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token } = useAuth();
   const clientId = useMemo(() => user?.discord_id || Math.random().toString(36).substring(7), [user]);
   
   const [activeCampaign, setActiveCampaign] = useState<{id: number, roomId: string, canvas_state?: any} | null>(null);
   const [activeLocation, setActiveLocation] = useState<Location | null>(null);
+  const [activeEntities, setActiveEntities] = useState<Entity[]>([]);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
@@ -129,6 +138,19 @@ function VTTApp() {
     }
   }, [activeCampaign, token]);
 
+  // Fetch Entities for Active Location
+  useEffect(() => {
+    if (activeLocation && token) {
+      fetch(`http://localhost:8000/locations/${activeLocation.id}/entities`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setActiveEntities(data);
+          }
+        });
+    }
+  }, [activeLocation, token]);
+
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -191,6 +213,13 @@ function VTTApp() {
         else if (data.type === "location_update") {
           setActiveLocation(data.location);
         }
+        else if (data.type === "entities_update") {
+          if (activeLocation && data.locationId === activeLocation.id) {
+            fetch(`http://localhost:8000/locations/${activeLocation.id}/entities`)
+              .then(res => res.json())
+              .then(d => setActiveEntities(d));
+          }
+        }
         else if (data.type === "move_proposal" && isGM) {
           setPendingProposals(prev => {
             const filtered = prev.filter(p => p.elementId !== data.elementId);
@@ -224,7 +253,7 @@ function VTTApp() {
         }
       } catch (e) {}
     }
-  }, [lastMessage, excalidrawAPI, clientId, isGM]);
+  }, [lastMessage, excalidrawAPI, clientId, isGM, activeLocation, token]);
 
   const persistCanvas = useCallback((elements: any, appState: any) => {
     if (!isGM || !activeCampaign || !token) return;
@@ -357,6 +386,31 @@ function VTTApp() {
     } catch (e) { console.error(e); } finally { setIsGenerating(false); }
   };
 
+  const handleManifestEntity = async () => {
+    if (!generatedEnemy || !token || !activeLocation) return;
+    try {
+      const res = await fetch(`http://localhost:8000/entities`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: generatedEnemy.name,
+          location_id: activeLocation.id,
+          stats: generatedEnemy.stats,
+          backstory: generatedEnemy.backstory
+        })
+      });
+      if (res.ok) {
+        setGeneratedEnemy(null);
+        // Sync entities
+        sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id }));
+        // Refresh local
+        fetch(`http://localhost:8000/locations/${activeLocation.id}/entities`)
+          .then(r => r.json())
+          .then(d => setActiveEntities(d));
+      }
+    } catch (e) { console.error(e); }
+  };
+
   const handleSetActiveLocation = (loc: Location) => {
     setActiveLocation(loc);
     sendMessage(JSON.stringify({
@@ -485,12 +539,7 @@ function VTTApp() {
             <>
               <div className="space-y-4 pt-4">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Tools</h3>
-                <button 
-                  onClick={() => setIsDashboardOpen(true)}
-                  className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"
-                >
-                  Manage Locations & NPCs
-                </button>
+                <button onClick={() => setIsDashboardOpen(true)} className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"> Manage Locations & NPCs </button>
               </div>
 
               <div className="space-y-4 pt-2">
@@ -522,21 +571,70 @@ function VTTApp() {
                   <button onClick={handleGenerateEnemy} disabled={isGenerating} className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest shadow-blue-900/20"> Manifest Enemy </button>
                   <button onClick={handleGenerateLore} disabled={isGenerating} className="w-full bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-indigo-500/20 text-xs uppercase tracking-widest shadow-indigo-900/20"> Script Lore </button>
                 </div>
+                
+                {(generatedEnemy || generatedLore) && (
+                  <div className="mt-4 p-5 bg-gray-900 rounded-[1.5rem] border border-indigo-500/30 shadow-2xl animate-in zoom-in-95 duration-300">
+                    {generatedLore && (
+                      <div className="space-y-2.5">
+                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Whispered Lore</h4>
+                        <p className="text-xs text-gray-200 leading-relaxed italic opacity-90">"{generatedLore}"</p>
+                      </div>
+                    )}
+                    {generatedEnemy && (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Entity Manifest</h4>
+                          <button onClick={handleManifestEntity} className="text-[8px] bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded-full border border-blue-400/30 font-black uppercase tracking-widest transition-all">Save to World</button>
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-gray-100 tracking-tight mb-1 uppercase">{generatedEnemy.name}</p>
+                          <p className="text-[10px] text-gray-400 leading-relaxed italic border-l-2 border-gray-800 pl-3">"{generatedEnemy.backstory}"</p>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {Object.entries(generatedEnemy.stats || {}).filter(([k]) => k.length === 3).map(([key, val]) => (
+                            <div key={key} className="bg-gray-950 p-2 rounded-xl border border-gray-800 text-center shadow-inner">
+                              <p className="text-[8px] font-black text-gray-600 uppercase tracking-tighter mb-0.5">{key}</p>
+                              <p className="text-xs font-black text-white">{val as number}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           ) : (
             <div className="pt-4 text-center">
               <div className="bg-gray-900/40 p-8 rounded-3xl border border-gray-800 shadow-inner">
-                <div className="w-20 h-20 bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-5 border border-indigo-500/30">
-                  <span className="text-2xl font-black text-indigo-300">{user ? user.username.substring(0, 2).toUpperCase() : '??'}</span>
+                <div className="w-20 h-20 bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-5 border border-indigo-500/30 shadow-2xl relative">
+                  <span className="text-2xl font-black text-indigo-300 relative z-10">{user ? user.username.substring(0, 2).toUpperCase() : '??'}</span>
                 </div>
                 <h3 className="font-black text-gray-100 uppercase tracking-tighter mb-1.5 text-xl">{user?.username}</h3>
                 <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-8">Adventurer • Level 5</p>
-                <div className="h-px bg-gray-800 w-full mb-8"></div>
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent w-full mb-8 shadow-inner"></div>
                 <p className="text-[10px] text-gray-500 font-bold leading-relaxed italic px-4 uppercase tracking-widest opacity-60">Suggestions are sent to the Master for arbitration.</p>
               </div>
             </div>
           )}
+
+          <div className="space-y-4 pt-2">
+            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Active NPCs</h3>
+            <div className="space-y-2">
+              {activeEntities.map(ent => (
+                <div key={ent.id} className="bg-gray-900/40 p-3 rounded-xl border border-gray-800 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-900/50 border border-blue-700/50 flex items-center justify-center text-[10px] font-black">{ent.name.substring(0, 2).toUpperCase()}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black truncate text-gray-100 uppercase">{ent.name}</p>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate italic">Manifested NPC</p>
+                  </div>
+                </div>
+              ))}
+              {activeEntities.length === 0 && (
+                <p className="text-[10px] text-gray-600 font-bold italic text-center py-4">No entities manifested in this locale</p>
+              )}
+            </div>
+          </div>
 
           <div className="space-y-4 pt-4 border-t border-gray-800/50">
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Manifest</h3>
