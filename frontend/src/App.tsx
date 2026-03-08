@@ -53,11 +53,15 @@ function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token } = useAuth();
   const clientId = useMemo(() => user?.discord_id || Math.random().toString(36).substring(7), [user]);
   
-  const [activeCampaign, setActiveCampaign] = useState<{id: number, roomId: string} | null>(null);
+  // Room State
+  const [activeCampaign, setActiveCampaign] = useState<{id: number, roomId: string, canvas_state?: any} | null>(null);
   const [activeLocationId] = useState(1);
+  
+  // Excalidraw API and Sync Ref
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const isRemoteUpdate = useRef(false);
   const lastSyncTime = useRef(0);
+  const saveTimeout = useRef<any>(null);
 
   const { isConnected, lastMessage, sendMessage } = useWebSocket(
     activeCampaign ? `ws://localhost:8000/ws/${activeCampaign.roomId}/${clientId}?role=${isGM ? 'gm' : 'player'}&username=${user?.username || 'Guest'}` : ''
@@ -68,15 +72,25 @@ function VTTApp() {
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
   const [rollRequirement, setRollRequirement] = useState<{die: string, label: string} | null>(null);
   
-  // AI and Voice State
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEnemy, setGeneratedEnemy] = useState<EnemyData | null>(null);
   const [generatedLore, setGeneratedLore] = useState<string | null>(null);
   const [isRecording, setIsIsRecording] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
 
-  // Speech Recognition Setup
   const recognitionRef = useRef<any>(null);
+
+  // Initial Scene Load
+  useEffect(() => {
+    if (excalidrawAPI && activeCampaign?.canvas_state) {
+      isRemoteUpdate.current = true;
+      excalidrawAPI.updateScene({
+        elements: activeCampaign.canvas_state.elements || [],
+        appState: activeCampaign.canvas_state.appState || {},
+        commitToHistory: false
+      });
+    }
+  }, [excalidrawAPI, activeCampaign]);
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -89,15 +103,10 @@ function VTTApp() {
       recognition.onresult = (event: any) => {
         let interim = "";
         let final = "";
-
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            final += event.results[i][0].transcript;
-          } else {
-            interim += event.results[i][0].transcript;
-          }
+          if (event.results[i].isFinal) final += event.results[i][0].transcript;
+          else interim += event.results[i][0].transcript;
         }
-
         if (final) {
           const storyItem: HistoryItem = {
             id: Math.random().toString(36).substring(7),
@@ -107,7 +116,6 @@ function VTTApp() {
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           };
           sendMessage(JSON.stringify(storyItem));
-          // Save to backend chronicle
           if (activeCampaign && token) {
             fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, {
               method: 'POST',
@@ -118,12 +126,10 @@ function VTTApp() {
         }
         setInterimTranscript(interim);
       };
-
       recognition.onerror = (event: any) => {
         console.error("Speech recognition error", event.error);
         setIsIsRecording(false);
       };
-
       recognitionRef.current = recognition;
     }
   }, [user, sendMessage, activeCampaign, token]);
@@ -143,7 +149,6 @@ function VTTApp() {
     if (lastMessage) {
       try {
         const data = JSON.parse(lastMessage);
-        
         if (data.type === "canvas_update" && data.senderId !== clientId) {
           if (excalidrawAPI) {
             isRemoteUpdate.current = true;
@@ -154,12 +159,8 @@ function VTTApp() {
             });
           }
         } 
-        else if (data.type === "presence") {
-          setActiveUsers(data.users);
-        } 
-        else if (data.type === "request_roll") {
-          setRollRequirement({ die: data.die, label: data.label });
-        }
+        else if (data.type === "presence") setActiveUsers(data.users);
+        else if (data.type === "request_roll") setRollRequirement({ die: data.die, label: data.label });
         else if (data.type === 'story' || (data.result && data.die)) {
           const item: HistoryItem = data.type === 'story' ? data : {
             id: data.id,
@@ -175,11 +176,34 @@ function VTTApp() {
     }
   }, [lastMessage, excalidrawAPI, clientId]);
 
+  const persistCanvas = useCallback((elements: any, appState: any) => {
+    if (!isGM || !activeCampaign || !token) return;
+    
+    // Clear existing timeout
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    
+    // Debounce save to database (every 3 seconds of inactivity)
+    saveTimeout.current = setTimeout(() => {
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/canvas`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          canvas_state: {
+            elements,
+            appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridSize }
+          }
+        })
+      }).catch(err => console.error("Failed to persist canvas:", err));
+    }, 3000);
+  }, [isGM, activeCampaign, token]);
+
   const handleCanvasChange = useCallback((elements: any, appState: any) => {
     if (isRemoteUpdate.current) {
       isRemoteUpdate.current = false;
       return;
     }
+    
+    // 1. WebSocket Sync (Frequent)
     const now = Date.now();
     if (now - lastSyncTime.current > 150) {
       lastSyncTime.current = now;
@@ -187,10 +211,13 @@ function VTTApp() {
         type: "canvas_update",
         senderId: clientId,
         elements,
-        appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridSize }
+        appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridState }
       }));
     }
-  }, [sendMessage, clientId]);
+
+    // 2. Database Persistence (Debounced)
+    persistCanvas(elements, appState);
+  }, [sendMessage, clientId, persistCanvas]);
 
   const rollDie = (die: string, label?: string) => {
     const sides = parseInt(die.substring(1));
@@ -260,7 +287,7 @@ function VTTApp() {
   }
 
   if (!activeCampaign) {
-    return <SetupScreen onJoin={(id, roomId) => setActiveCampaign({id, roomId})} />;
+    return <SetupScreen onJoin={(id, roomId, campaign) => setActiveCampaign({id, roomId, canvas_state: campaign?.canvas_state})} />;
   }
 
   return (
@@ -287,7 +314,6 @@ function VTTApp() {
           </div>
         )}
 
-        {/* Interim Voice Feedback */}
         {isRecording && interimTranscript && (
           <div className="mt-4 p-3 bg-indigo-950/20 border border-indigo-500/20 rounded-xl animate-pulse">
             <p className="text-[8px] font-black text-indigo-400 uppercase mb-1">Narration in progress...</p>
@@ -357,13 +383,9 @@ function VTTApp() {
         <div className="flex-1 overflow-y-auto space-y-8 pr-1 custom-scrollbar">
           {isGM ? (
             <>
-              {/* Voice Storytelling Toggle */}
               <div className="space-y-4 pt-4">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Narration</h3>
-                <button 
-                  onClick={toggleRecording}
-                  className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all border ${isRecording ? 'bg-red-600 border-red-400 shadow-[0_0_20px_rgba(220,38,38,0.3)] animate-pulse' : 'bg-gray-900 border-gray-800 hover:bg-gray-800'}`}
-                >
+                <button onClick={toggleRecording} className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all border ${isRecording ? 'bg-red-600 border-red-400 shadow-[0_0_20px_rgba(220,38,38,0.3)] animate-pulse' : 'bg-gray-900 border-gray-800 hover:bg-gray-800'}`}>
                   <div className={`h-2.5 w-2.5 rounded-full ${isRecording ? 'bg-white' : 'bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.6)]'}`}></div>
                   {isRecording ? 'Transcribing Story' : 'Start Voice Chronicle'}
                 </button>

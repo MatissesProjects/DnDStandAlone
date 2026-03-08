@@ -31,6 +31,14 @@ def create_campaign(db: Session, campaign: schemas.CampaignCreate, gm_id: int):
     db.refresh(db_campaign)
     return db_campaign
 
+def update_campaign_canvas(db: Session, campaign_id: int, canvas_state: dict):
+    db_campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
+    if db_campaign:
+        db_campaign.canvas_state = canvas_state
+        db.commit()
+        db.refresh(db_campaign)
+    return db_campaign
+
 # Location CRUD
 def get_locations(db: Session, campaign_id: int):
     return db.query(models.Location).filter(models.Location.campaign_id == campaign_id).all()

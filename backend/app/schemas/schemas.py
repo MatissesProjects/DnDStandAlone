@@ -19,10 +19,14 @@ class CampaignBase(BaseModel):
 class CampaignCreate(CampaignBase):
     pass
 
+class CampaignUpdate(BaseModel):
+    canvas_state: Optional[Dict[str, Any]] = None
+
 class Campaign(CampaignBase):
     id: int
     gm_id: int
     room_id: str
+    canvas_state: Optional[Dict[str, Any]] = None
     model_config = ConfigDict(from_attributes=True)
 
 # Location Schemas
