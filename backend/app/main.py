@@ -8,7 +8,7 @@ from app.db.database import engine, get_db, Base
 from app.services.websocket_manager import manager
 from app.models import models
 from app.api import auth
-from app.schemas import schemas
+from app.schemas import schemas, history as history_schemas
 from app.crud import crud
 from app.services.ai_service import ai_service
 
@@ -86,6 +86,17 @@ def join_campaign(room_id: str, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error joining campaign: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/campaigns/{campaign_id}/history", response_model=history_schemas.HistoryLog)
+def add_campaign_history(
+    campaign_id: int,
+    log: history_schemas.HistoryLogCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can record history")
+    return crud.create_history_log(db=db, log=log)
 
 # Location Endpoints
 @app.get("/campaigns/{campaign_id}/locations", response_model=List[schemas.Location])
