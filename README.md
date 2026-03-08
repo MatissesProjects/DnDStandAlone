@@ -16,7 +16,7 @@ A standalone web-based Virtual Tabletop (VTT) that unifies **Excalidraw** for ma
 - **Frontend:** React 19, Vite, TailwindCSS 4, Excalidraw.
 - **Backend:** Python 3.13, FastAPI, SQLAlchemy, WebSockets.
 - **Database:** SQLite (default for development) or PostgreSQL.
-- **AI:** Google Gemini API (`gemini-2.0-flash`).
+- **AI:** Google Gemini API (`gemini-2.5-flash`).
 
 ---
 
