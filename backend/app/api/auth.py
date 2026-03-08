@@ -1,5 +1,6 @@
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
@@ -7,6 +8,7 @@ from typing import Optional
 from app.db.database import get_db
 from app.core.config import settings
 from app.models import models
+import urllib.parse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -77,7 +79,6 @@ async def callback(code: str, db: Session = Depends(get_db)):
         token_data = token_response.json()
         access_token = token_data["access_token"]
 
-        # Get user info from Discord
         user_response = await client.get(
             DISCORD_USER_URL, 
             headers={"Authorization": f"Bearer {access_token}"}
@@ -89,7 +90,6 @@ async def callback(code: str, db: Session = Depends(get_db)):
         discord_id = user_info["id"]
         username = user_info["username"]
 
-        # Check if user exists, or create new one
         user = db.query(models.User).filter(models.User.discord_id == discord_id).first()
         if not user:
             is_first_user = db.query(models.User).count() == 0
@@ -102,17 +102,16 @@ async def callback(code: str, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(user)
 
-        # Create our own JWT
         jwt_token = create_access_token(
             data={"sub": user.discord_id, "role": user.role}
         )
         
-        return {
-            "access_token": jwt_token, 
-            "token_type": "bearer",
-            "user": {
-                "username": user.username,
-                "role": user.role,
-                "discord_id": user.discord_id
-            }
-        }
+        # REDIRECT back to frontend with the data in params
+        frontend_callback = "http://localhost:5173/auth/callback"
+        params = urllib.parse.urlencode({
+            "token": jwt_token,
+            "username": user.username,
+            "role": user.role,
+            "discord_id": user.discord_id
+        })
+        return RedirectResponse(url=f"{frontend_callback}?{params}")
