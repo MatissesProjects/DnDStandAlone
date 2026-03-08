@@ -63,8 +63,6 @@ class GeminiService:
 
     async def generate_enemy(self, location: models.Location, history: List[models.HistoryLog]) -> Dict[str, Any]:
         context = self._format_context(location, history)
-        
-        # Try Gemini first
         if self.client:
             try:
                 print(f"Attempting Gemini generation ({settings.GEMINI_MODEL})...")
@@ -90,66 +88,64 @@ class GeminiService:
                     "backstory": "A brief 2-sentence description of how they fit into the current scene."
                 }}
                 """
-                response = self.client.models.generate_content(
-                    model=settings.GEMINI_MODEL,
-                    contents=prompt
-                )
+                response = self.client.models.generate_content(model=settings.GEMINI_MODEL, contents=prompt)
                 text = response.text
-                print(f"Gemini success! Raw response length: {len(text)}")
-                
-                if "```json" in text:
-                    text = text.split("```json")[1].split("```")[0]
-                elif "```" in text:
-                    text = text.split("```")[1].split("```")[0]
-                
+                if "```json" in text: text = text.split("```json")[1].split("```")[0]
+                elif "```" in text: text = text.split("```")[1].split("```")[0]
                 return json.loads(text.strip())
-            except Exception as e:
-                print(f"Gemini generation failed, falling back: {str(e)}")
+            except Exception as e: print(f"Gemini failed: {e}")
         
-        # Fallback to Ollama
         ollama_result = await self._ollama_generate_enemy(context)
-        if ollama_result:
-            return ollama_result
-            
-        return {
-            "name": "Generation Error",
-            "stats": {"hp": 0, "ac": 0},
-            "backstory": "Failed to generate entity using both Gemini and Ollama. Check backend logs for details."
-        }
+        if ollama_result: return ollama_result
+        return {"name": "Error", "stats": {"hp": 0, "ac": 0}, "backstory": "Failed AI generation."}
 
     async def generate_lore(self, location: models.Location, history: List[models.HistoryLog]) -> str:
         context = self._format_context(location, history)
-        prompt = f"""
-        You are a D&D Dungeon Master's assistant. Based on the following context, provide a brief piece of flavorful lore or a hidden detail the players might discover.
-        
-        {context}
-        
-        Keep it under 3 sentences and highly atmospheric.
-        """
-        
-        # Try Gemini first
+        prompt = f"You are a D&D DM assistant. Based on context, provide 3 atmospheric sentences of lore.\n\n{context}"
         if self.client:
             try:
-                print(f"Attempting Gemini lore generation ({settings.GEMINI_MODEL})...")
-                response = self.client.models.generate_content(
-                    model=settings.GEMINI_MODEL,
-                    contents=prompt
-                )
-                print("Gemini lore success!")
+                response = self.client.models.generate_content(model=settings.GEMINI_MODEL, contents=prompt)
+                return response.text.strip()
+            except Exception as e: print(f"Gemini failed: {e}")
+        try:
+            response = await self.ollama_client.chat(model=settings.OLLAMA_MODEL, messages=[{'role': 'user', 'content': prompt}])
+            return response['message']['content'].strip()
+        except Exception as e: return "The shadows remain silent."
+
+    async def summarize_session(self, history: List[models.HistoryLog]) -> str:
+        if not history:
+            return "No chronicle entries found to summarize."
+            
+        logs = "\n".join([f"[{log.event_type}] {log.content}" for log in reversed(history)])
+        prompt = f"""
+        You are a bard recounting the epic tales of a D&D session. 
+        Based on the following chronicle logs (narration and events), provide a concise, 
+        immersive summary of what happened for a player who missed the session.
+        
+        Focus on key narrative points, major victories, and mysterious omens.
+        Keep it under 5 paragraphs and maintain a high-fantasy tone.
+        
+        Chronicle Logs:
+        {logs}
+        """
+        
+        if self.client:
+            try:
+                print(f"Attempting Gemini summary...")
+                response = self.client.models.generate_content(model=settings.GEMINI_MODEL, contents=prompt)
                 return response.text.strip()
             except Exception as e:
-                print(f"Gemini lore failed, falling back: {str(e)}")
+                print(f"Gemini summary failed: {e}")
 
         # Fallback to Ollama
         try:
-            print(f"Attempting Ollama lore generation with {settings.OLLAMA_MODEL}...")
+            print(f"Attempting Ollama summary...")
             response = await self.ollama_client.chat(model=settings.OLLAMA_MODEL, messages=[
                 {'role': 'user', 'content': prompt},
             ])
-            print("Ollama lore success!")
             return response['message']['content'].strip()
         except Exception as e:
-            print(f"Ollama lore failed: {str(e)}")
-            return "The shadows remain silent. (Both AI providers failed to respond)"
+            print(f"Ollama summary failed: {str(e)}")
+            return "The archives are incomplete. (Summary generation failed)"
 
 ai_service = GeminiService()

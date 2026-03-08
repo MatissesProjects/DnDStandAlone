@@ -135,6 +135,17 @@ def delete_campaign_history(
         return {"status": "ok"}
     raise HTTPException(status_code=404, detail="Log not found")
 
+@app.get("/campaigns/{campaign_id}/summarize")
+async def summarize_campaign(
+    campaign_id: int,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    history = crud.get_history(db, campaign_id, limit=limit)
+    summary = await ai_service.summarize_session(history)
+    return {"summary": summary}
+
 # Location Endpoints
 @app.get("/campaigns/{campaign_id}/locations", response_model=List[schemas.Location])
 def read_locations(campaign_id: int, db: Session = Depends(get_db)):

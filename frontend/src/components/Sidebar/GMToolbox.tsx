@@ -30,6 +30,8 @@ interface GMToolboxProps {
   setPlayerClass: (val: string) => void;
   setPlayerLevel: (val: number) => void;
   onUpdateProfile: () => void;
+  onSummarize: () => void;
+  isSummarizing: boolean;
 }
 
 const GMToolbox: React.FC<GMToolboxProps> = ({
@@ -37,7 +39,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   isRecording, onToggleRecording, activeUsers, onRequestRoll, onGenerateEnemy, onGenerateLore,
   isGenerating, generatedEnemy, generatedLore, onManifestEntity, activeEntities, onSelectEntity,
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, isEditingProfile,
-  setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile
+  setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile, onSummarize, isSummarizing
 }) => {
   return (
     <aside className="w-[320px] h-full flex-none border-l border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
@@ -67,7 +69,16 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
           <>
             <div className="space-y-4 pt-4">
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Tools</h3>
-              <button onClick={onOpenDashboard} className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"> Manage World Manifest </button>
+              <div className="grid gap-2">
+                <button onClick={onOpenDashboard} className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"> Manage Manifest </button>
+                <button 
+                  onClick={onSummarize} 
+                  disabled={isSummarizing}
+                  className="w-full bg-indigo-900/20 hover:bg-indigo-900/40 border border-indigo-500/20 text-indigo-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                > 
+                  {isSummarizing ? 'Recounting...' : "Chronicler's Summary"} 
+                </button>
+              </div>
             </div>
 
             <div className="space-y-4 pt-2">
@@ -193,7 +204,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
           <div className="bg-gray-900/80 p-5 rounded-3xl border border-gray-800 shadow-2xl space-y-6">
             <div>
               <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Room Code</p>
-              <p className="text-sm font-black tracking-tight text-indigo-400 font-mono">{activeCampaign.roomId}</p>
+              <p className="text-sm font-black tracking-tight text-indigo-400 font-mono">{activeCampaign.room_id}</p>
             </div>
             <div>
               <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Current Locale</p>

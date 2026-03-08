@@ -26,6 +26,10 @@ function VTTApp() {
   const [playerLevel, setPlayerLevel] = useState(user?.level || 1);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
+  // Summary State
+  const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const isRemoteUpdate = useRef(false);
   const lastSyncTime = useRef(0);
@@ -87,7 +91,7 @@ function VTTApp() {
             content: item.content,
             user: "Chronicle",
             timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isSubtle: item.content.includes("(Subtle)") // Simple heuristic for now
+            isSubtle: item.content.includes("(Subtle)")
           }));
           setHistory(formattedHistory);
         }
@@ -220,29 +224,13 @@ function VTTApp() {
     const sides = parseInt(die.substring(1));
     const result = Math.floor(Math.random() * sides) + 1;
     const content = `${label ? `${die} (${label})` : die}: ${result}${isSubtleMode ? ' (Subtle)' : ''}`;
-    
-    // Save to DB
     if (activeCampaign && token) {
-      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          event_type: 'dice_roll', 
-          content: `${user?.username || 'Guest'} rolled ${content}`,
-          campaign_id: activeCampaign.id 
-        })
-      }).then(res => res.json()).then(savedLog => {
-        // Broadcast the saved ID so it can be consumed
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content: `${user?.username || 'Guest'} rolled ${content}`, campaign_id: activeCampaign.id }) }).then(res => res.json()).then(savedLog => {
         const newRoll = { id: savedLog.id.toString(), type: 'roll', content: `${label ? `${die} (${label})` : die}: ${result}`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: user ? user.username : `Player ${clientId.substring(0, 4)}` };
         sendMessage(JSON.stringify(newRoll));
       });
     }
-    
     if (rollRequirement) setRollRequirement(null);
-  };
-
-  const requestPlayerRoll = (targetId: string, die: string, label: string) => {
-    sendMessage(JSON.stringify({ type: "request_roll", target_id: targetId, die, label }));
   };
 
   const handleGenerateEnemy = async () => {
@@ -264,6 +252,18 @@ function VTTApp() {
       const data = await res.json();
       setGeneratedLore(data.lore);
     } catch (e) { console.error(e); } finally { setIsGenerating(false); }
+  };
+
+  const handleSummarizeCampaign = async () => {
+    if (!token || !activeCampaign) return;
+    setIsSummarizing(true);
+    try {
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/summarize`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setCampaignSummary(data.summary);
+    } catch (e) { console.error(e); } finally { setIsSummarizing(false); }
   };
 
   const handleManifestEntity = async () => {
@@ -304,20 +304,9 @@ function VTTApp() {
 
   const rollForNPC = (entityName: string, label: string, bonus: number = 0) => {
     const result = Math.floor(Math.random() * 20) + 1;
-    const finalResult = result + bonus;
-    
-    // Save NPC Roll to DB
     if (activeCampaign && token) {
-      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          event_type: 'dice_roll', 
-          content: `${entityName} rolled d20 (${label}): ${finalResult}${isSubtleMode ? ' (Subtle)' : ''}`,
-          campaign_id: activeCampaign.id 
-        })
-      }).then(res => res.json()).then(savedLog => {
-        const newRoll = { id: savedLog.id.toString(), type: 'roll' as const, content: `d20 (${label}): ${finalResult}`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: entityName };
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content: `${entityName} rolled d20 (${label}): ${result + bonus}${isSubtleMode ? ' (Subtle)' : ''}`, campaign_id: activeCampaign.id }) }).then(res => res.json()).then(savedLog => {
+        const newRoll = { id: savedLog.id.toString(), type: 'roll' as const, content: `d20 (${label}): ${result + bonus}`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: entityName };
         sendMessage(JSON.stringify(newRoll));
       });
     }
@@ -343,10 +332,30 @@ function VTTApp() {
       {isDashboardOpen && <WorldDashboard campaignId={activeCampaign.id} onClose={() => setIsDashboardOpen(false)} onSetActive={handleSetActiveLocation} activeLocationId={activeLocation?.id} />}
       {selectedEntity && <NPCDetailCard entity={selectedEntity} isGM={isGM} onClose={() => setSelectedEntity(null)} onUpdateStats={handleUpdateNPCStats} onRoll={rollForNPC} />}
 
-      <ChronicleSidebar 
-        isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} 
-        onConsumeHistory={handleConsumeHistory}
-      />
+      {/* Summary Overlay */}
+      {campaignSummary && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4" onClick={() => setCampaignSummary(null)}>
+          <div className="bg-gray-900 border border-indigo-500/30 w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+            <div className="p-10 space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-3xl font-black tracking-tighter uppercase italic text-indigo-400">The Chronicler's Recap</h2>
+                <button onClick={() => setCampaignSummary(null)} className="text-gray-500 hover:text-white transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <div className="h-px bg-indigo-500/20 w-full"></div>
+              <div className="max-h-[50vh] overflow-y-auto pr-4 custom-scrollbar">
+                <p className="text-lg text-gray-200 leading-relaxed font-serif whitespace-pre-wrap">{campaignSummary}</p>
+              </div>
+              <div className="pt-4 flex justify-center">
+                <button onClick={() => setCampaignSummary(null)} className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Dismiss Tome</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ChronicleSidebar isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} onConsumeHistory={handleConsumeHistory} />
 
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
           <Excalidraw excalidrawRef={(api) => setExcalidrawAPI(api)} onChange={handleCanvasChange} theme="dark" UIOptions={{ canvasActions: { toggleTheme: false, export: false, loadScene: false, saveToActiveFile: false } }} />
@@ -360,6 +369,7 @@ function VTTApp() {
         onManifestEntity={handleManifestEntity} activeEntities={activeEntities} onSelectEntity={setSelectedEntity} activeLocation={activeLocation} activeCampaign={activeCampaign}
         onOpenDashboard={() => setIsDashboardOpen(true)} playerClass={playerClass} playerLevel={playerLevel} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
         setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} onUpdateProfile={handleUpdateProfile}
+        onSummarize={handleSummarizeCampaign} isSummarizing={isSummarizing}
       />
     </div>
   );
