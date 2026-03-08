@@ -19,9 +19,11 @@ interface Entity {
 interface WorldDashboardProps {
   campaignId: number;
   onClose: () => void;
+  onSetActive: (loc: Location) => void;
+  activeLocationId?: number;
 }
 
-const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose }) => {
+const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, onSetActive, activeLocationId }) => {
   const { token } = useAuth();
   const [locations, setLocations] = useState<Location[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
@@ -178,14 +180,22 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose }) 
                   <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Current Manifest</h3>
                   <div className="grid grid-cols-1 gap-3">
                     {locations.map(loc => (
-                      <div key={loc.id} className="p-4 rounded-2xl bg-gray-900 border border-gray-800 hover:border-gray-700 transition-all flex justify-between items-center group">
-                        <div>
+                      <div key={loc.id} className={`p-4 rounded-2xl border transition-all flex justify-between items-center group ${activeLocationId === loc.id ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-gray-900 border-gray-800 hover:border-gray-700'}`}>
+                        <div className="flex-1">
                           <div className="flex items-center gap-3 mb-1">
                             <h4 className="font-black text-gray-100 uppercase tracking-tight">{loc.name}</h4>
-                            <span className="text-[8px] bg-red-900/20 text-red-400 px-2 py-0.5 rounded-full border border-red-500/20 font-black tracking-widest uppercase">Tier {loc.danger_level}</span>
+                            {activeLocationId === loc.id && <span className="text-[8px] bg-green-900/30 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20 font-black tracking-widest uppercase">Active Locale</span>}
                           </div>
                           <p className="text-xs text-gray-400 leading-relaxed italic opacity-80">"{loc.description}"</p>
                         </div>
+                        {activeLocationId !== loc.id && (
+                          <button 
+                            onClick={() => onSetActive(loc)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 hover:bg-indigo-600 text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border border-gray-700"
+                          >
+                            Set Active
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -104,7 +104,6 @@ function VTTApp() {
   // Load History and Current Location on Join
   useEffect(() => {
     if (activeCampaign && token) {
-      // Fetch History
       fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`)
         .then(res => res.json())
         .then(data => {
@@ -120,12 +119,11 @@ function VTTApp() {
           }
         });
 
-      // Fetch Locations to find current one
       fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/locations`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data) && data.length > 0) {
-            setActiveLocation(data[0]); // Default to first location for now
+            setActiveLocation(data[data.length - 1]);
           }
         });
     }
@@ -190,6 +188,9 @@ function VTTApp() {
             localElementsRef.current = data.elements;
           }
         } 
+        else if (data.type === "location_update") {
+          setActiveLocation(data.location);
+        }
         else if (data.type === "move_proposal" && isGM) {
           setPendingProposals(prev => {
             const filtered = prev.filter(p => p.elementId !== data.elementId);
@@ -356,6 +357,14 @@ function VTTApp() {
     } catch (e) { console.error(e); } finally { setIsGenerating(false); }
   };
 
+  const handleSetActiveLocation = (loc: Location) => {
+    setActiveLocation(loc);
+    sendMessage(JSON.stringify({
+      type: "location_update",
+      location: loc
+    }));
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans">
@@ -382,15 +391,9 @@ function VTTApp() {
       {isDashboardOpen && (
         <WorldDashboard 
           campaignId={activeCampaign.id} 
-          onClose={() => {
-            setIsDashboardOpen(false);
-            // Refresh current location when closing dashboard
-            fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/locations`)
-              .then(res => res.json())
-              .then(data => {
-                if (Array.isArray(data) && data.length > 0) setActiveLocation(data[data.length - 1]);
-              });
-          }} 
+          onClose={() => setIsDashboardOpen(false)}
+          onSetActive={handleSetActiveLocation}
+          activeLocationId={activeLocation?.id}
         />
       )}
 
@@ -413,6 +416,13 @@ function VTTApp() {
             <button onClick={() => rollDie(rollRequirement.die, rollRequirement.label)} className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black py-3 rounded-xl uppercase text-xs tracking-wider transition-all border border-indigo-400/20 active:scale-95">
               Roll {rollRequirement.die} <span className="opacity-60 ml-1">[{rollRequirement.label}]</span>
             </button>
+          </div>
+        )}
+
+        {isRecording && interimTranscript && (
+          <div className="mt-4 p-3 bg-indigo-950/20 border border-indigo-500/20 rounded-xl animate-pulse">
+            <p className="text-[8px] font-black text-indigo-400 uppercase mb-1">Narration in progress...</p>
+            <p className="text-xs text-indigo-200 italic leading-relaxed">{interimTranscript}</p>
           </div>
         )}
 
