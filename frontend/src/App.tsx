@@ -147,17 +147,68 @@ function VTTApp() {
   }, [activeCampaign, token]);
 
   // Fetch Entities for Active Location
+  const fetchEntities = useCallback(async (locId: number) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:8000/locations/${locId}/entities`);
+      if (res.ok) {
+        const data = await res.json();
+        setActiveEntities(data);
+        // If the selected entity is one of these, update it to refresh HP etc.
+        if (selectedEntity && data.find((e: Entity) => e.id === selectedEntity.id)) {
+          setSelectedEntity(data.find((e: Entity) => e.id === selectedEntity.id));
+        }
+      }
+    } catch (e) { console.error(e); }
+  }, [token, selectedEntity]);
+
   useEffect(() => {
     if (activeLocation && token) {
-      fetch(`http://localhost:8000/locations/${activeLocation.id}/entities`)
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setActiveEntities(data);
-          }
-        });
+      fetchEntities(activeLocation.id);
     }
   }, [activeLocation, token]);
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: any) => {
+        let interim = "";
+        let final = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) final += event.results[i][0].transcript;
+          else interim += event.results[i][0].transcript;
+        }
+        if (final) {
+          const storyItem: HistoryItem = {
+            id: Math.random().toString(36).substring(7),
+            type: 'story',
+            content: final,
+            user: user?.username || "GM",
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          sendMessage(JSON.stringify(storyItem));
+          if (activeCampaign && token) {
+            fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ event_type: 'story', content: final, campaign_id: activeCampaign.id })
+            });
+          }
+        }
+        setInterimTranscript(interim);
+      };
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsIsRecording(false);
+      };
+      recognitionRef.current = recognition;
+    }
+  }, [user, sendMessage, activeCampaign, token]);
 
   // Handle incoming WebSocket messages
   useEffect(() => {
@@ -181,9 +232,7 @@ function VTTApp() {
         }
         else if (data.type === "entities_update") {
           if (activeLocation && data.locationId === activeLocation.id) {
-            fetch(`http://localhost:8000/locations/${activeLocation.id}/entities`)
-              .then(res => res.json())
-              .then(d => setActiveEntities(d));
+            fetchEntities(activeLocation.id);
           }
         }
         else if (data.type === "presence") {
@@ -205,7 +254,7 @@ function VTTApp() {
         }
       } catch (e) {}
     }
-  }, [lastMessage, excalidrawAPI, clientId, isGM, activeLocation, token]);
+  }, [lastMessage, excalidrawAPI, clientId, isGM, activeLocation, token, fetchEntities]);
 
   const handleUpdateProfile = async () => {
     if (!token) return;
@@ -220,17 +269,27 @@ function VTTApp() {
       });
       if (res.ok) {
         setIsEditingProfile(false);
-        // Sync via WebSocket
-        sendMessage(JSON.stringify({
-          type: "user_update",
-          class_name: playerClass,
-          level: playerLevel
-        }));
+        sendMessage(JSON.stringify({ type: "user_update", class_name: playerClass, level: playerLevel }));
       }
-    } catch (e) {
-      console.error("Profile update failed", e);
-    }
+    } catch (e) { console.error(e); }
   };
+
+  const persistCanvas = useCallback((elements: any, appState: any) => {
+    if (!isGM || !activeCampaign || !token) return;
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/canvas`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          canvas_state: {
+            elements,
+            appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridSize }
+          }
+        })
+      });
+    }, 3000);
+  }, [isGM, activeCampaign, token]);
 
   const handleCanvasChange = useCallback((elements: any, appState: any) => {
     if (isRemoteUpdate.current) {
@@ -362,9 +421,26 @@ function VTTApp() {
       if (res.ok) {
         setGeneratedEnemy(null);
         sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id }));
-        fetch(`http://localhost:8000/locations/${activeLocation.id}/entities`)
-          .then(r => r.json())
-          .then(d => setActiveEntities(d));
+        fetchEntities(activeLocation.id);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleUpdateNPCStats = async (entityId: number, statsUpdate: any) => {
+    if (!token || !activeLocation) return;
+    try {
+      const currentEntity = activeEntities.find(e => e.id === entityId);
+      if (!currentEntity) return;
+      
+      const newStats = { ...currentEntity.stats, ...statsUpdate };
+      const res = await fetch(`http://localhost:8000/entities/${entityId}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stats: newStats })
+      });
+      if (res.ok) {
+        sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id }));
+        fetchEntities(activeLocation.id);
       }
     } catch (e) { console.error(e); }
   };
@@ -464,14 +540,30 @@ function VTTApp() {
                 <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Narrative Essence</h4>
                 <p className="text-sm text-gray-300 leading-relaxed italic opacity-90">"{selectedEntity.backstory}"</p>
               </div>
+              
+              {/* HP Tracking Section */}
               <div className="flex gap-3 pt-2">
-                <div className="flex-1 bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
-                  <p className="text-[8px] font-black text-gray-600 uppercase mb-1">HP</p>
-                  <p className="text-xl font-black text-red-500">{selectedEntity.stats?.hp || '??'}</p>
+                <div className="flex-[2] bg-gray-950 p-4 rounded-3xl border border-gray-800 flex items-center justify-between shadow-inner">
+                  <div className="space-y-1">
+                    <p className="text-[8px] font-black text-gray-600 uppercase">Health Points</p>
+                    <p className="text-2xl font-black text-red-500 leading-none">{selectedEntity.stats?.hp || 0}</p>
+                  </div>
+                  {isGM && (
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleUpdateNPCStats(selectedEntity.id, { hp: (selectedEntity.stats?.hp || 0) - 1 })}
+                        className="w-10 h-10 bg-gray-900 hover:bg-gray-800 border border-gray-800 rounded-xl flex items-center justify-center font-black transition-all active:scale-90"
+                      >-</button>
+                      <button 
+                        onClick={() => handleUpdateNPCStats(selectedEntity.id, { hp: (selectedEntity.stats?.hp || 0) + 1 })}
+                        className="w-10 h-10 bg-gray-900 hover:bg-gray-800 border border-gray-800 rounded-xl flex items-center justify-center font-black transition-all active:scale-90"
+                      >+</button>
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1 bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
+                <div className="flex-1 bg-gray-950 p-4 rounded-3xl border border-gray-800 text-center shadow-inner">
                   <p className="text-[8px] font-black text-gray-600 uppercase mb-1">AC</p>
-                  <p className="text-xl font-black text-blue-400">{selectedEntity.stats?.ac || '??'}</p>
+                  <p className="text-2xl font-black text-blue-400 leading-none">{selectedEntity.stats?.ac || '??'}</p>
                 </div>
               </div>
             </div>
@@ -536,7 +628,7 @@ function VTTApp() {
 
       {/* Main Area: Excalidraw */}
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
-          <Excalidraw excalidrawRef={(api) => setExcalidrawAPI(api)} onChange={handleCanvasChange} theme="dark" UIOptions={{ canvasActions: { toggleTheme: false, export: false, loadScene: false, saveToActiveFile: false } }} />
+          <Excalidraw excalidrawRef={(api) => setExcalidrawAPI(api)} onChange={handleCanvasChange} theme="dark" UIOptions={{ canvasActions: { toggleTheme: false, export: false, loadScene: false, saveToActive_File: false } }} />
       </main>
 
       {/* Right Sidebar */}
@@ -647,23 +739,10 @@ function VTTApp() {
                 
                 {isEditingProfile ? (
                   <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                    <input 
-                      type="text" 
-                      placeholder="Class (e.g. Paladin)" 
-                      value={playerClass} 
-                      onChange={e => setPlayerClass(e.target.value)}
-                      className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50"
-                    />
+                    <input type="text" placeholder="Class" value={playerClass} onChange={e => setPlayerClass(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50" />
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-black text-gray-500 uppercase">Level</span>
-                      <input 
-                        type="number" 
-                        min="1" 
-                        max="20" 
-                        value={playerLevel} 
-                        onChange={e => setPlayerLevel(Number(e.target.value))}
-                        className="flex-1 bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50"
-                      />
+                      <input type="number" min="1" max="20" value={playerLevel} onChange={e => setPlayerLevel(Number(e.target.value))} className="flex-1 bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50" />
                     </div>
                     <div className="flex gap-2">
                       <button onClick={handleUpdateProfile} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Save</button>
@@ -674,7 +753,6 @@ function VTTApp() {
                   <div onClick={() => setIsEditingProfile(true)} className="cursor-pointer group">
                     <h3 className="font-black text-gray-100 uppercase tracking-tighter mb-1 text-xl group-hover:text-indigo-400 transition-colors">{user?.username}</h3>
                     <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mb-8">{playerClass || 'Class Unknown'} • Level {playerLevel}</p>
-                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest group-hover:opacity-100 opacity-0 transition-opacity">Click to edit profile</p>
                   </div>
                 )}
                 
@@ -691,7 +769,10 @@ function VTTApp() {
                 <div key={ent.id} onClick={() => setSelectedEntity(ent)} className="bg-gray-900/40 p-3 rounded-xl border border-gray-800 flex items-center gap-3 cursor-pointer hover:bg-indigo-900/10 hover:border-indigo-500/30 transition-all group">
                   <div className="w-8 h-8 rounded-full bg-blue-900/50 border border-blue-700/50 flex items-center justify-center text-[10px] font-black group-hover:bg-indigo-600 transition-colors">{ent.name.substring(0, 2).toUpperCase()}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black truncate text-gray-100 uppercase">{ent.name}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs font-black truncate text-gray-100 uppercase">{ent.name}</p>
+                      <span className="text-[10px] font-black text-red-500">{ent.stats?.hp || 0} HP</span>
+                    </div>
                     <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate italic">Manifested NPC</p>
                   </div>
                 </div>

@@ -143,6 +143,17 @@ def create_entity(
         raise HTTPException(status_code=403, detail="Only GMs can materialize entities")
     return crud.create_entity(db=db, entity=entity)
 
+@app.patch("/entities/{entity_id}", response_model=schemas.Entity)
+def update_entity(
+    entity_id: int,
+    entity_update: dict,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can update entities")
+    return crud.update_entity(db=db, entity_id=entity_id, entity_update=entity_update)
+
 @app.post("/locations", response_model=schemas.Location)
 def create_location(
     location: schemas.LocationCreate, 

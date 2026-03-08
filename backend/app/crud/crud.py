@@ -74,6 +74,15 @@ def create_entity(db: Session, entity: schemas.EntityCreate):
     db.refresh(db_entity)
     return db_entity
 
+def update_entity(db: Session, entity_id: int, entity_update: dict):
+    db_entity = db.query(models.Entity).filter(models.Entity.id == entity_id).first()
+    if db_entity:
+        for key, value in entity_update.items():
+            setattr(db_entity, key, value)
+        db.commit()
+        db.refresh(db_entity)
+    return db_entity
+
 # History CRUD
 def get_history(db: Session, campaign_id: int, limit: int = 10):
     return db.query(models.HistoryLog)\
