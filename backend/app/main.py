@@ -86,7 +86,6 @@ async def generate_enemy(
     
     location = db.query(models.Location).filter(models.Location.id == location_id).first()
     if not location:
-        # Fallback for testing if no location exists yet
         location = models.Location(name="Unknown Wilds", description="A mysterious uncharted area", danger_level=3)
         
     history = crud.get_history(db, campaign_id, limit=5)
@@ -105,13 +104,11 @@ async def generate_lore(
     
     location = db.query(models.Location).filter(models.Location.id == location_id).first()
     if not location:
-        # Fallback for testing
         location = models.Location(name="Unknown Wilds", description="A mysterious uncharted area", danger_level=3)
         
     history = crud.get_history(db, campaign_id, limit=5)
     lore_text = await ai_service.generate_lore(location, history)
     
-    # Save to history log
     crud.create_history_log(db, schemas.HistoryLogCreate(
         campaign_id=campaign_id,
         event_type="lore_update",
@@ -128,8 +125,6 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
             data = await websocket.receive_text()
             try:
                 message_json = json.loads(data)
-                
-                # Check for GM command: Requesting a roll from a specific player
                 if message_json.get("type") == "request_roll" and role == "gm":
                     target_id = message_json.get("target_id")
                     if target_id:
