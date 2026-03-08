@@ -124,10 +124,13 @@ function VTTApp() {
     try {
       const res = await fetch(`http://localhost:8000/campaigns/${activeCampaignId}/generate-enemy?location_id=${activeLocationId}`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
       });
       const data = await res.json();
-      // Ensure data has stats structure
       if (!data.stats) data.stats = {};
       setGeneratedEnemy(data);
     } catch (e) {
@@ -144,7 +147,11 @@ function VTTApp() {
     try {
       const res = await fetch(`http://localhost:8000/campaigns/${activeCampaignId}/generate-lore?location_id=${activeLocationId}`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
       });
       const data = await res.json();
       setGeneratedLore(data.lore);
@@ -163,26 +170,26 @@ function VTTApp() {
           <div>
             <h2 className="text-xl font-black tracking-tighter text-gray-100 uppercase italic">DND Master</h2>
             <div className="flex items-center gap-2 mt-1">
-              <div className={`h-2 w-2 rounded-full transition-all duration-500 ${isConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`}></div>
-              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{isConnected ? 'Link Active' : 'Link Severed'}</span>
+              <div className={`h-2.5 w-2.5 rounded-full transition-all duration-500 ${isConnected ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]'}`}></div>
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.1em]">{isConnected ? 'Link Active' : 'Link Severed'}</span>
             </div>
           </div>
           {isAuthenticated ? (
-            <button onClick={logout} className="text-[10px] bg-gray-900 hover:bg-red-900/30 border border-gray-800 px-2 py-1 rounded transition-colors uppercase font-bold">Logout</button>
+            <button onClick={logout} className="text-[10px] bg-gray-900 hover:bg-red-900/30 border border-gray-800 px-2 py-1 rounded transition-all uppercase font-bold tracking-tighter active:scale-95">Logout</button>
           ) : (
-            <button onClick={handleLogin} className="text-[10px] bg-indigo-600 hover:bg-indigo-500 px-2 py-1 rounded transition-colors uppercase font-bold">Login</button>
+            <button onClick={handleLogin} className="text-[10px] bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 px-2 py-1 rounded transition-all uppercase font-bold tracking-tighter active:scale-95 shadow-lg shadow-indigo-900/20">Login</button>
           )}
         </div>
 
         {/* Dynamic Roll Requirement for Players */}
         {!isGM && rollRequirement && (
-          <div className="mt-4 p-4 bg-indigo-900/40 border border-indigo-500/50 rounded-2xl animate-pulse">
-            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-2 text-center">GM Requests Roll</p>
+          <div className="mt-4 p-4 bg-indigo-900/20 border border-indigo-500/40 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2.5 text-center">Injunction from the Master</p>
             <button 
               onClick={() => rollDie(rollRequirement.die, rollRequirement.label)}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-xl shadow-lg uppercase text-xs tracking-tighter"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black py-3.5 rounded-xl shadow-lg uppercase text-xs tracking-wider transition-all border border-indigo-400/20 active:scale-95"
             >
-              Roll {rollRequirement.die} for {rollRequirement.label}
+              Roll {rollRequirement.die} <span className="opacity-60 ml-1">[{rollRequirement.label}]</span>
             </button>
           </div>
         )}
@@ -192,7 +199,7 @@ function VTTApp() {
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Dice Roller</h3>
             {isGM && (
               <label className="flex items-center gap-2 cursor-pointer group">
-                <span className="text-[10px] font-bold text-gray-400 group-hover:text-gray-200 uppercase tracking-wider transition-colors">Subtle Mode</span>
+                <span className="text-[10px] font-bold text-gray-400 group-hover:text-gray-200 uppercase tracking-wider transition-colors">Subtle</span>
                 <div className="relative">
                   <input type="checkbox" className="sr-only peer" checked={isSubtleMode} onChange={() => setIsSubtleMode(!isSubtleMode)}/>
                   <div className="w-9 h-5 bg-gray-800 rounded-full border border-gray-700 peer peer-checked:bg-purple-600 peer-checked:border-purple-400 after:content-[''] after:absolute after:top-[3px] after:left-[4px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4 shadow-inner"></div>
@@ -205,7 +212,7 @@ function VTTApp() {
               <button
                 key={die}
                 onClick={() => rollDie(die)}
-                className="bg-gray-900/50 hover:bg-gray-800 active:bg-gray-700 text-sm font-bold py-3 px-3 rounded-xl border border-gray-800 hover:border-gray-600 transition-all shadow-sm active:scale-95 text-gray-200"
+                className="bg-gray-900/50 hover:bg-gray-800 active:bg-gray-700 text-sm font-bold py-3.5 px-3 rounded-xl border border-gray-800 hover:border-gray-600 transition-all shadow-sm active:scale-95 text-gray-200"
               >
                 {die}
               </button>
@@ -217,20 +224,20 @@ function VTTApp() {
           <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4 shrink-0">Chronicle</h3>
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
             {recentRolls.length === 0 ? (
-              <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-900/50 rounded-2xl text-center p-4">
-                <p className="text-xs text-gray-800 font-bold uppercase tracking-widest leading-relaxed">The history is yet unwritten</p>
+              <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-900/50 rounded-3xl text-center p-6">
+                <p className="text-[10px] text-gray-700 font-black uppercase tracking-[0.2em] leading-relaxed">The history is yet unwritten</p>
               </div>
             ) : (
               recentRolls.map(roll => (
-                <div key={roll.id} className={`p-4 rounded-xl border transition-all ${roll.isSubtle ? 'bg-purple-950/20 border-purple-900/50' : 'bg-gray-900/40 border-gray-800'}`}>
+                <div key={roll.id} className={`p-4 rounded-2xl border transition-all ${roll.isSubtle ? 'bg-purple-950/20 border-purple-900/50' : 'bg-gray-900/40 border-gray-800'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                   <div className="flex justify-between items-start mb-2">
                     <span className={`text-[10px] font-black uppercase tracking-widest ${roll.isSubtle ? 'text-purple-400' : 'text-blue-500'}`}>
                       {roll.die} {roll.isSubtle && '• Subtle'}
                     </span>
-                    <span className="text-[9px] font-mono text-gray-600">{roll.timestamp}</span>
+                    <span className="text-[9px] font-mono text-gray-600 font-bold">{roll.timestamp}</span>
                   </div>
-                  <div className="text-3xl font-black text-white leading-none tracking-tighter">{roll.result}</div>
-                  <div className="text-[9px] text-gray-500 mt-2 font-bold uppercase tracking-tight truncate">{roll.user}</div>
+                  <div className="text-3xl font-black text-white leading-none tracking-tighter drop-shadow-sm">{roll.result}</div>
+                  <div className="text-[9px] text-gray-500 mt-2.5 font-black uppercase tracking-tighter truncate opacity-80">{roll.user}</div>
                 </div>
               ))
             )}
@@ -262,21 +269,24 @@ function VTTApp() {
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Active Adventurers</h3>
                 <div className="space-y-3">
                   {activeUsers.filter(u => u.role !== 'gm').map(u => (
-                    <div key={u.id} className="bg-gray-900/60 p-4 rounded-2xl border border-gray-800 group transition-all hover:border-indigo-500/30">
-                      <div className="flex items-center justify-between mb-3">
+                    <div key={u.id} className="bg-gray-900/60 p-4 rounded-2xl border border-gray-800 group transition-all hover:border-indigo-500/30 shadow-inner">
+                      <div className="flex items-center justify-between mb-3.5">
                         <p className="text-sm font-black text-gray-100 uppercase tracking-tighter">{u.username}</p>
-                        <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Active</span>
+                          <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <button 
                           onClick={() => requestPlayerRoll(u.id, 'd20', 'Perception')}
-                          className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all tracking-tighter"
+                          className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-2 rounded-lg font-black uppercase transition-all tracking-tighter border border-gray-700 active:scale-95"
                         >
                           Perception
                         </button>
                         <button 
                           onClick={() => requestPlayerRoll(u.id, 'd20', 'Stealth')}
-                          className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all tracking-tighter"
+                          className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-2 rounded-lg font-black uppercase transition-all tracking-tighter border border-gray-700 active:scale-95"
                         >
                           Stealth
                         </button>
@@ -284,7 +294,7 @@ function VTTApp() {
                     </div>
                   ))}
                   {activeUsers.filter(u => u.role !== 'gm').length === 0 && (
-                    <p className="text-[10px] text-gray-600 font-bold italic text-center py-4">No other players in room</p>
+                    <p className="text-[10px] text-gray-600 font-bold italic text-center py-6 bg-gray-900/20 rounded-2xl border-2 border-dashed border-gray-900">No other players in room</p>
                   )}
                 </div>
               </div>
@@ -292,34 +302,36 @@ function VTTApp() {
               <div className="space-y-4 pt-2">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">AI Weaver</h3>
                 <div className="grid gap-3">
-                  <button onClick={handleGenerateEnemy} disabled={isGenerating} className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 active:scale-[0.98] disabled:opacity-50 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest">
+                  <button onClick={handleGenerateEnemy} disabled={isGenerating} className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 active:scale-[0.98] disabled:opacity-50 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest shadow-blue-900/20">
                     {isGenerating ? 'Weaving...' : 'Manifest Enemy'}
                   </button>
-                  <button onClick={handleGenerateLore} disabled={isGenerating} className="w-full bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 active:scale-[0.98] disabled:opacity-50 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-indigo-500/20 text-xs uppercase tracking-widest">
+                  <button onClick={handleGenerateLore} disabled={isGenerating} className="w-full bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 active:scale-[0.98] disabled:opacity-50 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-indigo-500/20 text-xs uppercase tracking-widest shadow-indigo-900/20">
                     {isGenerating ? 'Channeling...' : 'Script Lore'}
                   </button>
                 </div>
                 
                 {(generatedEnemy || generatedLore) && (
-                  <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-indigo-500/30">
+                  <div className="mt-4 p-5 bg-gray-900 rounded-[1.5rem] border border-indigo-500/30 shadow-2xl animate-in zoom-in-95 duration-300">
                     {generatedLore && (
-                      <div className="space-y-2">
-                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Whispered Lore</h4>
-                        <p className="text-xs text-gray-300 leading-relaxed italic">"{generatedLore}"</p>
+                      <div className="space-y-2.5">
+                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Whispered Lore</h4>
+                        <p className="text-xs text-gray-200 leading-relaxed italic opacity-90">"{generatedLore}"</p>
                       </div>
                     )}
                     {generatedEnemy && (
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                          <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Entity Manifest</h4>
-                          <span className="text-[10px] bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/20 font-bold">HP {generatedEnemy.stats?.hp || '??'}</span>
+                          <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Entity Manifest</h4>
+                          <span className="text-[9px] bg-blue-900/40 text-blue-300 px-2.5 py-1 rounded-full border border-blue-500/30 font-black tracking-widest uppercase">HP {generatedEnemy.stats?.hp || '??'}</span>
                         </div>
-                        <p className="text-sm font-black text-gray-100 tracking-tight">{generatedEnemy.name}</p>
-                        <p className="text-[10px] text-gray-400 leading-relaxed italic">"{generatedEnemy.backstory}"</p>
-                        <div className="grid grid-cols-3 gap-1 pt-1">
+                        <div>
+                          <p className="text-sm font-black text-gray-100 tracking-tight mb-1 uppercase">{generatedEnemy.name}</p>
+                          <p className="text-[10px] text-gray-400 leading-relaxed italic border-l-2 border-gray-800 pl-3">"{generatedEnemy.backstory}"</p>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
                           {Object.entries(generatedEnemy.stats || {}).filter(([k]) => k.length === 3).map(([key, val]) => (
-                            <div key={key} className="bg-gray-950 p-1.5 rounded-lg border border-gray-800 text-center">
-                              <p className="text-[8px] font-black text-gray-600 uppercase tracking-tighter">{key}</p>
+                            <div key={key} className="bg-gray-950 p-2 rounded-xl border border-gray-800 text-center shadow-inner">
+                              <p className="text-[8px] font-black text-gray-600 uppercase tracking-tighter mb-0.5">{key}</p>
                               <p className="text-xs font-black text-white">{val as number}</p>
                             </div>
                           ))}
@@ -332,36 +344,37 @@ function VTTApp() {
             </>
           ) : (
             <div className="pt-4 space-y-6">
-              <div className="bg-gray-900/40 p-6 rounded-2xl border border-gray-800 text-center">
-                <div className="w-16 h-16 bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/30">
-                  <span className="text-xl font-black text-indigo-300">{user ? user.username.substring(0, 2).toUpperCase() : '??'}</span>
+              <div className="bg-gray-900/40 p-8 rounded-3xl border border-gray-800 text-center shadow-inner">
+                <div className="w-20 h-20 bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-5 border border-indigo-500/30 shadow-2xl relative">
+                  <div className="absolute inset-0 rounded-full animate-pulse bg-indigo-500/5 blur-xl"></div>
+                  <span className="text-2xl font-black text-indigo-300 drop-shadow-sm relative z-10">{user ? user.username.substring(0, 2).toUpperCase() : '??'}</span>
                 </div>
-                <h3 className="font-black text-gray-100 uppercase tracking-tighter mb-1 text-lg">
+                <h3 className="font-black text-gray-100 uppercase tracking-tighter mb-1.5 text-xl">
                   {isAuthenticated ? user?.username : 'Wanderer'}
                 </h3>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-6">Party Member • LVL 5</p>
-                <div className="h-px bg-gray-800 w-full mb-6 shadow-inner"></div>
-                <p className="text-[10px] text-gray-500 font-medium leading-relaxed italic px-2">
-                  Maintain your vigil. The Game Master will signal when a roll is required.
+                <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-8">Party Member • LVL 5</p>
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent w-full mb-8"></div>
+                <p className="text-[10px] text-gray-500 font-bold leading-relaxed italic px-4 uppercase tracking-widest opacity-60">
+                  Maintain your vigil.<br/>The Master will signal.
                 </p>
               </div>
             </div>
           )}
 
           {/* Persistent World Status section */}
-          <div className="space-y-4 pt-2">
+          <div className="space-y-4 pt-4 border-t border-gray-800/50">
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Manifest</h3>
-            <div className="bg-gray-900/80 p-5 rounded-2xl border border-gray-800 shadow-inner space-y-5 text-gray-100">
+            <div className="bg-gray-900/80 p-5 rounded-3xl border border-gray-800 shadow-2xl space-y-6 text-gray-100">
               <div>
-                <p className="text-[9px] text-gray-600 uppercase font-black mb-1.5 tracking-tighter">Current Locale</p>
-                <p className="text-sm font-black tracking-tight text-gray-200">The Dark Forest</p>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest italic opacity-80 mt-0.5">Whispering Grove, Tier 2</p>
+                <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Current Locale</p>
+                <p className="text-sm font-black tracking-tight text-gray-100 uppercase">The Dark Forest</p>
+                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1 opacity-90">Whispering Grove, Tier 2</p>
               </div>
               <div>
-                <p className="text-[9px] text-gray-600 uppercase font-black mb-2.5 tracking-tighter">Threat Intensity</p>
-                <div className="flex gap-1.5 h-1.5">
+                <p className="text-[9px] text-gray-600 uppercase font-black mb-3 tracking-tighter opacity-80">Threat Intensity</p>
+                <div className="flex gap-2 h-1.5">
                   {[1, 2, 3, 4, 5].map(i => (
-                    <div key={i} className={`flex-1 rounded-full ${i <= 3 ? 'bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.4)]' : 'bg-gray-800'}`}></div>
+                    <div key={i} className={`flex-1 rounded-full transition-all duration-1000 ${i <= 3 ? 'bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]' : 'bg-gray-800'}`}></div>
                   ))}
                 </div>
               </div>
