@@ -41,11 +41,13 @@ async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security
         discord_id: str = payload.get("sub")
         if discord_id is None:
             raise credentials_exception
-    except JWTError:
+    except JWTError as e:
+        print(f"JWT Decode Error: {e}")
         raise credentials_exception
     
     user = db.query(models.User).filter(models.User.discord_id == discord_id).first()
     if user is None:
+        print(f"User with discord_id {discord_id} not found in database (was it wiped?)")
         raise credentials_exception
     return user
 
