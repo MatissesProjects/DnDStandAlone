@@ -15,17 +15,43 @@ interface DiceRoll {
   user: string;
 }
 
+interface EnemyStats {
+  hp: number;
+  ac: number;
+  str: number;
+  dex: number;
+  con: number;
+  int: number;
+  wis: number;
+  cha: number;
+  actions: string[];
+}
+
+interface EnemyData {
+  name: string;
+  stats: EnemyStats;
+  backstory: string;
+}
+
 function VTTApp() {
-  const { user, isAuthenticated, logout, isGM } = useAuth();
+  const { user, isAuthenticated, logout, isGM, token } = useAuth();
   const clientId = useMemo(() => user?.discord_id || Math.random().toString(36).substring(7), [user]);
   
-  // Pass role to WebSocket so server knows who is GM
+  // State for active room and location (placeholders for now)
+  const [activeCampaignId] = useState(1);
+  const [activeLocationId] = useState(1);
+  
   const { isConnected, lastMessage, sendMessage } = useWebSocket(
-    `ws://localhost:8000/ws/${clientId}?role=${isGM ? 'gm' : 'player'}`
+    `ws://localhost:8000/ws/ROOM1/${clientId}?role=${isGM ? 'gm' : 'player'}`
   );
   
   const [recentRolls, setRecentRolls] = useState<DiceRoll[]>([]);
   const [isSubtleMode, setIsSubtleMode] = useState(false);
+  
+  // AI Generation State
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedEnemy, setGeneratedEnemy] = useState<EnemyData | null>(null);
+  const [generatedLore, setGeneratedLore] = useState<string | null>(null);
 
   useEffect(() => {
     if (lastMessage) {
@@ -67,6 +93,42 @@ function VTTApp() {
     };
 
     sendMessage(JSON.stringify(newRoll));
+  };
+
+  const handleGenerateEnemy = async () => {
+    if (!token) return;
+    setIsGenerating(true);
+    setGeneratedLore(null);
+    try {
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaignId}/generate-enemy?location_id=${activeLocationId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setGeneratedEnemy(data);
+    } catch (e) {
+      console.error("AI Generation failed", e);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateLore = async () => {
+    if (!token) return;
+    setIsGenerating(true);
+    setGeneratedEnemy(null);
+    try {
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaignId}/generate-lore?location_id=${activeLocationId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setGeneratedLore(data.lore);
+    } catch (e) {
+      console.error("AI Generation failed", e);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -172,13 +234,51 @@ function VTTApp() {
               <div className="space-y-4 pt-4">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">AI Weaver</h3>
                 <div className="grid gap-3">
-                  <button className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 active:scale-[0.98] text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest">
-                    Manifest Enemy
+                  <button 
+                    onClick={handleGenerateEnemy}
+                    disabled={isGenerating}
+                    className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 active:scale-[0.98] disabled:opacity-50 disabled:scale-100 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest"
+                  >
+                    {isGenerating ? 'Generating...' : 'Manifest Enemy'}
                   </button>
-                  <button className="w-full bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 active:scale-[0.98] text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-indigo-500/20 text-xs uppercase tracking-widest">
-                    Script Lore
+                  <button 
+                    onClick={handleGenerateLore}
+                    disabled={isGenerating}
+                    className="w-full bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 active:scale-[0.98] disabled:opacity-50 disabled:scale-100 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-indigo-500/20 text-xs uppercase tracking-widest"
+                  >
+                    {isGenerating ? 'Generating...' : 'Script Lore'}
                   </button>
                 </div>
+                
+                {/* AI Results Area */}
+                {(generatedEnemy || generatedLore) && (
+                  <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-indigo-500/30 animate-in fade-in slide-in-from-top-2 duration-300">
+                    {generatedLore && (
+                      <div className="space-y-2">
+                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Generated Lore</h4>
+                        <p className="text-xs text-gray-300 leading-relaxed italic">"{generatedLore}"</p>
+                      </div>
+                    )}
+                    {generatedEnemy && (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Manifested Entity</h4>
+                          <span className="text-[10px] bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/20">HP {generatedEnemy.stats.hp}</span>
+                        </div>
+                        <p className="text-sm font-bold text-gray-100">{generatedEnemy.name}</p>
+                        <p className="text-[10px] text-gray-400 leading-relaxed">{generatedEnemy.backstory}</p>
+                        <div className="grid grid-cols-3 gap-1 pt-1">
+                          {Object.entries(generatedEnemy.stats).filter(([k]) => k.length === 3).map(([key, val]) => (
+                            <div key={key} className="bg-gray-950 p-1.5 rounded-lg border border-gray-800 text-center">
+                              <p className="text-[8px] font-black text-gray-500 uppercase">{key}</p>
+                              <p className="text-xs font-bold">{val as number}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4 pt-2">
