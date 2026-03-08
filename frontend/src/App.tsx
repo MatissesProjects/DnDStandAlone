@@ -70,6 +70,7 @@ function VTTApp() {
   const [activeCampaign, setActiveCampaign] = useState<{id: number, roomId: string, canvas_state?: any} | null>(null);
   const [activeLocation, setActiveLocation] = useState<Location | null>(null);
   const [activeEntities, setActiveEntities] = useState<Entity[]>([]);
+  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
@@ -401,9 +402,7 @@ function VTTApp() {
       });
       if (res.ok) {
         setGeneratedEnemy(null);
-        // Sync entities
         sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id }));
-        // Refresh local
         fetch(`http://localhost:8000/locations/${activeLocation.id}/entities`)
           .then(r => r.json())
           .then(d => setActiveEntities(d));
@@ -451,6 +450,54 @@ function VTTApp() {
         />
       )}
 
+      {/* NPC Detail Card Overlay */}
+      {selectedEntity && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setSelectedEntity(null)}>
+          <div className="bg-gray-900 border border-indigo-500/30 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="relative h-32 bg-indigo-900/20 flex items-end p-8 border-b border-gray-800">
+              <div className="absolute top-6 right-8">
+                <button onClick={() => setSelectedEntity(null)} className="text-gray-500 hover:text-white transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-2xl font-black shadow-xl border border-indigo-400/20">
+                  {selectedEntity.name.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black tracking-tighter uppercase text-gray-100">{selectedEntity.name}</h3>
+                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Manifested Presence</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-3 gap-2">
+                {Object.entries(selectedEntity.stats || {}).filter(([k]) => k.length === 3).map(([key, val]) => (
+                  <div key={key} className="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center shadow-inner">
+                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">{key}</p>
+                    <p className="text-lg font-black text-white leading-none">{val as number}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Narrative Essence</h4>
+                <p className="text-sm text-gray-300 leading-relaxed italic opacity-90">"{selectedEntity.backstory}"</p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <div className="flex-1 bg-gray-950 p-3 rounded-2xl border border-gray-800">
+                  <p className="text-[8px] font-black text-gray-600 uppercase mb-1 text-center">Health Points</p>
+                  <p className="text-xl font-black text-red-500 text-center">{selectedEntity.stats?.hp || '??'}</p>
+                </div>
+                <div className="flex-1 bg-gray-950 p-3 rounded-2xl border border-gray-800">
+                  <p className="text-[8px] font-black text-gray-600 uppercase mb-1 text-center">Armor Class</p>
+                  <p className="text-xl font-black text-blue-400 text-center">{selectedEntity.stats?.ac || '??'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Left Sidebar: Chronicle & Dice */}
       <aside className="w-[340px] h-full flex-none border-r border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
         <div className="flex justify-between items-center border-b border-gray-800 pb-4 shrink-0">
@@ -466,7 +513,7 @@ function VTTApp() {
 
         {!isGM && rollRequirement && (
           <div className="mt-4 p-4 bg-indigo-900/20 border border-indigo-500/40 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl">
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2.5 text-center text-center">Injunction</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2.5 text-center">Injunction</p>
             <button onClick={() => rollDie(rollRequirement.die, rollRequirement.label)} className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black py-3 rounded-xl uppercase text-xs tracking-wider transition-all border border-indigo-400/20 active:scale-95">
               Roll {rollRequirement.die} <span className="opacity-60 ml-1">[{rollRequirement.label}]</span>
             </button>
@@ -622,8 +669,12 @@ function VTTApp() {
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Active NPCs</h3>
             <div className="space-y-2">
               {activeEntities.map(ent => (
-                <div key={ent.id} className="bg-gray-900/40 p-3 rounded-xl border border-gray-800 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-900/50 border border-blue-700/50 flex items-center justify-center text-[10px] font-black">{ent.name.substring(0, 2).toUpperCase()}</div>
+                <div 
+                  key={ent.id} 
+                  onClick={() => setSelectedEntity(ent)}
+                  className="bg-gray-900/40 p-3 rounded-xl border border-gray-800 flex items-center gap-3 cursor-pointer hover:bg-indigo-900/10 hover:border-indigo-500/30 transition-all group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-blue-900/50 border border-blue-700/50 flex items-center justify-center text-[10px] font-black group-hover:bg-indigo-600 transition-colors">{ent.name.substring(0, 2).toUpperCase()}</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-black truncate text-gray-100 uppercase">{ent.name}</p>
                     <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate italic">Manifested NPC</p>
