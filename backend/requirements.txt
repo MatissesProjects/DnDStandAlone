@@ -13,5 +13,5 @@ passlib[bcrypt]
 pytest
 pytest-asyncio
 pytest-mock
-google-generativeai
+google-genai
 ollama

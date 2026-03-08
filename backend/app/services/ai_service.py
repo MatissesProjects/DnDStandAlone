@@ -1,4 +1,4 @@
-import google.generativeai as genai
+from google import genai
 import json
 import ollama
 from app.core.config import settings
@@ -9,11 +9,10 @@ class GeminiService:
     def __init__(self):
         print(f"Initializing AI Service. Gemini Key present: {bool(settings.GEMINI_API_KEY)}")
         if settings.GEMINI_API_KEY:
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel(settings.GEMINI_MODEL)
+            self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
             print(f"Gemini configured with model: {settings.GEMINI_MODEL}")
         else:
-            self.model = None
+            self.client = None
             print("Gemini NOT configured (missing API key)")
         
         self.ollama_client = ollama.AsyncClient(host=settings.OLLAMA_HOST)
@@ -66,9 +65,9 @@ class GeminiService:
         context = self._format_context(location, history)
         
         # Try Gemini first
-        if self.model:
+        if self.client:
             try:
-                print("Attempting Gemini generation...")
+                print(f"Attempting Gemini generation ({settings.GEMINI_MODEL})...")
                 prompt = f"""
                 You are a D&D Dungeon Master's assistant. Based on the following context, generate a unique enemy or NPC.
                 
@@ -91,7 +90,10 @@ class GeminiService:
                     "backstory": "A brief 2-sentence description of how they fit into the current scene."
                 }}
                 """
-                response = self.model.generate_content(prompt)
+                response = self.client.models.generate_content(
+                    model=settings.GEMINI_MODEL,
+                    contents=prompt
+                )
                 text = response.text
                 print(f"Gemini success! Raw response length: {len(text)}")
                 
@@ -126,10 +128,13 @@ class GeminiService:
         """
         
         # Try Gemini first
-        if self.model:
+        if self.client:
             try:
-                print("Attempting Gemini lore generation...")
-                response = self.model.generate_content(prompt)
+                print(f"Attempting Gemini lore generation ({settings.GEMINI_MODEL})...")
+                response = self.client.models.generate_content(
+                    model=settings.GEMINI_MODEL,
+                    contents=prompt
+                )
                 print("Gemini lore success!")
                 return response.text.strip()
             except Exception as e:
