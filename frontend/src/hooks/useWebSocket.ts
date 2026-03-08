@@ -6,6 +6,9 @@ export const useWebSocket = (url: string) => {
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
+    // Basic connectivity logic
+    if (!url) return;
+
     const socket = new WebSocket(url);
     socketRef.current = socket;
 
@@ -15,7 +18,6 @@ export const useWebSocket = (url: string) => {
     };
 
     socket.onmessage = (event) => {
-      console.log('WebSocket message received:', event.data);
       setLastMessage(event.data);
     };
 
