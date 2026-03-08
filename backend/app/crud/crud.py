@@ -121,3 +121,11 @@ def create_history_log(db: Session, log: schemas.HistoryLogCreate):
     db.commit()
     db.refresh(db_log)
     return db_log
+
+def delete_history_log(db: Session, log_id: int):
+    db_log = db.query(models.HistoryLog).filter(models.HistoryLog.id == log_id).first()
+    if db_log:
+        db.delete(db_log)
+        db.commit()
+        return True
+    return False

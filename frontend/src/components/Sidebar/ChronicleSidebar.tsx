@@ -1,5 +1,5 @@
 import React from 'react';
-import { HistoryItem, UserPresence } from '../../types/vtt';
+import { HistoryItem } from '../../types/vtt';
 
 interface ChronicleSidebarProps {
   isConnected: boolean;
@@ -11,18 +11,19 @@ interface ChronicleSidebarProps {
   history: HistoryItem[];
   isSubtleMode: boolean;
   setIsSubtleMode: (val: boolean) => void;
+  onConsumeHistory: (id: string) => void;
 }
 
 const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
   isConnected,
-  onLogout,
   onLeave,
   rollRequirement,
   isGM,
   onRoll,
   history,
   isSubtleMode,
-  setIsSubtleMode
+  setIsSubtleMode,
+  onConsumeHistory
 }) => {
   return (
     <aside className="w-[340px] h-full flex-none border-r border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
@@ -54,12 +55,21 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
             </div>
           ) : (
             history.map(item => (
-              <div key={item.id} className={`p-4 rounded-2xl border transition-all ${item.type === 'story' ? 'bg-gray-900/60 border-indigo-900/30' : (item.isSubtle ? 'bg-purple-950/20 border-purple-900/50' : 'bg-gray-900/40 border-gray-800')} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+              <div key={item.id} className={`p-4 rounded-2xl border transition-all relative group ${item.type === 'story' ? 'bg-gray-900/60 border-indigo-900/30' : (item.isSubtle ? 'bg-purple-950/20 border-purple-900/50' : 'bg-gray-900/40 border-gray-800')} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                 <div className="flex justify-between items-start mb-2">
                   <span className={`text-[9px] font-black uppercase tracking-widest ${item.type === 'story' ? 'text-indigo-400' : (item.isSubtle ? 'text-purple-400' : 'text-blue-500')}`}>
                     {item.type.toUpperCase()} {item.isSubtle && '• Subtle'}
                   </span>
-                  <span className="text-[8px] font-mono text-gray-600 font-bold">{item.timestamp}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-mono text-gray-600 font-bold">{item.timestamp}</span>
+                    <button 
+                      onClick={() => onConsumeHistory(item.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded text-gray-500 hover:text-white"
+                      title="Consume Result"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
+                  </div>
                 </div>
                 <p className={`text-white leading-relaxed ${item.type === 'roll' ? 'text-2xl font-black' : 'text-xs italic'}`}>{item.content}</p>
                 <div className="text-[8px] text-gray-500 mt-2.5 font-black uppercase tracking-tighter truncate opacity-80">{item.user}</div>

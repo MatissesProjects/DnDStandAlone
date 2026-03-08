@@ -120,9 +120,20 @@ def add_campaign_history(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    if current_user.role != "gm":
-        raise HTTPException(status_code=403, detail="Only GMs can record history")
+    if current_user.role != "gm" and log.event_type != "dice_roll":
+        raise HTTPException(status_code=403, detail="Only GMs can record general history")
     return crud.create_history_log(db=db, log=log)
+
+@app.delete("/campaigns/{campaign_id}/history/{log_id}")
+def delete_campaign_history(
+    campaign_id: int,
+    log_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if crud.delete_history_log(db=db, log_id=log_id):
+        return {"status": "ok"}
+    raise HTTPException(status_code=404, detail="Log not found")
 
 # Location Endpoints
 @app.get("/campaigns/{campaign_id}/locations", response_model=List[schemas.Location])

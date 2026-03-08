@@ -75,29 +75,35 @@ function VTTApp() {
     }
   }, [excalidrawAPI, activeCampaign]);
 
+  const fetchHistory = useCallback(() => {
+    if (!activeCampaign || !token) return;
+    fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const formattedHistory: HistoryItem[] = data.map((item: any) => ({
+            id: item.id.toString(),
+            type: item.event_type === 'dice_roll' ? 'roll' : (item.event_type === 'lore_update' ? 'ai' : 'story'),
+            content: item.content,
+            user: "Chronicle",
+            timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isSubtle: item.content.includes("(Subtle)") // Simple heuristic for now
+          }));
+          setHistory(formattedHistory);
+        }
+      });
+  }, [activeCampaign, token]);
+
   useEffect(() => {
     if (activeCampaign && token) {
-      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`)
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            const formattedHistory: HistoryItem[] = data.map((item: any) => ({
-              id: item.id.toString(),
-              type: item.event_type === 'dice_roll' ? 'roll' : (item.event_type === 'lore_update' ? 'ai' : 'story'),
-              content: item.content,
-              user: "Chronicle",
-              timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }));
-            setHistory(formattedHistory);
-          }
-        });
+      fetchHistory();
       fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/locations`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data) && data.length > 0) setActiveLocation(data[data.length - 1]);
         });
     }
-  }, [activeCampaign, token]);
+  }, [activeCampaign, token, fetchHistory]);
 
   useEffect(() => {
     if (activeLocation && token) fetchEntities(activeLocation.id);
@@ -141,6 +147,7 @@ function VTTApp() {
         } 
         else if (data.type === "location_update") setActiveLocation(data.location);
         else if (data.type === "entities_update") { if (activeLocation && data.locationId === activeLocation.id) fetchEntities(activeLocation.id); }
+        else if (data.type === "history_consumed") { fetchHistory(); }
         else if (data.type === "presence") setActiveUsers(data.users);
         else if (data.type === "request_roll") setRollRequirement({ die: data.die, label: data.label });
         else if (data.type === 'story' || (data.result && data.die)) {
@@ -149,7 +156,21 @@ function VTTApp() {
         }
       } catch (e) {}
     }
-  }, [lastMessage, excalidrawAPI, clientId, isGM, activeLocation, token, fetchEntities]);
+  }, [lastMessage, excalidrawAPI, clientId, isGM, activeLocation, token, fetchEntities, fetchHistory]);
+
+  const handleConsumeHistory = async (logId: string) => {
+    if (!token || !activeCampaign) return;
+    try {
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history/${logId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        sendMessage(JSON.stringify({ type: "history_consumed", logId }));
+        fetchHistory();
+      }
+    } catch (e) { console.error(e); }
+  };
 
   const persistCanvas = useCallback((elements: any, appState: any) => {
     if (!isGM || !activeCampaign || !token) return;
@@ -198,9 +219,30 @@ function VTTApp() {
   const rollDie = (die: string, label?: string) => {
     const sides = parseInt(die.substring(1));
     const result = Math.floor(Math.random() * sides) + 1;
-    const newRoll = { id: Math.random().toString(36).substring(7), die: label ? `${die} (${label})` : die, result, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: user ? user.username : `Player ${clientId.substring(0, 4)}` };
-    sendMessage(JSON.stringify(newRoll));
+    const content = `${label ? `${die} (${label})` : die}: ${result}${isSubtleMode ? ' (Subtle)' : ''}`;
+    
+    // Save to DB
+    if (activeCampaign && token) {
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          event_type: 'dice_roll', 
+          content: `${user?.username || 'Guest'} rolled ${content}`,
+          campaign_id: activeCampaign.id 
+        })
+      }).then(res => res.json()).then(savedLog => {
+        // Broadcast the saved ID so it can be consumed
+        const newRoll = { id: savedLog.id.toString(), type: 'roll', content: `${label ? `${die} (${label})` : die}: ${result}`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: user ? user.username : `Player ${clientId.substring(0, 4)}` };
+        sendMessage(JSON.stringify(newRoll));
+      });
+    }
+    
     if (rollRequirement) setRollRequirement(null);
+  };
+
+  const requestPlayerRoll = (targetId: string, die: string, label: string) => {
+    sendMessage(JSON.stringify({ type: "request_roll", target_id: targetId, die, label }));
   };
 
   const handleGenerateEnemy = async () => {
@@ -262,22 +304,31 @@ function VTTApp() {
 
   const rollForNPC = (entityName: string, label: string, bonus: number = 0) => {
     const result = Math.floor(Math.random() * 20) + 1;
-    const newRoll = { id: Math.random().toString(36).substring(7), die: `d20 (${label})`, result: result + bonus, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: entityName };
-    sendMessage(JSON.stringify(newRoll));
+    const finalResult = result + bonus;
+    
+    // Save NPC Roll to DB
+    if (activeCampaign && token) {
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          event_type: 'dice_roll', 
+          content: `${entityName} rolled d20 (${label}): ${finalResult}${isSubtleMode ? ' (Subtle)' : ''}`,
+          campaign_id: activeCampaign.id 
+        })
+      }).then(res => res.json()).then(savedLog => {
+        const newRoll = { id: savedLog.id.toString(), type: 'roll' as const, content: `d20 (${label}): ${finalResult}`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: entityName };
+        sendMessage(JSON.stringify(newRoll));
+      });
+    }
   };
 
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans">
-        <div className="text-center space-y-8 p-12 bg-gray-900 rounded-[3rem] border border-gray-800 shadow-2xl relative overflow-hidden">
-          <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-600/10 rounded-full blur-3xl"></div>
-          <div className="relative z-10">
-            <h1 className="text-5xl font-black italic tracking-tighter text-gray-100 uppercase">DND Master</h1>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.4em] mt-4 mb-10">The Digital Forge Awaits</p>
-            <button onClick={() => { fetch('http://localhost:8000/auth/login').then(res => res.json()).then(data => { window.location.href = data.url; }); }} className="group relative px-10 py-5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black uppercase tracking-widest transition-all shadow-2xl shadow-indigo-900/40 active:scale-95">
-              Authenticate via Discord
-            </button>
-          </div>
+      <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans text-center">
+        <div className="space-y-8 p-12 bg-gray-900 rounded-[3rem] border border-gray-800 shadow-2xl relative overflow-hidden">
+          <h1 className="text-5xl font-black italic tracking-tighter text-gray-100 uppercase">DND Master</h1>
+          <button onClick={() => { fetch('http://localhost:8000/auth/login').then(res => res.json()).then(data => { window.location.href = data.url; }); }} className="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95">Authenticate via Discord</button>
         </div>
       </div>
     );
@@ -290,10 +341,12 @@ function VTTApp() {
   return (
     <div className="flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none">
       {isDashboardOpen && <WorldDashboard campaignId={activeCampaign.id} onClose={() => setIsDashboardOpen(false)} onSetActive={handleSetActiveLocation} activeLocationId={activeLocation?.id} />}
-      
       {selectedEntity && <NPCDetailCard entity={selectedEntity} isGM={isGM} onClose={() => setSelectedEntity(null)} onUpdateStats={handleUpdateNPCStats} onRoll={rollForNPC} />}
 
-      <ChronicleSidebar isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} />
+      <ChronicleSidebar 
+        isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} 
+        onConsumeHistory={handleConsumeHistory}
+      />
 
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
           <Excalidraw excalidrawRef={(api) => setExcalidrawAPI(api)} onChange={handleCanvasChange} theme="dark" UIOptions={{ canvasActions: { toggleTheme: false, export: false, loadScene: false, saveToActiveFile: false } }} />
