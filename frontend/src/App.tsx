@@ -92,6 +92,27 @@ function VTTApp() {
     }
   }, [excalidrawAPI, activeCampaign]);
 
+  // Load History on Join
+  useEffect(() => {
+    if (activeCampaign && token) {
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            const formattedHistory: HistoryItem[] = data.map((item: any) => ({
+              id: item.id.toString(),
+              type: item.event_type === 'dice_roll' ? 'roll' : (item.event_type === 'lore_update' ? 'ai' : 'story'),
+              content: item.content,
+              user: "Chronicle",
+              timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }));
+            setHistory(formattedHistory);
+          }
+        })
+        .catch(err => console.error("Failed to load history:", err));
+    }
+  }, [activeCampaign, token]);
+
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
