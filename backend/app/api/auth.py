@@ -106,6 +106,7 @@ async def callback(code: str, db: Session = Depends(get_db)):
             data={"sub": user.discord_id, "role": user.role}
         )
         
+        print(f"User {user.username} authenticated. Redirecting to frontend...")
         # REDIRECT back to frontend with the data in params
         frontend_callback = "http://localhost:5173/auth/callback"
         params = urllib.parse.urlencode({
