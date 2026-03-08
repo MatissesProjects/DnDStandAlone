@@ -7,13 +7,17 @@ from app.models import models
 
 class GeminiService:
     def __init__(self):
+        print(f"Initializing AI Service. Gemini Key present: {bool(settings.GEMINI_API_KEY)}")
         if settings.GEMINI_API_KEY:
             genai.configure(api_key=settings.GEMINI_API_KEY)
             self.model = genai.GenerativeModel(settings.GEMINI_MODEL)
+            print(f"Gemini configured with model: {settings.GEMINI_MODEL}")
         else:
             self.model = None
+            print("Gemini NOT configured (missing API key)")
         
         self.ollama_client = ollama.AsyncClient(host=settings.OLLAMA_HOST)
+        print(f"Ollama client initialized for host: {settings.OLLAMA_HOST} with model: {settings.OLLAMA_MODEL}")
 
     def _format_context(self, location: models.Location, history: List[models.HistoryLog]) -> str:
         context = f"Current Location: {location.name} (Danger Level: {location.danger_level})\n"
@@ -24,6 +28,7 @@ class GeminiService:
         return context
 
     async def _ollama_generate_enemy(self, context: str) -> Dict[str, Any]:
+        print(f"Attempting Ollama generation with model {settings.OLLAMA_MODEL}...")
         prompt = f"""
         You are a D&D Dungeon Master's assistant. Based on the following context, generate a unique enemy or NPC.
         
@@ -50,9 +55,11 @@ class GeminiService:
             response = await self.ollama_client.chat(model=settings.OLLAMA_MODEL, messages=[
                 {'role': 'user', 'content': prompt},
             ], format='json')
-            return json.loads(response['message']['content'])
+            content = response['message']['content']
+            print(f"Ollama success! Response length: {len(content)}")
+            return json.loads(content)
         except Exception as e:
-            print(f"Ollama generation failed: {e}")
+            print(f"Ollama generation failed CRITICALLY: {str(e)}")
             return None
 
     async def generate_enemy(self, location: models.Location, history: List[models.HistoryLog]) -> Dict[str, Any]:
@@ -61,6 +68,7 @@ class GeminiService:
         # Try Gemini first
         if self.model:
             try:
+                print("Attempting Gemini generation...")
                 prompt = f"""
                 You are a D&D Dungeon Master's assistant. Based on the following context, generate a unique enemy or NPC.
                 
@@ -85,6 +93,8 @@ class GeminiService:
                 """
                 response = self.model.generate_content(prompt)
                 text = response.text
+                print(f"Gemini success! Raw response length: {len(text)}")
+                
                 if "```json" in text:
                     text = text.split("```json")[1].split("```")[0]
                 elif "```" in text:
@@ -92,7 +102,7 @@ class GeminiService:
                 
                 return json.loads(text.strip())
             except Exception as e:
-                print(f"Gemini generation failed, falling back to Ollama: {e}")
+                print(f"Gemini generation failed, falling back: {str(e)}")
         
         # Fallback to Ollama
         ollama_result = await self._ollama_generate_enemy(context)
@@ -102,7 +112,7 @@ class GeminiService:
         return {
             "name": "Generation Error",
             "stats": {"hp": 0, "ac": 0},
-            "backstory": "Failed to generate entity using both Gemini and Ollama."
+            "backstory": "Failed to generate entity using both Gemini and Ollama. Check backend logs for details."
         }
 
     async def generate_lore(self, location: models.Location, history: List[models.HistoryLog]) -> str:
@@ -118,19 +128,23 @@ class GeminiService:
         # Try Gemini first
         if self.model:
             try:
+                print("Attempting Gemini lore generation...")
                 response = self.model.generate_content(prompt)
+                print("Gemini lore success!")
                 return response.text.strip()
             except Exception as e:
-                print(f"Gemini lore generation failed, falling back to Ollama: {e}")
+                print(f"Gemini lore failed, falling back: {str(e)}")
 
         # Fallback to Ollama
         try:
+            print(f"Attempting Ollama lore generation with {settings.OLLAMA_MODEL}...")
             response = await self.ollama_client.chat(model=settings.OLLAMA_MODEL, messages=[
                 {'role': 'user', 'content': prompt},
             ])
+            print("Ollama lore success!")
             return response['message']['content'].strip()
         except Exception as e:
-            print(f"Ollama lore generation failed: {e}")
-            return "The shadows remain silent. (AI generation failed)"
+            print(f"Ollama lore failed: {str(e)}")
+            return "The shadows remain silent. (Both AI providers failed to respond)"
 
 ai_service = GeminiService()
