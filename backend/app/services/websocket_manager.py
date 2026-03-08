@@ -9,45 +9,68 @@ class ConnectionManager:
         # room_map[room_id] = set(user_ids)
         self.room_map: Dict[str, Set[str]] = {}
         
-        # role_map[user_id] = role ("gm" or "player")
-        self.role_map: Dict[str, str] = {}
+        # user_metadata[user_id] = {"username": str, "role": str, "room_id": str}
+        self.user_metadata: Dict[str, Dict[str, str]] = {}
 
-    async def connect(self, websocket: WebSocket, user_id: str, room_id: str, role: str):
+    async def connect(self, websocket: WebSocket, user_id: str, room_id: str, role: str, username: str):
         await websocket.accept()
         self.active_connections[user_id] = websocket
-        self.role_map[user_id] = role
+        self.user_metadata[user_id] = {
+            "username": username,
+            "role": role,
+            "room_id": room_id
+        }
         
         if room_id not in self.room_map:
             self.room_map[room_id] = set()
         self.room_map[room_id].add(user_id)
+        
+        # Broadcast updated user list to the room
+        await self.broadcast_user_list(room_id)
 
     def disconnect(self, user_id: str, room_id: str):
         if user_id in self.active_connections:
             del self.active_connections[user_id]
         
-        if user_id in self.role_map:
-            del self.role_map[user_id]
+        if user_id in self.user_metadata:
+            del self.user_metadata[user_id]
             
         if room_id in self.room_map:
             if user_id in self.room_map[room_id]:
                 self.room_map[room_id].remove(user_id)
             if not self.room_map[room_id]:
                 del self.room_map[room_id]
+        
+        # Broadcast updated user list
+        import asyncio
+        asyncio.create_task(self.broadcast_user_list(room_id))
+
+    async def broadcast_user_list(self, room_id: str):
+        if room_id not in self.room_map:
+            return
+        
+        users = []
+        for u_id in self.room_map[room_id]:
+            meta = self.user_metadata.get(u_id)
+            if meta:
+                users.append({
+                    "id": u_id,
+                    "username": meta["username"],
+                    "role": meta["role"]
+                })
+        
+        import json
+        message = json.dumps({"type": "presence", "users": users})
+        await self.broadcast(message, room_id)
 
     async def broadcast(self, message: str, room_id: str, role_limit: str = None):
-        """
-        Broadcasts a message to a specific room.
-        If role_limit is provided, only sends to users in that room with that role.
-        """
         if room_id not in self.room_map:
             return
 
         target_user_ids = self.room_map[room_id]
-        
         for user_id in target_user_ids:
-            if role_limit and self.role_map.get(user_id) != role_limit:
+            if role_limit and self.user_metadata.get(user_id, {}).get("role") != role_limit:
                 continue
-                
             if user_id in self.active_connections:
                 await self.active_connections[user_id].send_text(message)
 

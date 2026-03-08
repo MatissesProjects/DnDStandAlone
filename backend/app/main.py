@@ -119,15 +119,25 @@ async def generate_lore(
     return {"lore": lore_text}
 
 @app.websocket("/ws/{room_id}/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str, role: str = "player"):
-    await manager.connect(websocket, client_id, room_id, role)
+async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str, role: str = "player", username: str = "Anonymous"):
+    await manager.connect(websocket, client_id, room_id, role, username)
     try:
         while True:
             data = await websocket.receive_text()
             try:
                 message_json = json.loads(data)
+                
+                # Check for GM command: Requesting a roll from a specific player
+                if message_json.get("type") == "request_roll" and role == "gm":
+                    target_id = message_json.get("target_id")
+                    if target_id:
+                        await manager.send_personal_message(data, target_id)
+                    continue
+
                 if message_json.get("isSubtle") is True:
+                    # Subtle rolls only go to GMs
                     await manager.broadcast(data, room_id, role_limit="gm")
+                    # Sender (if player) sees their own roll
                     if role != "gm":
                         await manager.send_personal_message(data, client_id)
                 else:
