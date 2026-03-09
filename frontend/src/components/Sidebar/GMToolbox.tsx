@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserPresence, MoveProposal, EnemyData, Location, Entity } from '../../types/vtt';
+import type { UserPresence, MoveProposal, EnemyData, Location, Entity } from '../../types/vtt';
 
 interface GMToolboxProps {
   isGM: boolean;

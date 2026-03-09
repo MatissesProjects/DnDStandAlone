@@ -1,5 +1,5 @@
 import React from 'react';
-import { HistoryItem } from '../../types/vtt';
+import type { HistoryItem } from '../../types/vtt';
 
 interface ChronicleSidebarProps {
   isConnected: boolean;
