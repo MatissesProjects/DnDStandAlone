@@ -60,21 +60,15 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   const handleCreateLocation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
-    console.log("[Dashboard] Creating location:", { name: newLocName, campaign_id: campaignId });
     try {
-      const res = await fetch('http://localhost:8000/locations', {
+      await fetch('http://localhost:8000/locations', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newLocName, description: newLocDesc, campaign_id: campaignId })
       });
-      console.log("[Dashboard] Create location response:", res.status);
-      if (res.ok) {
-        setNewLocName(''); setNewLocDesc('');
-        fetchLocations();
-      } else {
-        console.error("[Dashboard] Failed to create location:", await res.text());
-      }
-    } catch (e) { console.error("[Dashboard] Error creating location:", e); }
+      setNewLocName(''); setNewLocDesc('');
+      fetchLocations();
+    } catch (e) { console.error(e); }
   };
 
   const handleUpdateLocation = async (e: React.FormEvent) => {
