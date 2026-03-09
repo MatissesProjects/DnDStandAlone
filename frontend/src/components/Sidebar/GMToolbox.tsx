@@ -40,6 +40,7 @@ interface GMToolboxProps {
   onClearHistory: () => void;
   onBindEntity?: (entityId: number) => void;
   onForceSaveCanvas?: () => void;
+  onStoreMap?: () => void;
   isAnchoring?: boolean;
 }
 
@@ -48,7 +49,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   isRecording, onToggleRecording, activeUsers, onRequestRoll, onGenerateEnemy, onGenerateLore,
   isGenerating, generatedEnemy, generatedLore, onManifestEntity, onManifestLore, 
   onDismissEnemy, onDismissLore, onUpdateGeneratedEnemy, onUpdateGeneratedLore,
-  activeEntities, onSelectEntity, onBindEntity, onForceSaveCanvas,
+  activeEntities, onSelectEntity, onBindEntity, onForceSaveCanvas, onStoreMap,
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile, onSummarize, isSummarizing,
   onClearHistory, isAnchoring
@@ -83,13 +84,22 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Tools</h3>
               <div className="grid gap-2">
                 <button onClick={onOpenDashboard} className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"> Manage Manifest </button>
-                <button 
-                  onClick={onForceSaveCanvas} 
-                  disabled={isAnchoring}
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 text-white font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 shadow-indigo-900/20 disabled:opacity-70"
-                > 
-                  {isAnchoring ? 'Anchoring...' : 'Anchor Map State'} 
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={onForceSaveCanvas} 
+                    disabled={isAnchoring}
+                    className="flex-[2] bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 text-white font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 shadow-indigo-900/20 disabled:opacity-70"
+                  > 
+                    {isAnchoring ? 'Anchoring...' : 'Anchor Map'} 
+                  </button>
+                  <button 
+                    onClick={onStoreMap}
+                    className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 font-black py-3 rounded-xl uppercase text-[8px] tracking-tighter transition-all shadow-lg active:scale-95"
+                    title="Store full map in your library"
+                  >
+                    To Lib
+                  </button>
+                </div>
                 <button 
                   onClick={onSummarize} 
                   disabled={isSummarizing}

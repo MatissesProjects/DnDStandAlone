@@ -1,14 +1,14 @@
 import json
 import logging
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, Query
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.db.database import engine, get_db, Base
 from app.services.websocket_manager import manager
 from app.models import models
 from app.api import auth
-from app.schemas import schemas, history as history_schemas
+from app.schemas import schemas
 from app.crud import crud
 from app.services.ai_service import ai_service
 
@@ -125,7 +125,7 @@ def join_campaign(room_id: str, db: Session = Depends(get_db)):
         logger.error(f"Error joining campaign: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/campaigns/{campaign_id}/history", response_model=List[history_schemas.HistoryLog])
+@app.get("/campaigns/{campaign_id}/history", response_model=List[schemas.HistoryLog])
 def read_campaign_history(
     campaign_id: int,
     limit: int = 100,
@@ -134,10 +134,10 @@ def read_campaign_history(
 ):
     return crud.get_history(db, campaign_id=campaign_id, limit=limit)
 
-@app.post("/campaigns/{campaign_id}/history", response_model=history_schemas.HistoryLog)
+@app.post("/campaigns/{campaign_id}/history", response_model=schemas.HistoryLog)
 def add_campaign_history(
     campaign_id: int,
-    log: history_schemas.HistoryLogCreate,
+    log: schemas.HistoryLogCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -247,6 +247,27 @@ def delete_entity(
     if crud.delete_entity(db=db, entity_id=entity_id):
         return {"status": "ok"}
     raise HTTPException(status_code=404, detail="Entity not found")
+
+@app.post("/save-library")
+async def save_library(payload: dict, current_user: models.User = Depends(auth.get_current_user)):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can save the library")
+    
+    try:
+        import os
+        # Ensure directory exists relative to project root
+        file_path = os.path.join(os.getcwd(), "..", "ExcalidrawFiles", "library.excalidrawlib")
+        file_path = os.path.abspath(file_path)
+        
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
+            
+        return {"status": "saved", "path": file_path}
+    except Exception as e:
+        logger.error(f"Error saving library: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/locations", response_model=schemas.Location)
 def create_location(
