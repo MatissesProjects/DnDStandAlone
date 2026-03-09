@@ -22,12 +22,17 @@ function VTTApp() {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   
+  // UI State
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
+  
   const [playerClass, setPlayerClass] = useState(user?.class_name || "");
   const [playerLevel, setPlayerLevel] = useState(user?.level || 1);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-  // VFX State
+  // VFX & Collaboration State
   const [vfxRoll, setVfxRoll] = useState<{ id: string, result: number, isCrit: boolean } | null>(null);
+  const [collaborators, setCollaborators] = useState<Map<string, any>>(new Map());
 
   const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -144,6 +149,7 @@ function VTTApp() {
     if (lastMessage) {
       try {
         const data = JSON.parse(lastMessage);
+        
         if (data.type === "canvas_update" && data.senderId !== clientId) {
           if (excalidrawAPI) {
             isRemoteUpdate.current = true;
@@ -151,6 +157,13 @@ function VTTApp() {
             localElementsRef.current = data.elements;
           }
         } 
+        else if (data.type === "pointer_update" && data.senderId !== clientId) {
+          setCollaborators(prev => {
+            const next = new Map(prev);
+            next.set(data.senderId, { pointer: data.pointer, username: data.username, button: "up" });
+            return next;
+          });
+        }
         else if (data.type === "location_update") setActiveLocation(data.location);
         else if (data.type === "entities_update") { if (activeLocation && data.locationId === activeLocation.id) fetchEntities(activeLocation.id); }
         else if (data.type === "history_consumed") { fetchHistory(); }
@@ -168,20 +181,6 @@ function VTTApp() {
     }
   }, [lastMessage, excalidrawAPI, clientId, isGM, activeLocation, token, fetchEntities, fetchHistory]);
 
-  const handleConsumeHistory = async (logId: string) => {
-    if (!token || !activeCampaign) return;
-    try {
-      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history/${logId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        sendMessage(JSON.stringify({ type: "history_consumed", logId }));
-        fetchHistory();
-      }
-    } catch (e) { console.error(e); }
-  };
-
   const persistCanvas = useCallback((elements: any, appState: any) => {
     if (!isGM || !activeCampaign || !token) return;
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
@@ -189,6 +188,16 @@ function VTTApp() {
       fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/canvas`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ canvas_state: { elements, appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridSize } } }) });
     }, 3000);
   }, [isGM, activeCampaign, token]);
+
+  const handlePointerUpdate = useCallback((payload: any) => {
+    if (!isConnected || !activeCampaign) return;
+    sendMessage(JSON.stringify({
+      type: "pointer_update",
+      senderId: clientId,
+      username: user?.username || "Guest",
+      pointer: payload.pointer
+    }));
+  }, [sendMessage, clientId, isConnected, activeCampaign, user]);
 
   const handleCanvasChange = useCallback((elements: any, appState: any) => {
     if (isRemoteUpdate.current) { isRemoteUpdate.current = false; return; }
@@ -252,7 +261,7 @@ function VTTApp() {
 
   const handleGenerateLore = async () => {
     if (!token || !activeCampaign) return;
-    setIsGenerating(true); setGeneratedEnemy(null);
+    setIsGenerating(true); setGeneratedLore(null);
     try {
       const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/generate-lore?location_id=${activeLocation?.id || 1}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
       const data = await res.json();
@@ -352,22 +361,52 @@ function VTTApp() {
         </div>
       )}
 
-      <ChronicleSidebar isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} onConsumeHistory={handleConsumeHistory} />
+      {/* Sidebar Toggles */}
+      <button 
+        onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+        className={`fixed bottom-8 left-8 z-[60] p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!leftSidebarOpen ? 'translate-x-0' : 'translate-x-[340px]'}`}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          {leftSidebarOpen ? <polyline points="15 18 9 12 15 6"></polyline> : <polyline points="9 18 15 12 9 6"></polyline>}
+        </svg>
+      </button>
+
+      <button 
+        onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
+        className={`fixed bottom-8 right-8 z-[60] p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!rightSidebarOpen ? 'translate-x-0' : 'translate-x-[-320px]'}`}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          {rightSidebarOpen ? <polyline points="9 18 15 12 9 6"></polyline> : <polyline points="15 18 9 12 15 6"></polyline>}
+        </svg>
+      </button>
+
+      {leftSidebarOpen && (
+        <ChronicleSidebar isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} onConsumeHistory={handleConsumeHistory} />
+      )}
 
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
-          <Excalidraw excalidrawRef={(api) => setExcalidrawAPI(api)} onChange={handleCanvasChange} theme="dark" UIOptions={{ canvasActions: { toggleTheme: false, export: false, loadScene: false, saveToActiveFile: false } }} />
+          <Excalidraw 
+            excalidrawRef={(api) => setExcalidrawAPI(api)} 
+            onChange={handleCanvasChange} 
+            onPointerUpdate={handlePointerUpdate}
+            theme="dark" 
+            UIOptions={{ canvasActions: { toggleTheme: false, export: false, loadScene: false, saveToActiveFile: false } }} 
+            collaborators={collaborators}
+          />
       </main>
 
-      <GMToolbox 
-        isGM={isGM} user={user} isAuthenticated={isAuthenticated} pendingProposals={pendingProposals} onApproveProposal={approveProposal} onRejectProposal={rejectProposal}
-        isRecording={isRecording} onToggleRecording={() => { if(isRecording) { recognitionRef.current?.stop(); setIsIsRecording(false); setInterimTranscript(""); } else { recognitionRef.current?.start(); setIsIsRecording(true); } }}
-        activeUsers={activeUsers} onRequestRoll={(targetId, die, label) => sendMessage(JSON.stringify({ type: "request_roll", target_id: targetId, die, label }))}
-        onGenerateEnemy={handleGenerateEnemy} onGenerateLore={handleGenerateLore} isGenerating={isGenerating} generatedEnemy={generatedEnemy} generatedLore={generatedLore}
-        onManifestEntity={handleManifestEntity} activeEntities={activeEntities} onSelectEntity={setSelectedEntity} activeLocation={activeLocation} activeCampaign={activeCampaign}
-        onOpenDashboard={() => setIsDashboardOpen(true)} playerClass={playerClass} playerLevel={playerLevel} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
-        setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} onUpdateProfile={handleUpdateProfile}
-        onSummarize={handleSummarizeCampaign} isSummarizing={isSummarizing}
-      />
+      {rightSidebarOpen && (
+        <GMToolbox 
+          isGM={isGM} user={user} isAuthenticated={isAuthenticated} pendingProposals={pendingProposals} onApproveProposal={approveProposal} onRejectProposal={rejectProposal}
+          isRecording={isRecording} onToggleRecording={() => { if(isRecording) { recognitionRef.current?.stop(); setIsIsRecording(false); setInterimTranscript(""); } else { recognitionRef.current?.start(); setIsIsRecording(true); } }}
+          activeUsers={activeUsers} onRequestRoll={(targetId, die, label) => sendMessage(JSON.stringify({ type: "request_roll", target_id: targetId, die, label }))}
+          onGenerateEnemy={handleGenerateEnemy} onGenerateLore={handleGenerateLore} isGenerating={isGenerating} generatedEnemy={generatedEnemy} generatedLore={generatedLore}
+          onManifestEntity={handleManifestEntity} activeEntities={activeEntities} onSelectEntity={setSelectedEntity} activeLocation={activeLocation} activeCampaign={activeCampaign}
+          onOpenDashboard={() => setIsDashboardOpen(true)} playerClass={playerClass} playerLevel={playerLevel} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
+          setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} onUpdateProfile={handleUpdateProfile}
+          onSummarize={handleSummarizeCampaign} isSummarizing={isSummarizing}
+        />
+      )}
     </div>
   );
 }

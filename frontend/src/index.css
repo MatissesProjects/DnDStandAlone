@@ -6,6 +6,9 @@
 
 :root {
   font-family: system-ui, Inter, Avenir, Helvetica, Arial, sans-serif;
+  --bg-dark: #030712;
+  --panel-bg: rgba(17, 24, 39, 0.7);
+  --border-glow: rgba(99, 102, 241, 0.2);
 }
 
 html, body, #root {
@@ -17,12 +20,23 @@ html, body, #root {
 }
 
 body {
-  background-color: #030712; /* gray-950 */
+  background-color: var(--bg-dark);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.05) 0px, transparent 50%);
+}
+
+/* Glassmorphism Panel */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Custom scrollbar for roll history */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -30,12 +44,12 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #1f2937; /* gray-800 */
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #374151; /* gray-700 */
+  background: rgba(99, 102, 241, 0.4);
 }
 
 /* Screenshake Animation */
@@ -59,11 +73,16 @@ body {
 
 /* Critical Impact Overlay */
 @keyframes crit-glow {
-  0% { box-shadow: 0 0 0px rgba(129, 140, 248, 0); }
-  50% { box-shadow: 0 0 50px rgba(129, 140, 248, 0.5); }
-  100% { box-shadow: 0 0 0px rgba(129, 140, 248, 0); }
+  0% { box-shadow: inset 0 0 0px rgba(129, 140, 248, 0); }
+  50% { box-shadow: inset 0 0 100px rgba(129, 140, 248, 0.3); }
+  100% { box-shadow: inset 0 0 0px rgba(129, 140, 248, 0); }
 }
 
 .animate-crit-glow {
-  animation: crit-glow 1s ease-out forwards;
+  animation: crit-glow 1.5s ease-out forwards;
+}
+
+/* Tooltips & Interaction */
+.action-button {
+  @apply transition-all duration-200 active:scale-95 hover:brightness-110;
 }
