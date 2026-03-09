@@ -111,10 +111,18 @@ function VTTApp() {
   useEffect(() => {
     if (excalidrawAPI && activeCampaign?.canvas_state) {
       isRemoteUpdate.current = true;
-      excalidrawAPI.updateScene({ elements: activeCampaign.canvas_state.elements || [], appState: activeCampaign.canvas_state.appState || {}, commitToHistory: false });
+      excalidrawAPI.updateScene({ 
+        elements: activeCampaign.canvas_state.elements || [], 
+        appState: { 
+          ...(activeCampaign.canvas_state.appState || {}),
+          collaborators: new Map() 
+        }, 
+        commitToHistory: false 
+      });
       localElementsRef.current = activeCampaign.canvas_state.elements || [];
+      setTimeout(() => { isRemoteUpdate.current = false; }, 100);
     }
-  }, [excalidrawAPI, activeCampaign]);
+  }, [excalidrawAPI, activeCampaign?.id]);
 
   useEffect(() => {
     if (activeCampaign && token) {
@@ -171,6 +179,7 @@ function VTTApp() {
             isRemoteUpdate.current = true;
             excalidrawAPI.updateScene({ elements: data.elements, appState: { ...data.appState }, commitToHistory: false });
             localElementsRef.current = data.elements;
+            setTimeout(() => { isRemoteUpdate.current = false; }, 100);
           }
         } 
         else if (data.type === "pointer_update" && data.senderId !== clientId) {
@@ -266,7 +275,10 @@ function VTTApp() {
       }
     }
 
-    if (isRemoteUpdate.current) { isRemoteUpdate.current = false; return; }
+    if (isRemoteUpdate.current) return;
+    
+    localElementsRef.current = elements;
+
     if (!isGM) {
       elements.forEach((el: any) => {
         const prev = localElementsRef.current.find(p => p.id === el.id);
@@ -275,7 +287,6 @@ function VTTApp() {
           el.opacity = 50; 
         }
       });
-      localElementsRef.current = elements;
       return;
     }
     const now = Date.now();
@@ -284,14 +295,14 @@ function VTTApp() {
       sendMessage(JSON.stringify({ type: "canvas_update", senderId: clientId, elements, appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridSize } }));
     }
     persistCanvas(elements, appState);
-    localElementsRef.current = elements;
-  }, [sendMessage, clientId, isGM, persistCanvas, user]);
+  }, [sendMessage, clientId, isGM, persistCanvas, user, activeEntities, selectedEntity]);
 
   const approveProposal = (prop: MoveProposal) => {
     if (excalidrawAPI) {
       const updatedElements = localElementsRef.current.map(el => { if (el.id === prop.elementId) return { ...el, x: prop.x, y: prop.y, opacity: 100 }; return el; });
-      isRemoteUpdate.current = false;
+      isRemoteUpdate.current = true;
       excalidrawAPI.updateScene({ elements: updatedElements });
+      setTimeout(() => { isRemoteUpdate.current = false; }, 100);
       setPendingProposals(prev => prev.filter(p => p.elementId !== prop.elementId));
     }
   };
