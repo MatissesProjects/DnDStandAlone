@@ -626,6 +626,8 @@ function VTTApp() {
           onManifestLore={(content) => handleCreateHandout("Whispered Lore", content, "text")}
           onDismissEnemy={() => setGeneratedEnemy(null)}
           onDismissLore={() => setGeneratedLore(null)}
+          onUpdateGeneratedEnemy={setGeneratedEnemy}
+          onUpdateGeneratedLore={setGeneratedLore}
           onBindEntity={handleBindEntity}
           onForceSaveCanvas={forceSaveCanvas}
           />      )}

@@ -21,6 +21,8 @@ interface GMToolboxProps {
   onManifestLore?: (content: string) => void;
   onDismissEnemy: () => void;
   onDismissLore: () => void;
+  onUpdateGeneratedEnemy?: (enemy: EnemyData) => void;
+  onUpdateGeneratedLore?: (lore: string) => void;
   activeEntities: Entity[];
   onSelectEntity: (ent: Entity) => void;
   activeLocation: Location | null;
@@ -44,7 +46,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   isGM, user, isAuthenticated, pendingProposals, onApproveProposal, onRejectProposal,
   isRecording, onToggleRecording, activeUsers, onRequestRoll, onGenerateEnemy, onGenerateLore,
   isGenerating, generatedEnemy, generatedLore, onManifestEntity, onManifestLore, 
-  onDismissEnemy, onDismissLore,
+  onDismissEnemy, onDismissLore, onUpdateGeneratedEnemy, onUpdateGeneratedLore,
   activeEntities, onSelectEntity, onBindEntity, onForceSaveCanvas,
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile, onSummarize, isSummarizing,
@@ -151,27 +153,48 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                           onClick={() => onManifestLore?.(generatedLore)}
                           className="text-[8px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-full border border-indigo-400/30 font-black uppercase tracking-widest transition-all"
                         >
-                          Manifest as Handout
+                          Manifest
                         </button>
                       </div>
-                      <p className="text-xs text-gray-200 leading-relaxed italic opacity-90">"{generatedLore}"</p>
+                      <textarea 
+                        value={generatedLore}
+                        onChange={(e) => onUpdateGeneratedLore?.(e.target.value)}
+                        className="w-full bg-gray-950 border border-indigo-500/20 rounded-xl p-3 text-xs text-gray-200 leading-relaxed italic focus:outline-none focus:border-indigo-500/50 resize-none h-32"
+                      />
                     </div>
                   )}
                   {generatedEnemy && (
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Entity Manifest</h4>
-                        <button onClick={onManifestEntity} className="text-[8px] bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded-full border border-blue-400/30 font-black uppercase tracking-widest transition-all">Save to World</button>
+                        <button onClick={onManifestEntity} className="text-[8px] bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded-full border border-blue-400/30 font-black uppercase tracking-widest transition-all">Materialize</button>
                       </div>
-                      <div>
-                        <p className="text-sm font-black text-gray-100 tracking-tight mb-1 uppercase">{generatedEnemy.name}</p>
-                        <p className="text-[10px] text-gray-400 leading-relaxed italic border-l-2 border-gray-800 pl-3">"{generatedEnemy.backstory}"</p>
+                      <div className="space-y-3">
+                        <input 
+                          type="text"
+                          value={generatedEnemy.name}
+                          onChange={(e) => onUpdateGeneratedEnemy?.({ ...generatedEnemy, name: e.target.value })}
+                          className="w-full bg-gray-950 border border-blue-500/20 rounded-lg px-3 py-2 text-sm font-black text-gray-100 uppercase tracking-tight focus:outline-none focus:border-blue-500/50"
+                        />
+                        <textarea 
+                          value={generatedEnemy.backstory}
+                          onChange={(e) => onUpdateGeneratedEnemy?.({ ...generatedEnemy, backstory: e.target.value })}
+                          className="w-full bg-gray-950 border border-blue-500/20 rounded-lg px-3 py-2 text-[10px] text-gray-400 leading-relaxed italic focus:outline-none focus:border-blue-500/50 resize-none h-20"
+                        />
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
                         {Object.entries(generatedEnemy.stats || {}).filter(([k]) => k.length === 3).map(([key, val]) => (
-                          <div key={key} className="bg-gray-950 p-2 rounded-xl border border-gray-800 text-center shadow-inner">
+                          <div key={key} className="bg-gray-950 p-2 rounded-xl border border-gray-800 text-center shadow-inner relative group/stat">
                             <p className="text-[8px] font-black text-gray-600 uppercase tracking-tighter mb-0.5">{key}</p>
-                            <p className="text-xs font-black text-white">{val as number}</p>
+                            <input 
+                              type="number"
+                              value={val as number}
+                              onChange={(e) => onUpdateGeneratedEnemy?.({ 
+                                ...generatedEnemy, 
+                                stats: { ...generatedEnemy.stats, [key]: parseInt(e.target.value) || 0 } 
+                              })}
+                              className="w-full bg-transparent text-center text-xs font-black text-white focus:outline-none"
+                            />
                           </div>
                         ))}
                       </div>
