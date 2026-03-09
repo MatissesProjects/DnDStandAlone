@@ -10,7 +10,7 @@ import WorldDashboard from "./components/WorldDashboard";
 import ChronicleSidebar from "./components/Sidebar/ChronicleSidebar";
 import GMToolbox from "./components/Sidebar/GMToolbox";
 import NPCDetailCard from "./components/Overlay/NPCDetailCard";
-import { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign } from "./types/vtt";
+import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign } from "./types/vtt";
 
 function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token } = useAuth();
@@ -129,7 +129,7 @@ function VTTApp() {
           else interim += event.results[i][0].transcript;
         }
         if (final) {
-          const storyItem: HistoryItem = { id: Math.random().toString(36).substring(7), type: 'story', content: final, user: user?.username || "GM", timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+          const storyItem: HistoryItem = { id: Math.random().toString(36).substring(7), type: 'story' as const, content: final, user: user?.username || "GM", timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
           sendMessage(JSON.stringify(storyItem));
           if (activeCampaign && token) fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'story', content: final, campaign_id: activeCampaign.id }) });
         }
@@ -157,17 +157,11 @@ function VTTApp() {
         else if (data.type === "presence") setActiveUsers(data.users);
         else if (data.type === "request_roll") setRollRequirement({ die: data.die, label: data.label });
         else if (data.type === 'story' || (data.result && data.die)) {
-          // Trigger VFX for rolls
           if (data.result && data.die && !data.isSubtle) {
-            setVfxRoll({ 
-              id: data.id || Math.random().toString(), 
-              result: data.result, 
-              isCrit: data.result === 20 && data.die.includes('d20') 
-            });
+            setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && data.die.includes('d20') });
             setTimeout(() => setVfxRoll(null), 1000);
           }
-
-          const item: HistoryItem = data.type === 'story' ? data : { id: data.id, type: 'roll', content: `${data.die}: ${data.result}`, user: data.user, timestamp: data.timestamp, isSubtle: data.isSubtle };
+          const item: HistoryItem = data.type === 'story' ? data : { id: data.id, type: 'roll' as const, content: `${data.die}: ${data.result}`, user: data.user, timestamp: data.timestamp, isSubtle: data.isSubtle };
           setHistory(prev => [item, ...prev].slice(0, 100));
         }
       } catch (e) {}
@@ -238,7 +232,7 @@ function VTTApp() {
     const content = `${label ? `${die} (${label})` : die}: ${result}${isSubtleMode ? ' (Subtle)' : ''}`;
     if (activeCampaign && token) {
       fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content: `${user?.username || 'Guest'} rolled ${content}`, campaign_id: activeCampaign.id }) }).then(res => res.json()).then(savedLog => {
-        const newRoll = { id: savedLog.id.toString(), type: 'roll', die, result, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: user ? user.username : `Player ${clientId.substring(0, 4)}` };
+        const newRoll = { id: savedLog.id.toString(), type: 'roll' as const, die, result, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: user ? user.username : `Player ${clientId.substring(0, 4)}` };
         sendMessage(JSON.stringify(newRoll));
       });
     }
@@ -270,9 +264,7 @@ function VTTApp() {
     if (!token || !activeCampaign) return;
     setIsSummarizing(true);
     try {
-      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/summarize`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/summarize`, { headers: { 'Authorization': `Bearer ${token}` } });
       const data = await res.json();
       setCampaignSummary(data.summary);
     } catch (e) { console.error(e); } finally { setIsSummarizing(false); }
@@ -344,38 +336,17 @@ function VTTApp() {
       {isDashboardOpen && <WorldDashboard campaignId={activeCampaign.id} onClose={() => setIsDashboardOpen(false)} onSetActive={handleSetActiveLocation} activeLocationId={activeLocation?.id} />}
       {selectedEntity && <NPCDetailCard entity={selectedEntity} isGM={isGM} onClose={() => setSelectedEntity(null)} onUpdateStats={handleUpdateNPCStats} onRoll={rollForNPC} />}
 
-      {/* Critical Glow Effect */}
-      {vfxRoll?.isCrit && (
-        <div className="fixed inset-0 z-[200] pointer-events-none animate-crit-glow"></div>
-      )}
+      {vfxRoll?.isCrit && <div className="fixed inset-0 z-[200] pointer-events-none animate-crit-glow"></div>}
+      {vfxRoll && <div className="fixed inset-0 z-[150] pointer-events-none flex items-center justify-center animate-in fade-in zoom-in-125 duration-300"><div className={`text-[12rem] font-black italic tracking-tighter opacity-20 ${vfxRoll.isCrit ? 'text-indigo-400' : 'text-gray-400'}`}>{vfxRoll.result}</div></div>}
 
-      {/* Big Result Flash */}
-      {vfxRoll && (
-        <div className="fixed inset-0 z-[150] pointer-events-none flex items-center justify-center animate-in fade-in zoom-in-125 duration-300">
-          <div className={`text-[12rem] font-black italic tracking-tighter opacity-20 ${vfxRoll.isCrit ? 'text-indigo-400' : 'text-gray-400'}`}>
-            {vfxRoll.result}
-          </div>
-        </div>
-      )}
-
-      {/* Summary Overlay */}
       {campaignSummary && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4" onClick={() => setCampaignSummary(null)}>
           <div className="bg-gray-900 border border-indigo-500/30 w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
             <div className="p-10 space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-black tracking-tighter uppercase italic text-indigo-400">The Chronicler's Recap</h2>
-                <button onClick={() => setCampaignSummary(null)} className="text-gray-500 hover:text-white transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-              </div>
+              <div className="flex justify-between items-center"><h2 className="text-3xl font-black tracking-tighter uppercase italic text-indigo-400">The Chronicler's Recap</h2><button onClick={() => setCampaignSummary(null)} className="text-gray-500 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>
               <div className="h-px bg-indigo-500/20 w-full"></div>
-              <div className="max-h-[50vh] overflow-y-auto pr-4 custom-scrollbar">
-                <p className="text-lg text-gray-200 leading-relaxed font-serif whitespace-pre-wrap">{campaignSummary}</p>
-              </div>
-              <div className="pt-4 flex justify-center">
-                <button onClick={() => setCampaignSummary(null)} className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Dismiss Tome</button>
-              </div>
+              <div className="max-h-[50vh] overflow-y-auto pr-4 custom-scrollbar"><p className="text-lg text-gray-200 leading-relaxed font-serif whitespace-pre-wrap">{campaignSummary}</p></div>
+              <div className="pt-4 flex justify-center"><button onClick={() => setCampaignSummary(null)} className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Dismiss Tome</button></div>
             </div>
           </div>
         </div>
