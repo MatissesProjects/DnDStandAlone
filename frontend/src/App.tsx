@@ -197,7 +197,6 @@ function VTTApp() {
         else if (data.type === "presence") setActiveUsers(data.users);
         else if (data.type === "request_roll") setRollRequirement({ die: data.die, label: data.label });
         else if (data.type === 'story' || (data.result && data.die)) {
-          if (data.senderId === clientId) return;
           if (data.result && data.die && !data.isSubtle) {
             const isD20 = data.die.includes('d20');
             setVfxRoll({ 
