@@ -26,6 +26,7 @@ function VTTApp() {
   
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
+  const lastClosedEntityId = useRef<number | null>(null);
   
   const [playerClass, setPlayerClass] = useState(user?.class_name || "");
   const [playerLevel, setPlayerLevel] = useState(user?.level || 1);
@@ -179,7 +180,11 @@ function VTTApp() {
     if (lastMessage) {
       try {
         const data = JSON.parse(lastMessage);
-        if (data.type === "canvas_update" && data.senderId !== clientId) {
+
+        // Loop prevention for all messages
+        if (data.senderId === clientId) return;
+
+        if (data.type === "canvas_update") {
           if (excalidrawAPI) {
             isRemoteUpdate.current = true;
             excalidrawAPI.updateScene({ elements: data.elements, appState: { ...data.appState }, commitToHistory: false });
@@ -187,17 +192,17 @@ function VTTApp() {
             setTimeout(() => { isRemoteUpdate.current = false; }, 100);
           }
         } 
-        else if (data.type === "pointer_update" && data.senderId !== clientId) {
+        else if (data.type === "pointer_update") {
           setCollaborators(prev => { const next = new Map(prev); next.set(data.senderId, { pointer: data.pointer, username: data.username, button: "up" }); return next; });
         }
-        else if (data.type === "location_update" && data.senderId !== clientId) {
+        else if (data.type === "location_update") {
           if (!activeLocation || activeLocation.id !== data.location.id) {
             setActiveLocation(data.location);
           }
         }
-        else if (data.type === "entities_update" && data.senderId !== clientId) { if (activeLocation && data.locationId === activeLocation.id) fetchEntities(activeLocation.id); }
-        else if (data.type === "handouts_update" && data.senderId !== clientId) { fetchHandouts(); }
-        else if (data.type === "history_consumed" && data.senderId !== clientId) { fetchHistory(); }
+        else if (data.type === "entities_update") { if (activeLocation && data.locationId === activeLocation.id) fetchEntities(activeLocation.id); }
+        else if (data.type === "handouts_update") { fetchHandouts(); }
+        else if (data.type === "history_consumed") { fetchHistory(); }
         else if (data.type === "history_cleared") { setHistory([]); }
         else if (data.type === "presence") setActiveUsers(data.users);
         else if (data.type === "request_roll") setRollRequirement({ die: data.die, label: data.label });
@@ -321,12 +326,19 @@ function VTTApp() {
     if (selectedIds.length === 1) {
       const selectedEl = elements.find((el: any) => el.id === selectedIds[0]);
       if (selectedEl?.customData?.entityId) {
-        const entity = activeEntities.find(e => e.id === selectedEl.customData.entityId);
-        if (entity && (!selectedEntity || selectedEntity.id !== entity.id)) {
-          console.log(`[Selection] Bound entity detected: ${entity.name}`);
-          setSelectedEntity(entity);
+        const entityId = selectedEl.customData.entityId;
+        // Ignore if we just closed this entity
+        if (lastClosedEntityId.current !== entityId) {
+          const entity = activeEntities.find(e => e.id === entityId);
+          if (entity && (!selectedEntity || selectedEntity.id !== entity.id)) {
+            console.log(`[Selection] Bound entity detected: ${entity.name}`);
+            setSelectedEntity(entity);
+          }
         }
       }
+    } else {
+      // Clear closed ref when nothing or multiple things are selected
+      lastClosedEntityId.current = null;
     }
 
     if (isRemoteUpdate.current) return;
@@ -571,6 +583,7 @@ function VTTApp() {
           entity={selectedEntity} 
           isGM={isGM} 
           onClose={() => {
+            lastClosedEntityId.current = selectedEntity.id;
             setSelectedEntity(null);
             if (excalidrawAPI) {
               excalidrawAPI.updateScene({
