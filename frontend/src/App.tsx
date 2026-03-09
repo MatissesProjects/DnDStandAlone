@@ -276,9 +276,11 @@ function VTTApp() {
 
     if (isRemoteUpdate.current) return;
     
+    // ONLY update local ref if it's a local change
     localElementsRef.current = elements;
 
     if (!isGM) {
+      // ... same proposals logic
       elements.forEach((el: any) => {
         const prev = localElementsRef.current.find(p => p.id === el.id);
         if (prev && (prev.x !== el.x || prev.y !== el.y)) {
@@ -288,13 +290,31 @@ function VTTApp() {
       });
       return;
     }
+
     const now = Date.now();
     if (now - lastSyncTime.current > 150) {
       lastSyncTime.current = now;
-      sendMessage(JSON.stringify({ type: "canvas_update", senderId: clientId, elements, appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridSize } }));
+      sendMessage(JSON.stringify({ 
+        type: "canvas_update", 
+        senderId: clientId, 
+        elements, 
+        appState: { 
+          viewBackgroundColor: appState.viewBackgroundColor, 
+          gridSize: appState.gridSize 
+        } 
+      }));
     }
     persistCanvas(elements, appState);
   }, [sendMessage, clientId, isGM, persistCanvas, user, activeEntities, selectedEntity]);
+
+  const forceSaveCanvas = () => {
+    if (!excalidrawAPI || !isGM) return;
+    const elements = excalidrawAPI.getSceneElements();
+    const appState = excalidrawAPI.getAppState();
+    console.log("Forcing manual canvas save...");
+    persistCanvas(elements, appState);
+    alert("Map state anchored to the room!");
+  };
 
   const approveProposal = (prop: MoveProposal) => {
     if (excalidrawAPI) {
@@ -544,6 +564,7 @@ function VTTApp() {
           onDismissEnemy={() => setGeneratedEnemy(null)}
           onDismissLore={() => setGeneratedLore(null)}
           onBindEntity={handleBindEntity}
+          onForceSaveCanvas={forceSaveCanvas}
           />      )}
     </div>
   );
