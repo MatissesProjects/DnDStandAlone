@@ -19,6 +19,8 @@ interface GMToolboxProps {
   generatedLore: string | null;
   onManifestEntity: () => void;
   onManifestLore?: (content: string) => void;
+  onDismissEnemy: () => void;
+  onDismissLore: () => void;
   activeEntities: Entity[];
   onSelectEntity: (ent: Entity) => void;
   activeLocation: Location | null;
@@ -39,7 +41,9 @@ interface GMToolboxProps {
 const GMToolbox: React.FC<GMToolboxProps> = ({
   isGM, user, isAuthenticated, pendingProposals, onApproveProposal, onRejectProposal,
   isRecording, onToggleRecording, activeUsers, onRequestRoll, onGenerateEnemy, onGenerateLore,
-  isGenerating, generatedEnemy, generatedLore, onManifestEntity, onManifestLore, activeEntities, onSelectEntity,
+  isGenerating, generatedEnemy, generatedLore, onManifestEntity, onManifestLore, 
+  onDismissEnemy, onDismissLore,
+  activeEntities, onSelectEntity,
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile, onSummarize, isSummarizing,
   onClearHistory
@@ -127,7 +131,15 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               </div>
               
               {(generatedEnemy || generatedLore) && (
-                <div className="mt-4 p-5 bg-gray-900 rounded-[1.5rem] border border-indigo-500/30 shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="mt-4 p-5 bg-gray-900 rounded-[1.5rem] border border-indigo-500/30 shadow-2xl animate-in zoom-in-95 duration-300 relative group/weave">
+                  <button 
+                    onClick={() => { onDismissEnemy(); onDismissLore(); }}
+                    className="absolute -top-2 -right-2 bg-gray-800 hover:bg-red-900/40 text-gray-500 hover:text-red-500 rounded-full p-1.5 border border-gray-700 transition-all opacity-0 group-hover/weave:opacity-100 z-10"
+                    title="Dismiss weave"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+
                   {generatedLore && (
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">

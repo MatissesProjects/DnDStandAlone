@@ -498,8 +498,9 @@ function VTTApp() {
           onSummarize={handleSummarizeCampaign} isSummarizing={isSummarizing}
           onClearHistory={handleClearHistory}
           onManifestLore={(content) => handleCreateHandout("Whispered Lore", content, "text")}
-        />
-      )}
+          onDismissEnemy={() => setGeneratedEnemy(null)}
+          onDismissLore={() => setGeneratedLore(null)}
+          />      )}
     </div>
   );
 }
