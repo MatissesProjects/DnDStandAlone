@@ -44,16 +44,6 @@ def create_campaign(db: Session, campaign: schemas.CampaignCreate, gm_id: int):
     db.refresh(db_campaign)
     return db_campaign
 
-def update_campaign_canvas(db: Session, campaign_id: int, canvas_state: dict):
-    print(f"DEBUG: Updating canvas for campaign {campaign_id}")
-    db_campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
-    if db_campaign:
-        db_campaign.canvas_state = canvas_state
-        db.commit()
-        db.refresh(db_campaign)
-        print(f"DEBUG: Canvas updated successfully for campaign {campaign_id}")
-    return db_campaign
-
 def delete_campaign(db: Session, campaign_id: int, gm_id: int):
     db_campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id, models.Campaign.gm_id == gm_id).first()
     if db_campaign:
@@ -76,13 +66,16 @@ def create_location(db: Session, location: schemas.LocationCreate):
     db.refresh(db_location)
     return db_location
 
-def update_location(db: Session, location_id: int, location_update: dict):
+def update_location(db: Session, location_id: int, location_update: schemas.LocationUpdate):
+    print(f"DEBUG: Updating location {location_id}")
     db_location = db.query(models.Location).filter(models.Location.id == location_id).first()
     if db_location:
-        for key, value in location_update.items():
+        update_data = location_update.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
             setattr(db_location, key, value)
         db.commit()
         db.refresh(db_location)
+        print(f"DEBUG: Location {location_id} updated successfully")
     return db_location
 
 def delete_location(db: Session, location_id: int):

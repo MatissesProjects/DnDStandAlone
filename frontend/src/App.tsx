@@ -109,20 +109,25 @@ function VTTApp() {
   }, [activeCampaign, token]);
 
   useEffect(() => {
-    if (excalidrawAPI && activeCampaign?.canvas_state) {
+    if (excalidrawAPI && activeLocation) {
+      console.log(`[Canvas] Loading state for location ${activeLocation.id}`, activeLocation.canvas_state);
       isRemoteUpdate.current = true;
+      
+      const elements = activeLocation.canvas_state?.elements || [];
+      const appState = activeLocation.canvas_state?.appState || {};
+      
       excalidrawAPI.updateScene({ 
-        elements: activeCampaign.canvas_state.elements || [], 
+        elements, 
         appState: { 
-          ...(activeCampaign.canvas_state.appState || {}),
+          ...appState,
           collaborators: new Map() 
         }, 
         commitToHistory: false 
       });
-      localElementsRef.current = activeCampaign.canvas_state.elements || [];
-      setTimeout(() => { isRemoteUpdate.current = false; }, 100);
+      localElementsRef.current = elements;
+      setTimeout(() => { isRemoteUpdate.current = false; }, 150);
     }
-  }, [excalidrawAPI, activeCampaign?.id]);
+  }, [excalidrawAPI, activeLocation?.id]);
 
   useEffect(() => {
     if (activeCampaign && token) {
@@ -228,13 +233,13 @@ function VTTApp() {
   };
 
   const persistCanvas = useCallback((elements: any, appState: any, immediate: boolean = false) => {
-    if (!isGM || !activeCampaign || !token) return;
+    if (!isGM || !activeLocation || !token) return;
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
     
     const saveFunc = async () => {
-      console.log("[Canvas] Persisting to backend...", { elementCount: elements.length });
+      console.log(`[Canvas] Persisting to location ${activeLocation.id}...`, { elementCount: elements.length });
       try {
-        const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/canvas`, { 
+        const res = await fetch(`http://localhost:8000/locations/${activeLocation.id}/canvas`, { 
           method: 'PATCH', 
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
           body: JSON.stringify({ 
@@ -248,7 +253,14 @@ function VTTApp() {
           }) 
         });
         console.log("[Canvas] Persistence response:", res.status);
-        if (!res.ok) console.error("[Canvas] Persistence failed:", await res.text());
+        if (res.ok) {
+          const updatedLoc = await res.json();
+          // Update local activeLocation state without triggering effect if possible
+          // but we actually want the state to stay in sync
+          setActiveLocation(updatedLoc);
+        } else {
+          console.error("[Canvas] Persistence failed:", await res.text());
+        }
       } catch (e) { console.error("[Canvas] Failed to persist", e); }
     };
 
@@ -257,7 +269,7 @@ function VTTApp() {
     } else {
       saveTimeout.current = setTimeout(saveFunc, 3000);
     }
-  }, [isGM, activeCampaign, token]);
+  }, [isGM, activeLocation, token]);
 
   const handlePointerUpdate = useCallback((payload: any) => {
     if (!isConnected || !activeCampaign) return;

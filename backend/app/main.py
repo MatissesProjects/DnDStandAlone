@@ -101,16 +101,16 @@ def delete_campaign(
         return {"status": "ok"}
     raise HTTPException(status_code=404, detail="Campaign not found")
 
-@app.patch("/campaigns/{campaign_id}/canvas", response_model=schemas.Campaign)
-def update_campaign_canvas(
-    campaign_id: int,
-    update: schemas.CampaignUpdate,
+@app.patch("/locations/{location_id}/canvas", response_model=schemas.Location)
+def update_location_canvas(
+    location_id: int,
+    update: schemas.LocationUpdate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     if current_user.role != "gm":
         raise HTTPException(status_code=403, detail="Only GMs can save canvas state")
-    return crud.update_campaign_canvas(db=db, campaign_id=campaign_id, canvas_state=update.canvas_state)
+    return crud.update_location(db=db, location_id=location_id, location_update=update)
 
 @app.get("/campaigns/join/{room_id}", response_model=schemas.Campaign)
 def join_campaign(room_id: str, db: Session = Depends(get_db)):
@@ -261,7 +261,7 @@ def create_location(
 @app.patch("/locations/{location_id}", response_model=schemas.Location)
 def update_location(
     location_id: int,
-    location_update: dict,
+    location_update: schemas.LocationUpdate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):

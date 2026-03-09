@@ -17,7 +17,6 @@ class Campaign(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     room_id = Column(String, unique=True, index=True) # Unique join code
-    canvas_state = Column(JSON, nullable=True) # Store Excalidraw elements
     gm_id = Column(Integer, ForeignKey("users.id"))
     gm = relationship("User")
 
@@ -27,6 +26,7 @@ class Location(Base):
     name = Column(String, index=True)
     description = Column(Text)
     danger_level = Column(Integer, default=1)
+    canvas_state = Column(JSON, nullable=True) # Store Excalidraw elements per location
     campaign_id = Column(Integer, ForeignKey("campaigns.id"))
     campaign = relationship("Campaign")
 

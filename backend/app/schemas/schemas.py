@@ -26,13 +26,12 @@ class CampaignCreate(CampaignBase):
     pass
 
 class CampaignUpdate(BaseModel):
-    canvas_state: Optional[Dict[str, Any]] = None
+    name: Optional[str] = None
 
 class Campaign(CampaignBase):
     id: int
     gm_id: int
     room_id: str
-    canvas_state: Optional[Dict[str, Any]] = None
     model_config = ConfigDict(from_attributes=True)
 
 # Location Schemas
@@ -40,9 +39,16 @@ class LocationBase(BaseModel):
     name: str
     description: Optional[str] = None
     danger_level: int = 1
+    canvas_state: Optional[Dict[str, Any]] = None
 
 class LocationCreate(LocationBase):
     campaign_id: int
+
+class LocationUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    danger_level: Optional[int] = None
+    canvas_state: Optional[Dict[str, Any]] = None
 
 class Location(LocationBase):
     id: int
