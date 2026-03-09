@@ -54,6 +54,7 @@ class EntityBase(BaseModel):
     name: str
     stats: Optional[Dict[str, Any]] = None
     backstory: Optional[str] = None
+    notes: Optional[str] = None
 
 class EntityCreate(EntityBase):
     location_id: int

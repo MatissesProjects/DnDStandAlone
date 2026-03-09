@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Entity } from '../../types/vtt';
 
 interface NPCDetailCardProps {
@@ -6,6 +6,7 @@ interface NPCDetailCardProps {
   isGM: boolean;
   onClose: () => void;
   onUpdateStats: (entityId: number, statsUpdate: any) => void;
+  onUpdateEntity?: (entityId: number, update: any) => void;
   onRoll: (entityName: string, label: string, bonus?: number) => void;
 }
 
@@ -15,8 +16,13 @@ const CONDITIONS = [
   "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious"
 ];
 
-const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, onUpdateStats, onRoll }) => {
+const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, onUpdateStats, onUpdateEntity, onRoll }) => {
   const activeConditions = entity.stats?.conditions || [];
+  const [localNotes, setLocalNotes] = useState(entity.notes || "");
+
+  useEffect(() => {
+    setLocalNotes(entity.notes || "");
+  }, [entity.notes]);
 
   const toggleCondition = (condition: string) => {
     if (!isGM) return;
@@ -26,10 +32,18 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
     onUpdateStats(entity.id, { conditions: newConditions });
   };
 
+  const handleNotesBlur = () => {
+    if (!isGM || localNotes === entity.notes) return;
+    if (onUpdateEntity) {
+      onUpdateEntity(entity.id, { notes: localNotes });
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="bg-gray-900 border border-indigo-500/30 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-        <div className="relative h-32 bg-indigo-900/20 flex items-end p-8 border-b border-gray-800">
+      <div className="bg-gray-900 border border-indigo-500/30 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="relative h-32 bg-indigo-900/20 flex flex-none items-end p-8 border-b border-gray-800">
           <div className="absolute top-6 right-8">
             <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -43,7 +57,9 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
             </div>
           </div>
         </div>
-        <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+
+        {/* Content */}
+        <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
           {/* Conditions Section */}
           <div className="space-y-3">
             <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Status Conditions</h4>
@@ -74,6 +90,7 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
               </button>
             ))}
           </div>
+
           {entity.stats?.actions && entity.stats.actions.length > 0 && (
             <div className="space-y-3">
               <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Combat Maneuvers</h4>
@@ -87,10 +104,35 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
               </div>
             </div>
           )}
+
+          {/* Narrative / Backstory Section */}
           <div className="space-y-2">
             <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Narrative Essence</h4>
             <p className="text-sm text-gray-300 leading-relaxed italic opacity-90">"{entity.backstory}"</p>
           </div>
+
+          {/* GM Notes Section */}
+          {(isGM || entity.notes) && (
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest border-b border-indigo-900/30 pb-2 flex justify-between items-center">
+                <span>Chronicler's Notes</span>
+                {isGM && <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest">Only you can see this</span>}
+              </h4>
+              {isGM ? (
+                <textarea
+                  value={localNotes}
+                  onChange={e => setLocalNotes(e.target.value)}
+                  onBlur={handleNotesBlur}
+                  placeholder="Secret tactical notes, hidden motives, or loot details..."
+                  className="w-full bg-gray-950 border border-gray-800 rounded-2xl p-4 text-xs text-gray-300 focus:outline-none focus:border-indigo-500/50 min-h-[100px] shadow-inner leading-relaxed transition-all"
+                />
+              ) : (
+                <p className="text-xs text-indigo-200 leading-relaxed italic border-l-2 border-indigo-900/50 pl-4">{entity.notes}</p>
+              )}
+            </div>
+          )}
+
+          {/* HP and AC Footers */}
           <div className="flex gap-3 pt-2">
             <div className="flex-[2] bg-gray-950 p-4 rounded-3xl border border-gray-800 flex items-center justify-between shadow-inner">
               <div className="space-y-1">

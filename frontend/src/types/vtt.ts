@@ -64,6 +64,7 @@ export interface Entity {
   name: string;
   stats: any;
   backstory: string;
+  notes?: string;
   location_id: number;
 }
 

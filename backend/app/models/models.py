@@ -36,6 +36,7 @@ class Entity(Base):
     name = Column(String, index=True)
     stats = Column(JSON) # Store stats as JSON
     backstory = Column(Text)
+    notes = Column(Text, nullable=True) # GM specific notes
     location_id = Column(Integer, ForeignKey("locations.id"))
     location = relationship("Location")
 
