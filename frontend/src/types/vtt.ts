@@ -74,3 +74,13 @@ export interface Campaign {
   room_id: string;
   canvas_state?: any;
 }
+
+export interface Handout {
+  id: number;
+  type: 'text' | 'image';
+  title: string;
+  content: string;
+  x: number;
+  y: number;
+  campaign_id: number;
+}

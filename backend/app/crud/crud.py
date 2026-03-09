@@ -140,3 +140,32 @@ def delete_history_log(db: Session, log_id: int):
         db.commit()
         return True
     return False
+
+# Handout CRUD
+def get_handouts(db: Session, campaign_id: int):
+    return db.query(models.Handout).filter(models.Handout.campaign_id == campaign_id).all()
+
+def create_handout(db: Session, handout: schemas.HandoutCreate):
+    db_handout = models.Handout(**handout.model_dump())
+    db.add(db_handout)
+    db.commit()
+    db.refresh(db_handout)
+    return db_handout
+
+def update_handout(db: Session, handout_id: int, handout_update: schemas.HandoutUpdate):
+    db_handout = db.query(models.Handout).filter(models.Handout.id == handout_id).first()
+    if db_handout:
+        update_data = handout_update.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_handout, key, value)
+        db.commit()
+        db.refresh(db_handout)
+    return db_handout
+
+def delete_handout(db: Session, handout_id: int):
+    db_handout = db.query(models.Handout).filter(models.Handout.id == handout_id).first()
+    if db_handout:
+        db.delete(db_handout)
+        db.commit()
+        return True
+    return False

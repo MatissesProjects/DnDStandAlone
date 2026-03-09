@@ -18,6 +18,7 @@ interface GMToolboxProps {
   generatedEnemy: EnemyData | null;
   generatedLore: string | null;
   onManifestEntity: () => void;
+  onManifestLore?: (content: string) => void;
   activeEntities: Entity[];
   onSelectEntity: (ent: Entity) => void;
   activeLocation: Location | null;
@@ -32,14 +33,16 @@ interface GMToolboxProps {
   onUpdateProfile: () => void;
   onSummarize: () => void;
   isSummarizing: boolean;
+  onClearHistory: () => void;
 }
 
 const GMToolbox: React.FC<GMToolboxProps> = ({
   isGM, user, isAuthenticated, pendingProposals, onApproveProposal, onRejectProposal,
   isRecording, onToggleRecording, activeUsers, onRequestRoll, onGenerateEnemy, onGenerateLore,
-  isGenerating, generatedEnemy, generatedLore, onManifestEntity, activeEntities, onSelectEntity,
+  isGenerating, generatedEnemy, generatedLore, onManifestEntity, onManifestLore, activeEntities, onSelectEntity,
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, isEditingProfile,
-  setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile, onSummarize, isSummarizing
+  setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile, onSummarize, isSummarizing,
+  onClearHistory
 }) => {
   return (
     <aside className="w-[320px] h-full flex-none border-l border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
@@ -77,6 +80,12 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                   className="w-full bg-indigo-900/20 hover:bg-indigo-900/40 border border-indigo-500/20 text-indigo-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50"
                 > 
                   {isSummarizing ? 'Recounting...' : "Chronicler's Summary"} 
+                </button>
+                <button 
+                  onClick={onClearHistory}
+                  className="w-full bg-red-900/10 hover:bg-red-900/30 border border-red-900/20 text-red-400 font-black py-2 rounded-lg uppercase text-[8px] tracking-[0.2em] transition-all"
+                >
+                  Wipe Chronicle
                 </button>
               </div>
             </div>
@@ -120,8 +129,16 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               {(generatedEnemy || generatedLore) && (
                 <div className="mt-4 p-5 bg-gray-900 rounded-[1.5rem] border border-indigo-500/30 shadow-2xl animate-in zoom-in-95 duration-300">
                   {generatedLore && (
-                    <div className="space-y-2.5">
-                      <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Whispered Lore</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Whispered Lore</h4>
+                        <button 
+                          onClick={() => onManifestLore?.(generatedLore)}
+                          className="text-[8px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-full border border-indigo-400/30 font-black uppercase tracking-widest transition-all"
+                        >
+                          Manifest as Handout
+                        </button>
+                      </div>
                       <p className="text-xs text-gray-200 leading-relaxed italic opacity-90">"{generatedLore}"</p>
                     </div>
                   )}

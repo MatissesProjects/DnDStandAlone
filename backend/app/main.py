@@ -158,6 +158,45 @@ async def summarize_campaign(
     summary = await ai_service.summarize_session(history)
     return {"summary": summary}
 
+# Handout Endpoints
+@app.get("/campaigns/{campaign_id}/handouts", response_model=List[schemas.Handout])
+def read_handouts(campaign_id: int, db: Session = Depends(get_db)):
+    return crud.get_handouts(db, campaign_id=campaign_id)
+
+@app.post("/handouts", response_model=schemas.Handout)
+def create_handout(
+    handout: schemas.HandoutCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can create handouts")
+    db_handout = crud.create_handout(db=db, handout=handout)
+    return db_handout
+
+@app.patch("/handouts/{handout_id}", response_model=schemas.Handout)
+def update_handout(
+    handout_id: int,
+    handout_update: schemas.HandoutUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can move handouts")
+    return crud.update_handout(db=db, handout_id=handout_id, handout_update=handout_update)
+
+@app.delete("/handouts/{handout_id}")
+def delete_handout(
+    handout_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can delete handouts")
+    if crud.delete_handout(db=db, handout_id=handout_id):
+        return {"status": "ok"}
+    raise HTTPException(status_code=404, detail="Handout not found")
+
 # Location Endpoints
 @app.get("/campaigns/{campaign_id}/locations", response_model=List[schemas.Location])
 def read_locations(campaign_id: int, db: Session = Depends(get_db)):

@@ -77,3 +77,25 @@ class HistoryLog(HistoryLogBase):
     campaign_id: int
     timestamp: datetime
     model_config = ConfigDict(from_attributes=True)
+
+# Handout Schemas
+class HandoutBase(BaseModel):
+    type: str
+    title: str
+    content: str
+    x: int = 100
+    y: int = 100
+
+class HandoutCreate(HandoutBase):
+    campaign_id: int
+
+class HandoutUpdate(BaseModel):
+    x: Optional[int] = None
+    y: Optional[int] = None
+    title: Optional[str] = None
+    content: Optional[str] = None
+
+class Handout(HandoutBase):
+    id: int
+    campaign_id: int
+    model_config = ConfigDict(from_attributes=True)

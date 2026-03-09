@@ -48,3 +48,14 @@ class HistoryLog(Base):
     campaign_id = Column(Integer, ForeignKey("campaigns.id"))
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     campaign = relationship("Campaign")
+
+class Handout(Base):
+    __tablename__ = "handouts"
+    id = Column(Integer, primary_key=True, index=True)
+    type = Column(String) # "text" or "image"
+    title = Column(String)
+    content = Column(Text)
+    x = Column(Integer, default=100)
+    y = Column(Integer, default=100)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"))
+    campaign = relationship("Campaign")

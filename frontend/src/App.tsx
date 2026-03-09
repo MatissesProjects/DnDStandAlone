@@ -10,7 +10,8 @@ import WorldDashboard from "./components/WorldDashboard";
 import ChronicleSidebar from "./components/Sidebar/ChronicleSidebar";
 import GMToolbox from "./components/Sidebar/GMToolbox";
 import NPCDetailCard from "./components/Overlay/NPCDetailCard";
-import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign } from "./types/vtt";
+import HandoutItem from "./components/Overlay/HandoutItem";
+import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout } from "./types/vtt";
 
 function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token } = useAuth();
@@ -19,6 +20,7 @@ function VTTApp() {
   const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(null);
   const [activeLocation, setActiveLocation] = useState<Location | null>(null);
   const [activeEntities, setActiveEntities] = useState<Entity[]>([]);
+  const [handouts, setHandouts] = useState<Handout[]>([]);
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   
@@ -72,17 +74,16 @@ function VTTApp() {
     } catch (e) { console.error(e); }
   }, [token, selectedEntity]);
 
-  useEffect(() => {
-    if (excalidrawAPI && activeCampaign?.canvas_state) {
-      isRemoteUpdate.current = true;
-      excalidrawAPI.updateScene({
-        elements: activeCampaign.canvas_state.elements || [],
-        appState: activeCampaign.canvas_state.appState || {},
-        commitToHistory: false
-      });
-      localElementsRef.current = activeCampaign.canvas_state.elements || [];
-    }
-  }, [excalidrawAPI, activeCampaign]);
+  const fetchHandouts = useCallback(async () => {
+    if (!activeCampaign || !token) return;
+    try {
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/handouts`);
+      if (res.ok) {
+        const data = await res.json();
+        setHandouts(data);
+      }
+    } catch (e) { console.error(e); }
+  }, [activeCampaign, token]);
 
   const fetchHistory = useCallback(() => {
     if (!activeCampaign || !token) return;
@@ -104,15 +105,22 @@ function VTTApp() {
   }, [activeCampaign, token]);
 
   useEffect(() => {
+    if (excalidrawAPI && activeCampaign?.canvas_state) {
+      isRemoteUpdate.current = true;
+      excalidrawAPI.updateScene({ elements: activeCampaign.canvas_state.elements || [], appState: activeCampaign.canvas_state.appState || {}, commitToHistory: false });
+      localElementsRef.current = activeCampaign.canvas_state.elements || [];
+    }
+  }, [excalidrawAPI, activeCampaign]);
+
+  useEffect(() => {
     if (activeCampaign && token) {
       fetchHistory();
+      fetchHandouts();
       fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/locations`)
         .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data) && data.length > 0) setActiveLocation(data[data.length - 1]);
-        });
+        .then(data => { if (Array.isArray(data) && data.length > 0) setActiveLocation(data[data.length - 1]); });
     }
-  }, [activeCampaign, token, fetchHistory]);
+  }, [activeCampaign, token, fetchHistory, fetchHandouts]);
 
   useEffect(() => {
     if (activeLocation && token) fetchEntities(activeLocation.id);
@@ -122,9 +130,7 @@ function VTTApp() {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+      recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'en-US';
       recognition.onresult = (event: any) => {
         let interim = "", final = "";
         for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -155,14 +161,11 @@ function VTTApp() {
           }
         } 
         else if (data.type === "pointer_update" && data.senderId !== clientId) {
-          setCollaborators(prev => {
-            const next = new Map(prev);
-            next.set(data.senderId, { pointer: data.pointer, username: data.username, button: "up" });
-            return next;
-          });
+          setCollaborators(prev => { const next = new Map(prev); next.set(data.senderId, { pointer: data.pointer, username: data.username, button: "up" }); return next; });
         }
         else if (data.type === "location_update") setActiveLocation(data.location);
         else if (data.type === "entities_update") { if (activeLocation && data.locationId === activeLocation.id) fetchEntities(activeLocation.id); }
+        else if (data.type === "handouts_update") { fetchHandouts(); }
         else if (data.type === "history_consumed") { fetchHistory(); }
         else if (data.type === "history_cleared") { setHistory([]); }
         else if (data.type === "presence") setActiveUsers(data.users);
@@ -177,29 +180,19 @@ function VTTApp() {
         }
       } catch (e) {}
     }
-  }, [lastMessage, excalidrawAPI, clientId, isGM, activeLocation, token, fetchEntities, fetchHistory]);
+  }, [lastMessage, excalidrawAPI, clientId, isGM, activeLocation, token, fetchEntities, fetchHistory, fetchHandouts]);
 
   const handleConsumeHistory = async (logId: string) => {
     if (!token || !activeCampaign) return;
     try {
-      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history/${logId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        sendMessage(JSON.stringify({ type: "history_consumed", logId }));
-        fetchHistory();
-      }
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history/${logId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) { sendMessage(JSON.stringify({ type: "history_consumed", logId })); fetchHistory(); }
     } catch (e) { console.error(e); }
   };
 
   const handleClearHistory = async () => {
     if (!isGM || !token || !activeCampaign || !window.confirm("Clear entire chronicle history?")) return;
-    try {
-      // In a real app, we'd have a DELETE /history endpoint, but for now we'll just broadcast
-      sendMessage(JSON.stringify({ type: "history_cleared" }));
-      setHistory([]);
-    } catch (e) { console.error(e); }
+    try { sendMessage(JSON.stringify({ type: "history_cleared" })); setHistory([]); } catch (e) { console.error(e); }
   };
 
   const persistCanvas = useCallback((elements: any, appState: any) => {
@@ -277,12 +270,56 @@ function VTTApp() {
 
   const handleGenerateLore = async () => {
     if (!token || !activeCampaign) return;
-    setIsGenerating(true); setGeneratedLore(null);
+    setIsGenerating(true); setGeneratedEnemy(null);
     try {
       const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/generate-lore?location_id=${activeLocation?.id || 1}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
       const data = await res.json();
       setGeneratedLore(data.lore);
     } catch (e) { console.error(e); } finally { setIsGenerating(false); }
+  };
+
+  const handleCreateHandout = async (title: string, content: string, type: 'text' | 'image' = 'text') => {
+    if (!token || !activeCampaign) return;
+    try {
+      const res = await fetch(`http://localhost:8000/handouts`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content, type, campaign_id: activeCampaign.id, x: 400, y: 300 })
+      });
+      if (res.ok) {
+        sendMessage(JSON.stringify({ type: "handouts_update" }));
+        fetchHandouts();
+        setGeneratedLore(null);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleMoveHandout = async (id: number, x: number, y: number) => {
+    if (!token || !activeCampaign || !isGM) return;
+    try {
+      const res = await fetch(`http://localhost:8000/handouts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ x, y })
+      });
+      if (res.ok) {
+        sendMessage(JSON.stringify({ type: "handouts_update" }));
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteHandout = async (id: number) => {
+    if (!token || !activeCampaign || !isGM) return;
+    try {
+      const res = await fetch(`http://localhost:8000/handouts/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        sendMessage(JSON.stringify({ type: "handouts_update" }));
+        fetchHandouts();
+      }
+    } catch (e) { console.error(e); }
   };
 
   const handleSummarizeCampaign = async () => {
@@ -331,8 +368,7 @@ function VTTApp() {
   };
 
   const handleSetActiveLocation = (loc: Location) => {
-    setActiveLocation(loc);
-    sendMessage(JSON.stringify({ type: "location_update", location: loc }));
+    setActiveLocation(loc); sendMessage(JSON.stringify({ type: "location_update", location: loc }));
   };
 
   const rollForNPC = (entityName: string, label: string, bonus: number = 0) => {
@@ -368,6 +404,15 @@ function VTTApp() {
       {vfxRoll?.isCrit && <div className="fixed inset-0 z-[200] pointer-events-none animate-crit-glow"></div>}
       {vfxRoll && <div className="fixed inset-0 z-[150] pointer-events-none flex items-center justify-center animate-in fade-in zoom-in-125 duration-300"><div className={`text-[8rem] font-black italic tracking-tighter opacity-20 ${vfxRoll.isCrit ? 'text-indigo-400' : 'text-gray-400'}`}>{vfxRoll.result}</div></div>}
 
+      {/* Handouts Layer */}
+      <div className="fixed inset-0 pointer-events-none z-40">
+        {handouts.map(h => (
+          <div key={h.id} className="pointer-events-auto">
+            <HandoutItem handout={h} isGM={isGM} onDelete={handleDeleteHandout} onMove={handleMoveHandout} />
+          </div>
+        ))}
+      </div>
+
       {campaignSummary && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4" onClick={() => setCampaignSummary(null)}>
           <div className="bg-gray-900 border border-indigo-500/30 w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
@@ -401,6 +446,7 @@ function VTTApp() {
           setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} onUpdateProfile={handleUpdateProfile}
           onSummarize={handleSummarizeCampaign} isSummarizing={isSummarizing}
           onClearHistory={handleClearHistory}
+          onManifestLore={(content) => handleCreateHandout("Whispered Lore", content, "text")}
         />
       )}
     </div>
