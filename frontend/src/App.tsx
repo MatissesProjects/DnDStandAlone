@@ -190,6 +190,7 @@ function VTTApp() {
 
   const handleConsumeHistory = async (logId: string) => {
     if (!token || !activeCampaign) return;
+    console.log(`Attempting to delete log ${logId} for campaign ${activeCampaign.id}`);
     try {
       const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history/${logId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { sendMessage(JSON.stringify({ type: "history_consumed", logId })); fetchHistory(); }
@@ -255,8 +256,24 @@ function VTTApp() {
     const result = Math.floor(Math.random() * sides) + 1;
     const content = `${label ? `${die} (${label})` : die}: ${result}${isSubtleMode ? ' (Subtle)' : ''}`;
     if (activeCampaign && token) {
-      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content: `${user?.username || 'Guest'} rolled ${content}`, campaign_id: activeCampaign.id }) }).then(res => res.json()).then(savedLog => {
-        const newRoll = { id: savedLog.id.toString(), type: 'roll' as const, die, result, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: user ? user.username : `Player ${clientId.substring(0, 4)}` };
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, { 
+        method: 'POST', 
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ 
+          event_type: 'dice_roll', 
+          content: `${user?.username || 'Guest'} rolled ${content}`, 
+          campaign_id: activeCampaign.id 
+        }) 
+      }).then(res => res.json()).then(savedLog => {
+        const newRoll = { 
+          id: savedLog.id.toString(), 
+          type: 'roll' as const, 
+          die, 
+          result, 
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
+          isSubtle: isSubtleMode, 
+          user: user ? user.username : `Player ${clientId.substring(0, 4)}` 
+        };
         sendMessage(JSON.stringify(newRoll));
       });
     }
