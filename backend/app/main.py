@@ -125,6 +125,15 @@ def join_campaign(room_id: str, db: Session = Depends(get_db)):
         logger.error(f"Error joining campaign: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/campaigns/{campaign_id}/history", response_model=List[history_schemas.HistoryLog])
+def read_campaign_history(
+    campaign_id: int,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    return crud.get_history(db, campaign_id=campaign_id, limit=limit)
+
 @app.post("/campaigns/{campaign_id}/history", response_model=history_schemas.HistoryLog)
 def add_campaign_history(
     campaign_id: int,
