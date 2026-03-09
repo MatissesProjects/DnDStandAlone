@@ -60,29 +60,41 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   const handleCreateLocation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
+    console.log("[Dashboard] Creating location:", { name: newLocName, campaign_id: campaignId });
     try {
-      await fetch('http://localhost:8000/locations', {
+      const res = await fetch('http://localhost:8000/locations', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newLocName, description: newLocDesc, campaign_id: campaignId })
       });
-      setNewLocName(''); setNewLocDesc('');
-      fetchLocations();
-    } catch (e) { console.error(e); }
+      console.log("[Dashboard] Create location response:", res.status);
+      if (res.ok) {
+        setNewLocName(''); setNewLocDesc('');
+        fetchLocations();
+      } else {
+        console.error("[Dashboard] Failed to create location:", await res.text());
+      }
+    } catch (e) { console.error("[Dashboard] Error creating location:", e); }
   };
 
   const handleUpdateLocation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !editingLocation) return;
+    console.log("[Dashboard] Updating location:", editingLocation.id);
     try {
-      await fetch(`http://localhost:8000/locations/${editingLocation.id}`, {
+      const res = await fetch(`http://localhost:8000/locations/${editingLocation.id}`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: editingLocation.name, description: editingLocation.description })
       });
-      setEditingLocation(null);
-      fetchLocations();
-    } catch (e) { console.error(e); }
+      console.log("[Dashboard] Update location response:", res.status);
+      if (res.ok) {
+        setEditingLocation(null);
+        fetchLocations();
+      } else {
+        console.error("[Dashboard] Failed to update location:", await res.text());
+      }
+    } catch (e) { console.error("[Dashboard] Error updating location:", e); }
   };
 
   const handleDeleteLocation = async (id: number) => {
@@ -100,15 +112,21 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   const handleCreateEntity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !selectedLocId) return;
+    console.log("[Dashboard] Creating entity:", { name: newEntityName, location_id: selectedLocId });
     try {
-      await fetch('http://localhost:8000/entities', {
+      const res = await fetch('http://localhost:8000/entities', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newEntityName, location_id: selectedLocId, stats: {}, backstory: "New entity established." })
       });
-      setNewEntityName('');
-      fetchEntities(selectedLocId);
-    } catch (e) { console.error(e); }
+      console.log("[Dashboard] Create entity response:", res.status);
+      if (res.ok) {
+        setNewEntityName('');
+        fetchEntities(selectedLocId);
+      } else {
+        console.error("[Dashboard] Failed to create entity:", await res.text());
+      }
+    } catch (e) { console.error("[Dashboard] Error creating entity:", e); }
   };
 
   const handleDeleteEntity = async (id: number) => {

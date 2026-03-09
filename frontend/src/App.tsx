@@ -529,7 +529,10 @@ function VTTApp() {
   };
 
   const handleSetActiveLocation = (loc: Location) => {
-    setActiveLocation(loc); sendMessage(JSON.stringify({ type: "location_update", location: loc, senderId: clientId }));
+    setActiveLocation(loc); 
+    sendMessage(JSON.stringify({ type: "location_update", location: loc, senderId: clientId }));
+    // Also notify to fetch entities for new location
+    sendMessage(JSON.stringify({ type: "entities_update", locationId: loc.id, senderId: clientId }));
   };
 
   const rollForNPC = (entityName: string, label: string, bonus: number = 0) => {
