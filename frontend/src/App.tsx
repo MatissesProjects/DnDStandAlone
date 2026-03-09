@@ -77,7 +77,9 @@ function VTTApp() {
   const fetchHandouts = useCallback(async () => {
     if (!activeCampaign || !token) return;
     try {
-      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/handouts`);
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/handouts`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (res.ok) {
         const data = await res.json();
         setHandouts(data);
@@ -87,7 +89,9 @@ function VTTApp() {
 
   const fetchHistory = useCallback(() => {
     if (!activeCampaign || !token) return;
-    fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`)
+    fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -116,7 +120,9 @@ function VTTApp() {
     if (activeCampaign && token) {
       fetchHistory();
       fetchHandouts();
-      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/locations`)
+      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/locations`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
         .then(res => res.json())
         .then(data => { if (Array.isArray(data) && data.length > 0) setActiveLocation(data[data.length - 1]); });
     }
