@@ -40,13 +40,13 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => { console.log("Backdrop close clicked"); onClose(); }}>
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="bg-gray-900 border border-indigo-500/30 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="relative h-32 bg-indigo-900/20 flex flex-none items-end p-8 border-b border-gray-800">
           <div className="absolute top-6 right-8">
             <button 
-              onClick={(e) => { e.stopPropagation(); console.log("X button clicked"); onClose(); }} 
+              onClick={(e) => { e.stopPropagation(); onClose(); }} 
               className="text-gray-500 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>

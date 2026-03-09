@@ -566,7 +566,23 @@ function VTTApp() {
   return (
     <div className={`flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none transition-all duration-300 ${(vfxRoll?.isCrit || vfxRoll?.isFail) ? 'animate-big-shake' : vfxRoll ? 'animate-shake' : ''}`}>
       {isDashboardOpen && <WorldDashboard campaignId={activeCampaign.id} onClose={() => setIsDashboardOpen(false)} onSetActive={handleSetActiveLocation} activeLocationId={activeLocation?.id} />}
-      {selectedEntity && <NPCDetailCard entity={selectedEntity} isGM={isGM} onClose={() => setSelectedEntity(null)} onUpdateStats={handleUpdateNPCStats} onUpdateEntity={handleUpdateEntity} onRoll={rollForNPC} />}
+      {selectedEntity && (
+        <NPCDetailCard 
+          entity={selectedEntity} 
+          isGM={isGM} 
+          onClose={() => {
+            setSelectedEntity(null);
+            if (excalidrawAPI) {
+              excalidrawAPI.updateScene({
+                appState: { ...excalidrawAPI.getAppState(), selectedElementIds: {} }
+              });
+            }
+          }} 
+          onUpdateStats={handleUpdateNPCStats} 
+          onUpdateEntity={handleUpdateEntity} 
+          onRoll={rollForNPC} 
+        />
+      )}
 
       {vfxRoll?.isCrit && <div className="fixed inset-0 z-[200] pointer-events-none animate-crit-glow"></div>}
       {vfxRoll?.isFail && <div className="fixed inset-0 z-[200] pointer-events-none animate-fail-glow"></div>}
