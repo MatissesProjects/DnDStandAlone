@@ -67,19 +67,47 @@ body {
   100% { transform: translate(1px, -2px) rotate(-1deg); }
 }
 
+@keyframes big-shake {
+  0% { transform: translate(5px, 5px) rotate(0deg); }
+  10% { transform: translate(-5px, -10px) rotate(-2deg); }
+  20% { transform: translate(-15px, 0px) rotate(2deg); }
+  30% { transform: translate(15px, 10px) rotate(0deg); }
+  40% { transform: translate(5px, -5px) rotate(2deg); }
+  50% { transform: translate(-5px, 10px) rotate(-2deg); }
+  60% { transform: translate(-15px, 5px) rotate(0deg); }
+  70% { transform: translate(15px, 5px) rotate(-2deg); }
+  80% { transform: translate(-5px, -5px) rotate(2deg); }
+  90% { transform: translate(5px, 10px) rotate(0deg); }
+  100% { transform: translate(5px, -10px) rotate(-2deg); }
+}
+
 .animate-shake {
   animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+.animate-big-shake {
+  animation: big-shake 0.6s cubic-bezier(.36,.07,.19,.97) both;
 }
 
 /* Critical Impact Overlay */
 @keyframes crit-glow {
   0% { box-shadow: inset 0 0 0px rgba(129, 140, 248, 0); }
-  50% { box-shadow: inset 0 0 100px rgba(129, 140, 248, 0.3); }
+  50% { box-shadow: inset 0 0 150px rgba(129, 140, 248, 0.4); }
   100% { box-shadow: inset 0 0 0px rgba(129, 140, 248, 0); }
+}
+
+@keyframes fail-glow {
+  0% { box-shadow: inset 0 0 0px rgba(239, 68, 68, 0); }
+  50% { box-shadow: inset 0 0 150px rgba(239, 68, 68, 0.4); }
+  100% { box-shadow: inset 0 0 0px rgba(239, 68, 68, 0); }
 }
 
 .animate-crit-glow {
   animation: crit-glow 1.5s ease-out forwards;
+}
+
+.animate-fail-glow {
+  animation: fail-glow 1.5s ease-out forwards;
 }
 
 /* Tooltips & Interaction */

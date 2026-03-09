@@ -31,7 +31,7 @@ function VTTApp() {
   const [playerLevel, setPlayerLevel] = useState(user?.level || 1);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-  const [vfxRoll, setVfxRoll] = useState<{ id: string, result: number, isCrit: boolean } | null>(null);
+  const [vfxRoll, setVfxRoll] = useState<{ id: string, result: number, isCrit: boolean, isFail: boolean } | null>(null);
   const [collaborators, setCollaborators] = useState<Map<string, any>>(new Map());
 
   const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
@@ -172,7 +172,13 @@ function VTTApp() {
         else if (data.type === "request_roll") setRollRequirement({ die: data.die, label: data.label });
         else if (data.type === 'story' || (data.result && data.die)) {
           if (data.result && data.die && !data.isSubtle) {
-            setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && data.die.includes('d20') });
+            const isD20 = data.die.includes('d20');
+            setVfxRoll({ 
+              id: data.id || Math.random().toString(), 
+              result: data.result, 
+              isCrit: data.result === 20 && isD20,
+              isFail: data.result === 1 && isD20
+            });
             setTimeout(() => setVfxRoll(null), 800);
           }
           const item: HistoryItem = data.type === 'story' ? data : { id: data.id, type: 'roll' as const, content: `${data.die}: ${data.result}`, user: data.user, timestamp: data.timestamp, isSubtle: data.isSubtle };
@@ -397,12 +403,22 @@ function VTTApp() {
   }
 
   return (
-    <div className={`flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none transition-all duration-300 ${vfxRoll ? 'animate-shake' : ''}`}>
+    <div className={`flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none transition-all duration-300 ${(vfxRoll?.isCrit || vfxRoll?.isFail) ? 'animate-big-shake' : vfxRoll ? 'animate-shake' : ''}`}>
       {isDashboardOpen && <WorldDashboard campaignId={activeCampaign.id} onClose={() => setIsDashboardOpen(false)} onSetActive={handleSetActiveLocation} activeLocationId={activeLocation?.id} />}
       {selectedEntity && <NPCDetailCard entity={selectedEntity} isGM={isGM} onClose={() => setSelectedEntity(null)} onUpdateStats={handleUpdateNPCStats} onUpdateEntity={handleUpdateEntity} onRoll={rollForNPC} />}
 
       {vfxRoll?.isCrit && <div className="fixed inset-0 z-[200] pointer-events-none animate-crit-glow"></div>}
-      {vfxRoll && <div className="fixed inset-0 z-[150] pointer-events-none flex items-center justify-center animate-in fade-in zoom-in-125 duration-300"><div className={`text-[8rem] font-black italic tracking-tighter opacity-20 ${vfxRoll.isCrit ? 'text-indigo-400' : 'text-gray-400'}`}>{vfxRoll.result}</div></div>}
+      {vfxRoll?.isFail && <div className="fixed inset-0 z-[200] pointer-events-none animate-fail-glow"></div>}
+      
+      {vfxRoll && (
+        <div className="fixed inset-0 z-[150] pointer-events-none flex flex-col items-center justify-center animate-in fade-in zoom-in-125 duration-300">
+          <div className={`text-[8rem] font-black italic tracking-tighter opacity-20 ${vfxRoll.isCrit ? 'text-indigo-400' : vfxRoll.isFail ? 'text-red-500' : 'text-gray-400'}`}>
+            {vfxRoll.result}
+          </div>
+          {vfxRoll.isCrit && <div className="text-2xl font-black text-indigo-400 uppercase tracking-[0.5em] animate-bounce">Critical Success</div>}
+          {vfxRoll.isFail && <div className="text-2xl font-black text-red-500 uppercase tracking-[0.5em] animate-pulse">Critical Failure</div>}
+        </div>
+      )}
 
       {/* Handouts Layer */}
       <div className="fixed inset-0 pointer-events-none z-40">
