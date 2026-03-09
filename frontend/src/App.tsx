@@ -232,9 +232,9 @@ function VTTApp() {
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
     
     const saveFunc = async () => {
-      console.log("Persisting canvas to backend...");
+      console.log("[Canvas] Persisting to backend...", { elementCount: elements.length });
       try {
-        await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/canvas`, { 
+        const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/canvas`, { 
           method: 'PATCH', 
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
           body: JSON.stringify({ 
@@ -247,7 +247,9 @@ function VTTApp() {
             } 
           }) 
         });
-      } catch (e) { console.error("Failed to persist canvas", e); }
+        console.log("[Canvas] Persistence response:", res.status);
+        if (!res.ok) console.error("[Canvas] Persistence failed:", await res.text());
+      } catch (e) { console.error("[Canvas] Failed to persist", e); }
     };
 
     if (immediate) {
@@ -266,11 +268,24 @@ function VTTApp() {
     if (!excalidrawAPI) return;
     const allElements = excalidrawAPI.getSceneElements();
     const selectedIds = excalidrawAPI.getAppState().selectedElementIds;
+    const selectedCount = Object.keys(selectedIds).length;
+    
+    if (selectedCount === 0) {
+      alert("Please select a drawing first!");
+      return;
+    }
+
+    console.log(`[Binding] Attempting to bind entity ${entityId} to ${selectedCount} elements`);
     
     const updatedElements = allElements.map((el: any) => {
       if (selectedIds[el.id]) {
-        console.log(`Binding entity ${entityId} to element ${el.id}`);
-        return { ...el, customData: { ...el.customData, entityId } };
+        console.log(`[Binding] Binding entity ${entityId} to element ${el.id}`);
+        return { 
+          ...el, 
+          version: (el.version || 0) + 1,
+          versionNonce: Math.floor(Math.random() * 1000000000),
+          customData: { ...el.customData, entityId } 
+        };
       }
       return el;
     });
@@ -278,7 +293,6 @@ function VTTApp() {
     excalidrawAPI.updateScene({ elements: updatedElements });
     localElementsRef.current = updatedElements;
     
-    // Trigger sync immediately
     sendMessage(JSON.stringify({ 
       type: "canvas_update", 
       senderId: clientId, 
@@ -286,7 +300,6 @@ function VTTApp() {
       appState: excalidrawAPI.getAppState() 
     }));
     
-    // Persist immediately
     persistCanvas(updatedElements, excalidrawAPI.getAppState(), true);
   }, [excalidrawAPI, clientId, sendMessage, persistCanvas]);
 
@@ -298,6 +311,7 @@ function VTTApp() {
       if (selectedEl?.customData?.entityId) {
         const entity = activeEntities.find(e => e.id === selectedEl.customData.entityId);
         if (entity && (!selectedEntity || selectedEntity.id !== entity.id)) {
+          console.log(`[Selection] Bound entity detected: ${entity.name}`);
           setSelectedEntity(entity);
         }
       }
@@ -350,8 +364,10 @@ function VTTApp() {
       const updatedElements = localElementsRef.current.map(el => { if (el.id === prop.elementId) return { ...el, x: prop.x, y: prop.y, opacity: 100 }; return el; });
       isRemoteUpdate.current = true;
       excalidrawAPI.updateScene({ elements: updatedElements });
+      localElementsRef.current = updatedElements;
       setTimeout(() => { isRemoteUpdate.current = false; }, 100);
       setPendingProposals(prev => prev.filter(p => p.elementId !== prop.elementId));
+      persistCanvas(updatedElements, excalidrawAPI.getAppState(), true);
     }
   };
 
@@ -526,7 +542,10 @@ function VTTApp() {
   }
 
   if (!activeCampaign) {
-    return <SetupScreen onJoin={(id, roomId, campaign) => setActiveCampaign({id, room_id: roomId, canvas_state: campaign?.canvas_state})} />;
+    return <SetupScreen onJoin={(id, roomId, campaign) => {
+      console.log("[Setup] Joining campaign:", id, "with state:", campaign?.canvas_state);
+      setActiveCampaign({id, room_id: roomId, canvas_state: campaign?.canvas_state});
+    }} />;
   }
 
   return (

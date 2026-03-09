@@ -45,11 +45,13 @@ def create_campaign(db: Session, campaign: schemas.CampaignCreate, gm_id: int):
     return db_campaign
 
 def update_campaign_canvas(db: Session, campaign_id: int, canvas_state: dict):
+    print(f"DEBUG: Updating canvas for campaign {campaign_id}")
     db_campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
     if db_campaign:
         db_campaign.canvas_state = canvas_state
         db.commit()
         db.refresh(db_campaign)
+        print(f"DEBUG: Canvas updated successfully for campaign {campaign_id}")
     return db_campaign
 
 def delete_campaign(db: Session, campaign_id: int, gm_id: int):
