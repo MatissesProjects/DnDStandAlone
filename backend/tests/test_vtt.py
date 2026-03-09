@@ -92,6 +92,10 @@ def test_create_location_as_gm():
 def test_websocket_room_scoping():
     # Test websocket connection and basic broadcast
     with client.websocket_connect("/ws/ROOM1/CLIENT1?role=gm") as websocket:
+        # First message is usually presence
+        presence = websocket.receive_json()
+        assert presence["type"] == "presence"
+        
         websocket.send_text(json.dumps({"isSubtle": False, "msg": "hello"}))
         data = websocket.receive_text()
         assert "hello" in data

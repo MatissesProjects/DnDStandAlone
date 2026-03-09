@@ -1,4 +1,5 @@
 import pytest
+import urllib.parse
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.database import Base, engine, get_db
@@ -55,12 +56,21 @@ async def test_callback_success(mocker):
     instance.post.return_value = mock_token_resp
     instance.get.return_value = mock_user_resp
     
-    response = client.get("/auth/callback?code=mock_code")
+    # We use follow_redirects=False to check the 307 redirect
+    response = client.get("/auth/callback?code=mock_code", follow_redirects=False)
     
-    assert response.status_code == 200
-    data = response.json()
-    assert "access_token" in data
-    assert data["user"]["username"] == "testuser"
+    if response.status_code == 422:
+        print(f"DEBUG 422: {response.content}")
+        
+    assert response.status_code == 307
+    location = response.headers["location"]
+    assert "http://localhost:5173/auth/callback" in location
+    
+    # Parse the redirect URL to check params
+    parsed = urllib.parse.urlparse(location)
+    params = urllib.parse.parse_qs(parsed.query)
+    assert "token" in params
+    assert params["username"][0] == "testuser"
 
 def test_health_check():
     response = client.get("/health")
