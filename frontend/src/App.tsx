@@ -232,7 +232,40 @@ function VTTApp() {
     sendMessage(JSON.stringify({ type: "pointer_update", senderId: clientId, username: user?.username || "Guest", pointer: payload.pointer }));
   }, [sendMessage, clientId, isConnected, activeCampaign, user]);
 
+  const handleBindEntity = useCallback((entityId: number) => {
+    if (!excalidrawAPI) return;
+    const selectedElements = excalidrawAPI.getSceneElements().filter((el: any) => {
+      const selectedIds = excalidrawAPI.getAppState().selectedElementIds;
+      return selectedIds[el.id];
+    });
+    if (selectedElements.length === 0) {
+      alert("Please select a drawing first!");
+      return;
+    }
+    const updatedElements = excalidrawAPI.getSceneElements().map((el: any) => {
+      if (selectedElements.find((sel: any) => sel.id === el.id)) {
+        return { ...el, customData: { ...el.customData, entityId } };
+      }
+      return el;
+    });
+    excalidrawAPI.updateScene({ elements: updatedElements });
+    // Trigger sync
+    sendMessage(JSON.stringify({ type: "canvas_update", senderId: clientId, elements: updatedElements, appState: excalidrawAPI.getAppState() }));
+  }, [excalidrawAPI, clientId, sendMessage]);
+
   const handleCanvasChange = useCallback((elements: any, appState: any) => {
+    // Detect entity selection
+    const selectedIds = Object.keys(appState.selectedElementIds);
+    if (selectedIds.length === 1) {
+      const selectedEl = elements.find((el: any) => el.id === selectedIds[0]);
+      if (selectedEl?.customData?.entityId) {
+        const entity = activeEntities.find(e => e.id === selectedEl.customData.entityId);
+        if (entity && (!selectedEntity || selectedEntity.id !== entity.id)) {
+          setSelectedEntity(entity);
+        }
+      }
+    }
+
     if (isRemoteUpdate.current) { isRemoteUpdate.current = false; return; }
     if (!isGM) {
       elements.forEach((el: any) => {
@@ -500,6 +533,7 @@ function VTTApp() {
           onManifestLore={(content) => handleCreateHandout("Whispered Lore", content, "text")}
           onDismissEnemy={() => setGeneratedEnemy(null)}
           onDismissLore={() => setGeneratedLore(null)}
+          onBindEntity={handleBindEntity}
           />      )}
     </div>
   );

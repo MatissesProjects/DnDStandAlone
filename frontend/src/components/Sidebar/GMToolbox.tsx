@@ -36,6 +36,7 @@ interface GMToolboxProps {
   onSummarize: () => void;
   isSummarizing: boolean;
   onClearHistory: () => void;
+  onBindEntity?: (entityId: number) => void;
 }
 
 const GMToolbox: React.FC<GMToolboxProps> = ({
@@ -219,7 +220,18 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
                     <p className="text-xs font-black truncate text-gray-100 uppercase">{ent.name}</p>
-                    <span className="text-[10px] font-black text-red-500">{ent.stats?.hp || 0} HP</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-red-500">{ent.stats?.hp || 0} HP</span>
+                      {isGM && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onBindEntity?.(ent.id); }}
+                          className="p-1 hover:bg-indigo-500 rounded text-[8px] font-black uppercase text-gray-500 hover:text-white transition-all border border-transparent hover:border-indigo-400/50"
+                          title="Bind to selected drawing"
+                        >
+                          Bind
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {(ent.stats?.conditions || []).map((c: string) => (
