@@ -190,7 +190,6 @@ function VTTApp() {
 
   const handleConsumeHistory = async (logId: string) => {
     if (!token || !activeCampaign) return;
-    console.log(`Attempting to delete log ${logId} for campaign ${activeCampaign.id}`);
     try {
       const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history/${logId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { sendMessage(JSON.stringify({ type: "history_consumed", logId })); fetchHistory(); }

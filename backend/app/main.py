@@ -152,10 +152,8 @@ def delete_campaign_history(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    print(f"DEBUG: DELETE history log {log_id} for campaign {campaign_id}")
     if crud.delete_history_log(db=db, log_id=log_id):
         return {"status": "ok"}
-    print(f"DEBUG: Log {log_id} not found")
     raise HTTPException(status_code=404, detail="Log not found")
 
 @app.get("/campaigns/{campaign_id}/summarize")
