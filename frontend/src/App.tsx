@@ -22,7 +22,6 @@ function VTTApp() {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   
-  // UI State
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
   
@@ -30,7 +29,6 @@ function VTTApp() {
   const [playerLevel, setPlayerLevel] = useState(user?.level || 1);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-  // VFX & Collaboration State
   const [vfxRoll, setVfxRoll] = useState<{ id: string, result: number, isCrit: boolean } | null>(null);
   const [collaborators, setCollaborators] = useState<Map<string, any>>(new Map());
 
@@ -149,7 +147,6 @@ function VTTApp() {
     if (lastMessage) {
       try {
         const data = JSON.parse(lastMessage);
-        
         if (data.type === "canvas_update" && data.senderId !== clientId) {
           if (excalidrawAPI) {
             isRemoteUpdate.current = true;
@@ -167,12 +164,13 @@ function VTTApp() {
         else if (data.type === "location_update") setActiveLocation(data.location);
         else if (data.type === "entities_update") { if (activeLocation && data.locationId === activeLocation.id) fetchEntities(activeLocation.id); }
         else if (data.type === "history_consumed") { fetchHistory(); }
+        else if (data.type === "history_cleared") { setHistory([]); }
         else if (data.type === "presence") setActiveUsers(data.users);
         else if (data.type === "request_roll") setRollRequirement({ die: data.die, label: data.label });
         else if (data.type === 'story' || (data.result && data.die)) {
           if (data.result && data.die && !data.isSubtle) {
             setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && data.die.includes('d20') });
-            setTimeout(() => setVfxRoll(null), 1000);
+            setTimeout(() => setVfxRoll(null), 800);
           }
           const item: HistoryItem = data.type === 'story' ? data : { id: data.id, type: 'roll' as const, content: `${data.die}: ${data.result}`, user: data.user, timestamp: data.timestamp, isSubtle: data.isSubtle };
           setHistory(prev => [item, ...prev].slice(0, 100));
@@ -180,6 +178,29 @@ function VTTApp() {
       } catch (e) {}
     }
   }, [lastMessage, excalidrawAPI, clientId, isGM, activeLocation, token, fetchEntities, fetchHistory]);
+
+  const handleConsumeHistory = async (logId: string) => {
+    if (!token || !activeCampaign) return;
+    try {
+      const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history/${logId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        sendMessage(JSON.stringify({ type: "history_consumed", logId }));
+        fetchHistory();
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleClearHistory = async () => {
+    if (!isGM || !token || !activeCampaign || !window.confirm("Clear entire chronicle history?")) return;
+    try {
+      // In a real app, we'd have a DELETE /history endpoint, but for now we'll just broadcast
+      sendMessage(JSON.stringify({ type: "history_cleared" }));
+      setHistory([]);
+    } catch (e) { console.error(e); }
+  };
 
   const persistCanvas = useCallback((elements: any, appState: any) => {
     if (!isGM || !activeCampaign || !token) return;
@@ -191,12 +212,7 @@ function VTTApp() {
 
   const handlePointerUpdate = useCallback((payload: any) => {
     if (!isConnected || !activeCampaign) return;
-    sendMessage(JSON.stringify({
-      type: "pointer_update",
-      senderId: clientId,
-      username: user?.username || "Guest",
-      pointer: payload.pointer
-    }));
+    sendMessage(JSON.stringify({ type: "pointer_update", senderId: clientId, username: user?.username || "Guest", pointer: payload.pointer }));
   }, [sendMessage, clientId, isConnected, activeCampaign, user]);
 
   const handleCanvasChange = useCallback((elements: any, appState: any) => {
@@ -283,11 +299,7 @@ function VTTApp() {
     if (!generatedEnemy || !token || !activeLocation) return;
     try {
       const res = await fetch(`http://localhost:8000/entities`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: generatedEnemy.name, location_id: activeLocation.id, stats: generatedEnemy.stats, backstory: generatedEnemy.backstory }) });
-      if (res.ok) {
-        setGeneratedEnemy(null);
-        sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id }));
-        fetchEntities(activeLocation.id);
-      }
+      if (res.ok) { setGeneratedEnemy(null); sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id })); fetchEntities(activeLocation.id); }
     } catch (e) { console.error(e); }
   };
 
@@ -298,6 +310,14 @@ function VTTApp() {
       if (!currentEntity) return;
       const newStats = { ...currentEntity.stats, ...statsUpdate };
       const res = await fetch(`http://localhost:8000/entities/${entityId}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ stats: newStats }) });
+      if (res.ok) { sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id })); fetchEntities(activeLocation.id); }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleUpdateEntity = async (entityId: number, update: any) => {
+    if (!token || !activeLocation) return;
+    try {
+      const res = await fetch(`http://localhost:8000/entities/${entityId}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(update) });
       if (res.ok) { sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id })); fetchEntities(activeLocation.id); }
     } catch (e) { console.error(e); }
   };
@@ -343,10 +363,10 @@ function VTTApp() {
   return (
     <div className={`flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none transition-all duration-300 ${vfxRoll ? 'animate-shake' : ''}`}>
       {isDashboardOpen && <WorldDashboard campaignId={activeCampaign.id} onClose={() => setIsDashboardOpen(false)} onSetActive={handleSetActiveLocation} activeLocationId={activeLocation?.id} />}
-      {selectedEntity && <NPCDetailCard entity={selectedEntity} isGM={isGM} onClose={() => setSelectedEntity(null)} onUpdateStats={handleUpdateNPCStats} onRoll={rollForNPC} />}
+      {selectedEntity && <NPCDetailCard entity={selectedEntity} isGM={isGM} onClose={() => setSelectedEntity(null)} onUpdateStats={handleUpdateNPCStats} onUpdateEntity={handleUpdateEntity} onRoll={rollForNPC} />}
 
       {vfxRoll?.isCrit && <div className="fixed inset-0 z-[200] pointer-events-none animate-crit-glow"></div>}
-      {vfxRoll && <div className="fixed inset-0 z-[150] pointer-events-none flex items-center justify-center animate-in fade-in zoom-in-125 duration-300"><div className={`text-[12rem] font-black italic tracking-tighter opacity-20 ${vfxRoll.isCrit ? 'text-indigo-400' : 'text-gray-400'}`}>{vfxRoll.result}</div></div>}
+      {vfxRoll && <div className="fixed inset-0 z-[150] pointer-events-none flex items-center justify-center animate-in fade-in zoom-in-125 duration-300"><div className={`text-[8rem] font-black italic tracking-tighter opacity-20 ${vfxRoll.isCrit ? 'text-indigo-400' : 'text-gray-400'}`}>{vfxRoll.result}</div></div>}
 
       {campaignSummary && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4" onClick={() => setCampaignSummary(null)}>
@@ -361,38 +381,13 @@ function VTTApp() {
         </div>
       )}
 
-      {/* Sidebar Toggles */}
-      <button 
-        onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-        className={`fixed bottom-8 left-8 z-[60] p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!leftSidebarOpen ? 'translate-x-0' : 'translate-x-[340px]'}`}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          {leftSidebarOpen ? <polyline points="15 18 9 12 15 6"></polyline> : <polyline points="9 18 15 12 9 6"></polyline>}
-        </svg>
-      </button>
+      <button onClick={() => setLeftSidebarOpen(!leftSidebarOpen)} className={`fixed bottom-8 left-8 z-[60] p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!leftSidebarOpen ? 'translate-x-0' : 'translate-x-[340px]'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{leftSidebarOpen ? <polyline points="15 18 9 12 15 6"></polyline> : <polyline points="9 18 15 12 9 6"></polyline>}</svg></button>
+      <button onClick={() => setRightSidebarOpen(!rightSidebarOpen)} className={`fixed bottom-8 right-8 z-[60] p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!rightSidebarOpen ? 'translate-x-0' : 'translate-x-[-320px]'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{rightSidebarOpen ? <polyline points="9 18 15 12 9 6"></polyline> : <polyline points="15 18 9 12 15 6"></polyline>}</svg></button>
 
-      <button 
-        onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-        className={`fixed bottom-8 right-8 z-[60] p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!rightSidebarOpen ? 'translate-x-0' : 'translate-x-[-320px]'}`}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          {rightSidebarOpen ? <polyline points="9 18 15 12 9 6"></polyline> : <polyline points="15 18 9 12 15 6"></polyline>}
-        </svg>
-      </button>
-
-      {leftSidebarOpen && (
-        <ChronicleSidebar isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} onConsumeHistory={handleConsumeHistory} />
-      )}
+      {leftSidebarOpen && <ChronicleSidebar isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} onConsumeHistory={handleConsumeHistory} />}
 
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
-          <Excalidraw 
-            excalidrawRef={(api) => setExcalidrawAPI(api)} 
-            onChange={handleCanvasChange} 
-            onPointerUpdate={handlePointerUpdate}
-            theme="dark" 
-            UIOptions={{ canvasActions: { toggleTheme: false, export: false, loadScene: false, saveToActiveFile: false } }} 
-            collaborators={collaborators}
-          />
+          <Excalidraw excalidrawRef={(api) => setExcalidrawAPI(api)} onChange={handleCanvasChange} onPointerUpdate={handlePointerUpdate} theme="dark" UIOptions={{ canvasActions: { toggleTheme: false, export: false, loadScene: false, saveToActiveFile: false } }} collaborators={collaborators} />
       </main>
 
       {rightSidebarOpen && (
@@ -405,6 +400,7 @@ function VTTApp() {
           onOpenDashboard={() => setIsDashboardOpen(true)} playerClass={playerClass} playerLevel={playerLevel} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
           setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} onUpdateProfile={handleUpdateProfile}
           onSummarize={handleSummarizeCampaign} isSummarizing={isSummarizing}
+          onClearHistory={handleClearHistory}
         />
       )}
     </div>
