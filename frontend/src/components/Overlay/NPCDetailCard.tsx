@@ -157,7 +157,7 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
 
           <div className="pt-4 flex justify-center">
             <button 
-              onClick={onClose}
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
               className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-gray-700 shadow-lg active:scale-95"
             >
               Dismiss Presence

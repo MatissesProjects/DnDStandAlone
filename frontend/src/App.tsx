@@ -69,12 +69,13 @@ function VTTApp() {
       if (res.ok) {
         const data = await res.json();
         setActiveEntities(data);
-        if (selectedEntity && data.find((e: Entity) => e.id === selectedEntity.id)) {
-          setSelectedEntity(data.find((e: Entity) => e.id === selectedEntity.id));
-        }
+        setSelectedEntity(prev => {
+          if (!prev) return null;
+          return data.find((e: Entity) => e.id === prev.id) || null;
+        });
       }
     } catch (e) { console.error(e); }
-  }, [token, selectedEntity]);
+  }, [token]);
 
   const fetchHandouts = useCallback(async () => {
     if (!activeCampaign || !token) return;
@@ -345,11 +346,11 @@ function VTTApp() {
     if (selectedIds.length === 1) {
       const selectedEl = elements.find((el: any) => el.id === selectedIds[0]);
       if (selectedEl?.customData?.entityId) {
-        const entityId = selectedEl.customData.entityId;
+        const entityId = Number(selectedEl.customData.entityId);
         
-        // Selection Guard: Ignore if we just closed this entity very recently (within 1s)
+        // Selection Guard: Ignore if we just closed this entity very recently (within 1.5s)
         const isRecentlyClosed = lastClosedEntityId.current?.id === entityId && 
-                                (Date.now() - lastClosedEntityId.current.time < 1000);
+                                (Date.now() - lastClosedEntityId.current.time < 1500);
 
         if (!isRecentlyClosed) {
           const entity = activeEntities.find(e => e.id === entityId);
@@ -603,14 +604,15 @@ function VTTApp() {
           entity={selectedEntity} 
           isGM={isGM} 
           onClose={() => {
+            if (!selectedEntity) return;
             console.log("[Presence] Closing card for:", selectedEntity.name);
-            lastClosedEntityId.current = { id: selectedEntity.id, time: Date.now() };
-            setSelectedEntity(null);
             if (excalidrawAPI) {
               excalidrawAPI.updateScene({
                 appState: { ...excalidrawAPI.getAppState(), selectedElementIds: {} }
               });
             }
+            lastClosedEntityId.current = { id: selectedEntity.id, time: Date.now() };
+            setSelectedEntity(null);
           }} 
           onUpdateStats={handleUpdateNPCStats} 
           onUpdateEntity={handleUpdateEntity} 
