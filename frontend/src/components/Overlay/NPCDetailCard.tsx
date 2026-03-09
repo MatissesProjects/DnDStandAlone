@@ -1,5 +1,5 @@
 import React from 'react';
-import { Entity } from '../../types/vtt';
+import type { Entity } from '../../types/vtt';
 
 interface NPCDetailCardProps {
   entity: Entity;
