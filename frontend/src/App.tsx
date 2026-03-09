@@ -26,7 +26,9 @@ function VTTApp() {
   const [playerLevel, setPlayerLevel] = useState(user?.level || 1);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-  // Summary State
+  // VFX State
+  const [vfxRoll, setVfxRoll] = useState<{ id: string, result: number, isCrit: boolean } | null>(null);
+
   const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
 
@@ -155,6 +157,16 @@ function VTTApp() {
         else if (data.type === "presence") setActiveUsers(data.users);
         else if (data.type === "request_roll") setRollRequirement({ die: data.die, label: data.label });
         else if (data.type === 'story' || (data.result && data.die)) {
+          // Trigger VFX for rolls
+          if (data.result && data.die && !data.isSubtle) {
+            setVfxRoll({ 
+              id: data.id || Math.random().toString(), 
+              result: data.result, 
+              isCrit: data.result === 20 && data.die.includes('d20') 
+            });
+            setTimeout(() => setVfxRoll(null), 1000);
+          }
+
           const item: HistoryItem = data.type === 'story' ? data : { id: data.id, type: 'roll', content: `${data.die}: ${data.result}`, user: data.user, timestamp: data.timestamp, isSubtle: data.isSubtle };
           setHistory(prev => [item, ...prev].slice(0, 100));
         }
@@ -226,7 +238,7 @@ function VTTApp() {
     const content = `${label ? `${die} (${label})` : die}: ${result}${isSubtleMode ? ' (Subtle)' : ''}`;
     if (activeCampaign && token) {
       fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content: `${user?.username || 'Guest'} rolled ${content}`, campaign_id: activeCampaign.id }) }).then(res => res.json()).then(savedLog => {
-        const newRoll = { id: savedLog.id.toString(), type: 'roll', content: `${label ? `${die} (${label})` : die}: ${result}`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: user ? user.username : `Player ${clientId.substring(0, 4)}` };
+        const newRoll = { id: savedLog.id.toString(), type: 'roll', die, result, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: user ? user.username : `Player ${clientId.substring(0, 4)}` };
         sendMessage(JSON.stringify(newRoll));
       });
     }
@@ -306,7 +318,7 @@ function VTTApp() {
     const result = Math.floor(Math.random() * 20) + 1;
     if (activeCampaign && token) {
       fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content: `${entityName} rolled d20 (${label}): ${result + bonus}${isSubtleMode ? ' (Subtle)' : ''}`, campaign_id: activeCampaign.id }) }).then(res => res.json()).then(savedLog => {
-        const newRoll = { id: savedLog.id.toString(), type: 'roll' as const, content: `d20 (${label}): ${result + bonus}`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: entityName };
+        const newRoll = { id: savedLog.id.toString(), type: 'roll' as const, die: 'd20', result: result + bonus, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: entityName };
         sendMessage(JSON.stringify(newRoll));
       });
     }
@@ -328,9 +340,23 @@ function VTTApp() {
   }
 
   return (
-    <div className="flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none">
+    <div className={`flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none transition-all duration-300 ${vfxRoll ? 'animate-shake' : ''}`}>
       {isDashboardOpen && <WorldDashboard campaignId={activeCampaign.id} onClose={() => setIsDashboardOpen(false)} onSetActive={handleSetActiveLocation} activeLocationId={activeLocation?.id} />}
       {selectedEntity && <NPCDetailCard entity={selectedEntity} isGM={isGM} onClose={() => setSelectedEntity(null)} onUpdateStats={handleUpdateNPCStats} onRoll={rollForNPC} />}
+
+      {/* Critical Glow Effect */}
+      {vfxRoll?.isCrit && (
+        <div className="fixed inset-0 z-[200] pointer-events-none animate-crit-glow"></div>
+      )}
+
+      {/* Big Result Flash */}
+      {vfxRoll && (
+        <div className="fixed inset-0 z-[150] pointer-events-none flex items-center justify-center animate-in fade-in zoom-in-125 duration-300">
+          <div className={`text-[12rem] font-black italic tracking-tighter opacity-20 ${vfxRoll.isCrit ? 'text-indigo-400' : 'text-gray-400'}`}>
+            {vfxRoll.result}
+          </div>
+        </div>
+      )}
 
       {/* Summary Overlay */}
       {campaignSummary && (
