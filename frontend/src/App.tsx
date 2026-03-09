@@ -144,7 +144,14 @@ function VTTApp() {
           else interim += event.results[i][0].transcript;
         }
         if (final) {
-          const storyItem: HistoryItem = { id: Math.random().toString(36).substring(7), type: 'story' as const, content: final, user: user?.username || "GM", timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+          const storyItem: HistoryItem = { 
+            id: Math.random().toString(36).substring(7), 
+            type: 'story' as const, 
+            content: final, 
+            user: user?.username || "GM", 
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            senderId: clientId 
+          };
           sendMessage(JSON.stringify(storyItem));
           if (activeCampaign && token) fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'story', content: final, campaign_id: activeCampaign.id }) });
         }
@@ -169,14 +176,19 @@ function VTTApp() {
         else if (data.type === "pointer_update" && data.senderId !== clientId) {
           setCollaborators(prev => { const next = new Map(prev); next.set(data.senderId, { pointer: data.pointer, username: data.username, button: "up" }); return next; });
         }
-        else if (data.type === "location_update") setActiveLocation(data.location);
-        else if (data.type === "entities_update") { if (activeLocation && data.locationId === activeLocation.id) fetchEntities(activeLocation.id); }
-        else if (data.type === "handouts_update") { fetchHandouts(); }
-        else if (data.type === "history_consumed") { fetchHistory(); }
+        else if (data.type === "location_update" && data.senderId !== clientId) {
+          if (!activeLocation || activeLocation.id !== data.location.id) {
+            setActiveLocation(data.location);
+          }
+        }
+        else if (data.type === "entities_update" && data.senderId !== clientId) { if (activeLocation && data.locationId === activeLocation.id) fetchEntities(activeLocation.id); }
+        else if (data.type === "handouts_update" && data.senderId !== clientId) { fetchHandouts(); }
+        else if (data.type === "history_consumed" && data.senderId !== clientId) { fetchHistory(); }
         else if (data.type === "history_cleared") { setHistory([]); }
         else if (data.type === "presence") setActiveUsers(data.users);
         else if (data.type === "request_roll") setRollRequirement({ die: data.die, label: data.label });
         else if (data.type === 'story' || (data.result && data.die)) {
+          if (data.senderId === clientId) return;
           if (data.result && data.die && !data.isSubtle) {
             const isD20 = data.die.includes('d20');
             setVfxRoll({ 
@@ -198,7 +210,7 @@ function VTTApp() {
     if (!token || !activeCampaign) return;
     try {
       const res = await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history/${logId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) { sendMessage(JSON.stringify({ type: "history_consumed", logId })); fetchHistory(); }
+      if (res.ok) { sendMessage(JSON.stringify({ type: "history_consumed", logId, senderId: clientId })); fetchHistory(); }
     } catch (e) { console.error(e); }
   };
 
@@ -277,7 +289,8 @@ function VTTApp() {
           result, 
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
           isSubtle: isSubtleMode, 
-          user: user ? user.username : `Player ${clientId.substring(0, 4)}` 
+          user: user ? user.username : `Player ${clientId.substring(0, 4)}`,
+          senderId: clientId
         };
         sendMessage(JSON.stringify(newRoll));
       });
@@ -315,7 +328,7 @@ function VTTApp() {
         body: JSON.stringify({ title, content, type, campaign_id: activeCampaign.id, x: 400, y: 300 })
       });
       if (res.ok) {
-        sendMessage(JSON.stringify({ type: "handouts_update" }));
+        sendMessage(JSON.stringify({ type: "handouts_update", senderId: clientId }));
         fetchHandouts();
         setGeneratedLore(null);
       }
@@ -331,7 +344,7 @@ function VTTApp() {
         body: JSON.stringify({ x, y })
       });
       if (res.ok) {
-        sendMessage(JSON.stringify({ type: "handouts_update" }));
+        sendMessage(JSON.stringify({ type: "handouts_update", senderId: clientId }));
       }
     } catch (e) { console.error(e); }
   };
@@ -344,7 +357,7 @@ function VTTApp() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        sendMessage(JSON.stringify({ type: "handouts_update" }));
+        sendMessage(JSON.stringify({ type: "handouts_update", senderId: clientId }));
         fetchHandouts();
       }
     } catch (e) { console.error(e); }
@@ -364,7 +377,7 @@ function VTTApp() {
     if (!generatedEnemy || !token || !activeLocation) return;
     try {
       const res = await fetch(`http://localhost:8000/entities`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: generatedEnemy.name, location_id: activeLocation.id, stats: generatedEnemy.stats, backstory: generatedEnemy.backstory }) });
-      if (res.ok) { setGeneratedEnemy(null); sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id })); fetchEntities(activeLocation.id); }
+      if (res.ok) { setGeneratedEnemy(null); sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id, senderId: clientId })); fetchEntities(activeLocation.id); }
     } catch (e) { console.error(e); }
   };
 
@@ -375,7 +388,7 @@ function VTTApp() {
       if (!currentEntity) return;
       const newStats = { ...currentEntity.stats, ...statsUpdate };
       const res = await fetch(`http://localhost:8000/entities/${entityId}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ stats: newStats }) });
-      if (res.ok) { sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id })); fetchEntities(activeLocation.id); }
+      if (res.ok) { sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id, senderId: clientId })); fetchEntities(activeLocation.id); }
     } catch (e) { console.error(e); }
   };
 
@@ -383,7 +396,7 @@ function VTTApp() {
     if (!token || !activeLocation) return;
     try {
       const res = await fetch(`http://localhost:8000/entities/${entityId}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(update) });
-      if (res.ok) { sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id })); fetchEntities(activeLocation.id); }
+      if (res.ok) { sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id, senderId: clientId })); fetchEntities(activeLocation.id); }
     } catch (e) { console.error(e); }
   };
 
@@ -396,14 +409,14 @@ function VTTApp() {
   };
 
   const handleSetActiveLocation = (loc: Location) => {
-    setActiveLocation(loc); sendMessage(JSON.stringify({ type: "location_update", location: loc }));
+    setActiveLocation(loc); sendMessage(JSON.stringify({ type: "location_update", location: loc, senderId: clientId }));
   };
 
   const rollForNPC = (entityName: string, label: string, bonus: number = 0) => {
     const result = Math.floor(Math.random() * 20) + 1;
     if (activeCampaign && token) {
       fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content: `${entityName} rolled d20 (${label}): ${result + bonus}${isSubtleMode ? ' (Subtle)' : ''}`, campaign_id: activeCampaign.id }) }).then(res => res.json()).then(savedLog => {
-        const newRoll = { id: savedLog.id.toString(), type: 'roll' as const, die: 'd20', result: result + bonus, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: entityName };
+        const newRoll = { id: savedLog.id.toString(), type: 'roll' as const, die: 'd20', result: result + bonus, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: entityName, senderId: clientId };
         sendMessage(JSON.stringify(newRoll));
       });
     }
