@@ -227,12 +227,34 @@ function VTTApp() {
     try { sendMessage(JSON.stringify({ type: "history_cleared" })); setHistory([]); } catch (e) { console.error(e); }
   };
 
-  const persistCanvas = useCallback((elements: any, appState: any) => {
+  const persistCanvas = useCallback((elements: any, appState: any, immediate: boolean = false) => {
     if (!isGM || !activeCampaign || !token) return;
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    saveTimeout.current = setTimeout(() => {
-      fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/canvas`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ canvas_state: { elements, appState: { viewBackgroundColor: appState.viewBackgroundColor, gridSize: appState.gridSize } } }) });
-    }, 3000);
+    
+    const saveFunc = async () => {
+      console.log("Persisting canvas to backend...");
+      try {
+        await fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/canvas`, { 
+          method: 'PATCH', 
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ 
+            canvas_state: { 
+              elements, 
+              appState: { 
+                viewBackgroundColor: appState.viewBackgroundColor, 
+                gridSize: appState.gridSize 
+              } 
+            } 
+          }) 
+        });
+      } catch (e) { console.error("Failed to persist canvas", e); }
+    };
+
+    if (immediate) {
+      saveFunc();
+    } else {
+      saveTimeout.current = setTimeout(saveFunc, 3000);
+    }
   }, [isGM, activeCampaign, token]);
 
   const handlePointerUpdate = useCallback((payload: any) => {
@@ -242,24 +264,31 @@ function VTTApp() {
 
   const handleBindEntity = useCallback((entityId: number) => {
     if (!excalidrawAPI) return;
-    const selectedElements = excalidrawAPI.getSceneElements().filter((el: any) => {
-      const selectedIds = excalidrawAPI.getAppState().selectedElementIds;
-      return selectedIds[el.id];
-    });
-    if (selectedElements.length === 0) {
-      alert("Please select a drawing first!");
-      return;
-    }
-    const updatedElements = excalidrawAPI.getSceneElements().map((el: any) => {
-      if (selectedElements.find((sel: any) => sel.id === el.id)) {
+    const allElements = excalidrawAPI.getSceneElements();
+    const selectedIds = excalidrawAPI.getAppState().selectedElementIds;
+    
+    const updatedElements = allElements.map((el: any) => {
+      if (selectedIds[el.id]) {
+        console.log(`Binding entity ${entityId} to element ${el.id}`);
         return { ...el, customData: { ...el.customData, entityId } };
       }
       return el;
     });
+
     excalidrawAPI.updateScene({ elements: updatedElements });
-    // Trigger sync
-    sendMessage(JSON.stringify({ type: "canvas_update", senderId: clientId, elements: updatedElements, appState: excalidrawAPI.getAppState() }));
-  }, [excalidrawAPI, clientId, sendMessage]);
+    localElementsRef.current = updatedElements;
+    
+    // Trigger sync immediately
+    sendMessage(JSON.stringify({ 
+      type: "canvas_update", 
+      senderId: clientId, 
+      elements: updatedElements, 
+      appState: excalidrawAPI.getAppState() 
+    }));
+    
+    // Persist immediately
+    persistCanvas(updatedElements, excalidrawAPI.getAppState(), true);
+  }, [excalidrawAPI, clientId, sendMessage, persistCanvas]);
 
   const handleCanvasChange = useCallback((elements: any, appState: any) => {
     // Detect entity selection
@@ -312,7 +341,7 @@ function VTTApp() {
     const elements = excalidrawAPI.getSceneElements();
     const appState = excalidrawAPI.getAppState();
     console.log("Forcing manual canvas save...");
-    persistCanvas(elements, appState);
+    persistCanvas(elements, appState, true);
     alert("Map state anchored to the room!");
   };
 
