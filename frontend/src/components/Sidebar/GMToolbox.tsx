@@ -192,7 +192,14 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                     <p className="text-xs font-black truncate text-gray-100 uppercase">{ent.name}</p>
                     <span className="text-[10px] font-black text-red-500">{ent.stats?.hp || 0} HP</span>
                   </div>
-                  <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate italic">Manifested NPC</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {(ent.stats?.conditions || []).map((c: string) => (
+                      <span key={c} className="text-[7px] bg-red-900/40 text-red-400 px-1.5 py-0.5 rounded-full border border-red-500/20 font-black uppercase tracking-tighter">{c}</span>
+                    ))}
+                    {(!ent.stats?.conditions || ent.stats.conditions.length === 0) && (
+                      <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate italic">Manifested NPC</p>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

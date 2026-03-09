@@ -9,7 +9,23 @@ interface NPCDetailCardProps {
   onRoll: (entityName: string, label: string, bonus?: number) => void;
 }
 
+const CONDITIONS = [
+  "Blinded", "Charmed", "Deafened", "Frightened", "Grappled", 
+  "Incapacitated", "Invisible", "Paralyzed", "Petrified", 
+  "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious"
+];
+
 const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, onUpdateStats, onRoll }) => {
+  const activeConditions = entity.stats?.conditions || [];
+
+  const toggleCondition = (condition: string) => {
+    if (!isGM) return;
+    const newConditions = activeConditions.includes(condition)
+      ? activeConditions.filter((c: string) => c !== condition)
+      : [...activeConditions, condition];
+    onUpdateStats(entity.id, { conditions: newConditions });
+  };
+
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="bg-gray-900 border border-indigo-500/30 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -27,7 +43,28 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
             </div>
           </div>
         </div>
-        <div className="p-8 space-y-6">
+        <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+          {/* Conditions Section */}
+          <div className="space-y-3">
+            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Status Conditions</h4>
+            <div className="flex flex-wrap gap-1.5">
+              {CONDITIONS.map(condition => (
+                <button
+                  key={condition}
+                  onClick={() => toggleCondition(condition)}
+                  disabled={!isGM}
+                  className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all border ${
+                    activeConditions.includes(condition)
+                      ? 'bg-red-600 border-red-400 text-white shadow-lg shadow-red-900/20'
+                      : 'bg-gray-950 border-gray-800 text-gray-600 hover:border-gray-600'
+                  }`}
+                >
+                  {condition}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 gap-2">
             {Object.entries(entity.stats || {}).filter(([k]) => k.length === 3).map(([key, val]) => (
               <button key={key} onClick={() => onRoll(entity.name, key.toUpperCase(), Math.floor(((val as number) - 10) / 2))} className="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center shadow-inner hover:border-indigo-500/50 hover:bg-indigo-900/10 transition-all active:scale-95 group">
@@ -57,7 +94,7 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
           <div className="flex gap-3 pt-2">
             <div className="flex-[2] bg-gray-950 p-4 rounded-3xl border border-gray-800 flex items-center justify-between shadow-inner">
               <div className="space-y-1">
-                <p className="text-[8px] font-black text-gray-600 uppercase">Health Points</p>
+                <p className="text-[8px] font-black text-gray-600 uppercase">HP</p>
                 <p className="text-2xl font-black text-red-500 leading-none">{entity.stats?.hp || 0}</p>
               </div>
               {isGM && (
