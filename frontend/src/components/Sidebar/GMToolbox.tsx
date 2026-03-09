@@ -40,6 +40,7 @@ interface GMToolboxProps {
   onClearHistory: () => void;
   onBindEntity?: (entityId: number) => void;
   onForceSaveCanvas?: () => void;
+  isAnchoring?: boolean;
 }
 
 const GMToolbox: React.FC<GMToolboxProps> = ({
@@ -50,7 +51,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   activeEntities, onSelectEntity, onBindEntity, onForceSaveCanvas,
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile, onSummarize, isSummarizing,
-  onClearHistory
+  onClearHistory, isAnchoring
 }) => {
   return (
     <aside className="w-[320px] h-full flex-none border-l border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
@@ -82,7 +83,13 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Tools</h3>
               <div className="grid gap-2">
                 <button onClick={onOpenDashboard} className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"> Manage Manifest </button>
-                <button onClick={onForceSaveCanvas} className="w-full bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 text-white font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 shadow-indigo-900/20"> Anchor Map State </button>
+                <button 
+                  onClick={onForceSaveCanvas} 
+                  disabled={isAnchoring}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 text-white font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 shadow-indigo-900/20 disabled:opacity-70"
+                > 
+                  {isAnchoring ? 'Anchoring...' : 'Anchor Map State'} 
+                </button>
                 <button 
                   onClick={onSummarize} 
                   disabled={isSummarizing}
