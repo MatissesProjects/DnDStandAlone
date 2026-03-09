@@ -89,6 +89,18 @@ def create_campaign(
         logger.error(f"Error creating campaign: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.delete("/campaigns/{campaign_id}")
+def delete_campaign(
+    campaign_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can delete campaigns")
+    if crud.delete_campaign(db=db, campaign_id=campaign_id, gm_id=current_user.id):
+        return {"status": "ok"}
+    raise HTTPException(status_code=404, detail="Campaign not found")
+
 @app.patch("/campaigns/{campaign_id}/canvas", response_model=schemas.Campaign)
 def update_campaign_canvas(
     campaign_id: int,

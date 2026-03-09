@@ -52,6 +52,17 @@ def update_campaign_canvas(db: Session, campaign_id: int, canvas_state: dict):
         db.refresh(db_campaign)
     return db_campaign
 
+def delete_campaign(db: Session, campaign_id: int, gm_id: int):
+    db_campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id, models.Campaign.gm_id == gm_id).first()
+    if db_campaign:
+        # Also delete associated locations and history
+        db.query(models.Location).filter(models.Location.campaign_id == campaign_id).delete()
+        db.query(models.HistoryLog).filter(models.HistoryLog.campaign_id == campaign_id).delete()
+        db.delete(db_campaign)
+        db.commit()
+        return True
+    return False
+
 # Location CRUD
 def get_locations(db: Session, campaign_id: int):
     return db.query(models.Location).filter(models.Location.campaign_id == campaign_id).all()
