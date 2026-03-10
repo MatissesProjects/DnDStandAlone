@@ -42,6 +42,20 @@ def create_campaign(db: Session, campaign: schemas.CampaignCreate, gm_id: int):
     db.add(db_campaign)
     db.commit()
     db.refresh(db_campaign)
+    
+    # Create a default starting location
+    default_loc = models.Location(
+        name="The Starting Glade",
+        description="A peaceful clearing where your journey begins.",
+        campaign_id=db_campaign.id,
+        danger_level=1,
+        x=0,
+        y=0,
+        zoom=1
+    )
+    db.add(default_loc)
+    db.commit()
+    
     return db_campaign
 
 def delete_campaign(db: Session, campaign_id: int, gm_id: int):

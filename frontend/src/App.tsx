@@ -13,8 +13,8 @@ import NPCDetailCard from "./components/Overlay/NPCDetailCard";
 import HandoutItem from "./components/Overlay/HandoutItem";
 import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout } from "./types/vtt";
 
-const API_BASE = "http://localhost:8000";
-const WS_BASE = "ws://localhost:8000";
+const API_BASE = "http://192.168.4.150:8000";
+const WS_BASE = "ws://192.168.4.150:8000";
 
 function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token, login } = useAuth();
@@ -75,6 +75,14 @@ function VTTApp() {
     }
     else localStorage.removeItem("vtt_active_location");
   }, [activeLocation]);
+
+  useEffect(() => {
+    if (activeCampaign) {
+      const excalidrawRoom = (activeCampaign.room_id + "00000000000000000000").substring(0, 20);
+      const excalidrawKey = (activeCampaign.room_id + "0000000000000000000000").substring(0, 22);
+      console.log("[Excalidraw] Shared Room URL:", `https://excalidraw.com/#room=${excalidrawRoom},${excalidrawKey}`);
+    }
+  }, [activeCampaign?.room_id]);
 
   const [activeEntities, setActiveEntities] = useState<Entity[]>([]);
   const [handouts, setHandouts] = useState<Handout[]>([]);
@@ -462,8 +470,9 @@ function VTTApp() {
 
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
           <iframe 
-            src={`https://excalidraw.com/#room=${activeCampaign.room_id},${(activeCampaign.room_id + "0000000000000000000000").substring(0, 22)}`} 
-            className="w-full h-full border-none bg-white"
+            src={`https://excalidraw.com/#room=${(activeCampaign.room_id + "00000000000000000000").substring(0, 20)},${(activeCampaign.room_id + "0000000000000000000000").substring(0, 22)}`} 
+            className="w-full h-full border-none bg-white block"
+            style={{ width: '100%', height: '100%', minHeight: '100vh' }}
             title="Excalidraw Canvas"
             allow="clipboard-read; clipboard-write"
           />
@@ -513,7 +522,42 @@ function VTTApp() {
             } 
           }} 
           isGenerating={isGenerating} generatedEnemy={generatedEnemy} generatedLore={generatedLore}
-          onManifestEntity={async () => { if (!generatedEnemy || !token || !activeLocation) return; const res = await fetch(`${API_BASE}/entities`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: generatedEnemy.name, location_id: activeLocation.id, stats: generatedEnemy.stats, backstory: generatedEnemy.backstory }) }); if (res.ok) { setGeneratedEnemy(null); sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id, senderId: clientId })); fetchEntities(activeLocation.id); } }} 
+          onManifestEntity={async () => { 
+            console.log("[Materialize] Attempting to manifest:", { generatedEnemy, hasToken: !!token, activeLocationId: activeLocation?.id });
+            if (!activeLocation) {
+              alert("Please create or select a Location in the Dashboard first!");
+              return;
+            }
+            if (!generatedEnemy || !token) {
+              console.warn("[Materialize] Aborting: Missing enemy or token");
+              return;
+            }
+            try {
+              const res = await fetch(`${API_BASE}/entities`, { 
+                method: 'POST', 
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ 
+                  name: generatedEnemy.name, 
+                  location_id: activeLocation.id, 
+                  stats: generatedEnemy.stats, 
+                  backstory: generatedEnemy.backstory 
+                }) 
+              }); 
+              console.log("[Materialize] Response status:", res.status);
+              if (res.ok) { 
+                setGeneratedEnemy(null); 
+                sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id, senderId: clientId })); 
+                fetchEntities(activeLocation.id); 
+              } else {
+                const err = await res.json();
+                console.error("[Materialize] Server error:", err);
+                alert("Materialization failed: " + (err.detail || "Unknown error"));
+              }
+            } catch (e) {
+              console.error("[Materialize] Fetch exception:", e);
+              alert("Network error during materialization.");
+            }
+          }} 
           activeEntities={activeEntities} onSelectEntity={setSelectedEntity} activeLocation={activeLocation} activeCampaign={activeCampaign}
           onOpenDashboard={() => setIsDashboardOpen(true)} playerClass={playerClass} playerLevel={playerLevel} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
           setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} onUpdateProfile={async () => { if (!token) return; const res = await fetch(`${API_BASE}/users/me`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ class_name: playerClass, level: playerLevel }) }); if (res.ok) { setIsEditingProfile(false); sendMessage(JSON.stringify({ type: "user_update", class_name: playerClass, level: playerLevel })); } }}

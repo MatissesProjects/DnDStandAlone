@@ -26,7 +26,7 @@ interface GMToolboxProps {
   activeEntities: Entity[];
   onSelectEntity: (ent: Entity) => void;
   activeLocation: Location | null;
-  activeCampaign: { id: number, roomId: string };
+  activeCampaign: { id: number, room_id: string };
   onOpenDashboard: () => void;
   playerClass: string;
   playerLevel: number;

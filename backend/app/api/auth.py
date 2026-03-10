@@ -143,7 +143,7 @@ async def callback(code: str, db: Session = Depends(get_db)):
         
         print(f"User {user.username} authenticated. Redirecting to frontend...")
         # REDIRECT back to frontend with the data in params
-        frontend_callback = "http://localhost:5173/auth/callback"
+        frontend_callback = "http://192.168.4.150:5173/auth/callback"#localhost
         params = urllib.parse.urlencode({
             "token": jwt_token,
             "username": user.username,
