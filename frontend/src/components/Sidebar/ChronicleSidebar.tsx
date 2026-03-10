@@ -55,11 +55,16 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
             </div>
           ) : (
             history.map(item => (
-              <div key={item.id} className={`p-2.5 rounded-xl border transition-all relative group ${item.type === 'story' ? 'bg-gray-900/60 border-indigo-900/20' : (item.isSubtle ? 'bg-purple-950/10 border-purple-900/30' : 'bg-gray-900/30 border-gray-800/50')} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
+              <div key={item.id} className={`p-2.5 rounded-xl border transition-all relative group ${item.type === 'story' ? 'bg-gray-900/60 border-indigo-900/20' : (item.isSubtle ? 'bg-purple-950/20 border-purple-500/40 shadow-[inset_0_0_15px_rgba(168,85,247,0.05)]' : 'bg-gray-900/30 border-gray-800/50')} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
                 <div className="flex justify-between items-center mb-1">
-                  <span className={`text-[8px] font-black uppercase tracking-widest ${item.type === 'story' ? 'text-indigo-500' : (item.isSubtle ? 'text-purple-500' : 'text-blue-600')}`}>
-                    {item.isSubtle ? 'SUBTLE' : item.type.toUpperCase()}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[8px] font-black uppercase tracking-widest ${item.type === 'story' ? 'text-indigo-500' : (item.isSubtle ? 'text-purple-400' : 'text-blue-600')}`}>
+                      {item.isSubtle ? 'HIDDEN ROLL' : item.type.toUpperCase()}
+                    </span>
+                    {item.isSubtle && (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[7px] font-mono text-gray-700 font-bold">{item.timestamp}</span>
                     <button 
@@ -85,18 +90,25 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
         <div className="flex justify-between items-center text-gray-100">
           <h3 className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">Fate</h3>
           {isGM && (
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <span className="text-[9px] font-bold text-gray-500 group-hover:text-gray-300 uppercase tracking-tighter transition-colors">Subtle Mode</span>
-              <div className="relative">
-                <input type="checkbox" className="sr-only peer" checked={isSubtleMode} onChange={(e) => setIsSubtleMode(e.target.checked)}/>
-                <div className="w-8 h-4 bg-gray-800 rounded-full border border-gray-700 peer peer-checked:bg-purple-600 peer-checked:border-purple-400 after:content-[''] after:absolute after:top-[2px] after:left-[3px] after:bg-white after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:after:translate-x-3.5"></div>
-              </div>
-            </label>
+            <div className="flex p-0.5 bg-gray-900 rounded-lg border border-gray-800">
+              <button 
+                onClick={() => setIsSubtleMode(false)}
+                className={`px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-tighter transition-all ${!isSubtleMode ? 'bg-gray-800 text-blue-400 shadow-sm' : 'text-gray-600 hover:text-gray-400'}`}
+              >
+                Public
+              </button>
+              <button 
+                onClick={() => setIsSubtleMode(true)}
+                className={`px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-tighter transition-all ${isSubtleMode ? 'bg-purple-900/40 text-purple-400 shadow-sm border border-purple-500/20' : 'text-gray-600 hover:text-gray-400'}`}
+              >
+                Hidden
+              </button>
+            </div>
           )}
         </div>
         <div className="grid grid-cols-3 gap-1.5">
           {['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].map(die => (
-            <button key={die} onClick={() => onRoll(die)} className="bg-gray-950 hover:bg-gray-800 active:bg-gray-700 text-[9px] font-black py-1.5 rounded-lg border border-gray-800 hover:border-gray-600 transition-all shadow-sm active:scale-95 text-gray-400">
+            <button key={die} onClick={() => onRoll(die)} className={`bg-gray-950 hover:bg-gray-800 active:bg-gray-700 text-[9px] font-black py-1.5 rounded-lg border transition-all shadow-sm active:scale-95 ${isSubtleMode ? 'border-purple-900/50 hover:border-purple-500/50 text-purple-300/70' : 'border-gray-800 hover:border-gray-600 text-gray-400'}`}>
               {die}
             </button>
           ))}

@@ -70,14 +70,30 @@ class ConnectionManager:
         message = json.dumps({"type": "presence", "users": users})
         await self.broadcast(message, room_id)
 
-    async def broadcast(self, message: str, room_id: str, role_limit: str = None):
+    async def broadcast(self, message: str, room_id: str, role_limit: str = None, sender_id: str = None):
         if room_id not in self.room_map:
             return
 
+        import json
+        is_subtle = False
+        try:
+            msg_data = json.loads(message)
+            is_subtle = msg_data.get("isSubtle") is True
+        except:
+            pass
+
         target_user_ids = self.room_map[room_id]
         for user_id in target_user_ids:
+            # If subtle, only GMs or the original sender can see it
+            if is_subtle:
+                user_role = self.user_metadata.get(user_id, {}).get("role")
+                if user_role != "gm" and user_id != sender_id:
+                    continue
+            
+            # If there's a specific role limit (like "gm" only for canvas updates)
             if role_limit and self.user_metadata.get(user_id, {}).get("role") != role_limit:
                 continue
+                
             if user_id in self.active_connections:
                 await self.active_connections[user_id].send_text(message)
 
