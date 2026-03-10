@@ -35,6 +35,22 @@ function VTTApp() {
     } catch (e) { return null; }
   });
 
+  const clientId = useMemo(() => {
+    let cid = user?.discord_id;
+    if (!cid) {
+      cid = localStorage.getItem("vtt_guest_id");
+      if (!cid) {
+        cid = "guest_" + Math.random().toString(36).substring(2, 9);
+        localStorage.setItem("vtt_guest_id", cid);
+      }
+    }
+    return cid;
+  }, [user?.discord_id]);
+
+  const { isConnected, lastMessage, sendMessage } = useWebSocket(
+    activeCampaign ? `${WS_BASE}/ws/${activeCampaign.room_id}/${clientId}?role=${isGM ? 'gm' : 'player'}&username=${user?.username || 'Guest'}` : ''
+  );
+
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [activeEntities, setActiveEntities] = useState<Entity[]>([]);
@@ -61,24 +77,11 @@ function VTTApp() {
   const [streamImage, setStreamImage] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const clientId = useMemo(() => {
-    let cid = user?.discord_id;
-    if (!cid) {
-      cid = localStorage.getItem("vtt_guest_id");
-      if (!cid) {
-        cid = "guest_" + Math.random().toString(36).substring(2, 9);
-        localStorage.setItem("vtt_guest_id", cid);
-      }
-    }
-    return cid;
-  }, [user?.discord_id]);
-
   const excalidrawRoomUrl = useMemo(() => {
     if (!activeCampaign) return "";
     const seed = activeCampaign.room_id.toUpperCase().replace(/[^A-Z0-9]/g, '');
     const room = (seed + "00000000000000000000").substring(0, 20);
     const key = (seed + "0000000000000000000000").substring(0, 22);
-    console.log(`[Excalidraw] Syncing Room: ${room} | Key: ${key}`);
     return `https://excalidraw.com/#room=${room},${key}`;
   }, [activeCampaign?.room_id]);
 
@@ -97,18 +100,17 @@ function VTTApp() {
     if (!token || !activeCampaign) return;
     try {
       const res = await fetch(`${API_BASE}/campaigns/${activeCampaign.id}/history/${logId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) fetchHistory();
+      if (res.ok) {
+        sendMessage(JSON.stringify({ type: "history_updated", campaignId: activeCampaign.id }));
+        fetchHistory();
+      }
     } catch (e) { console.error(e); }
-  }, [token, activeCampaign, fetchHistory]);
+  }, [token, activeCampaign, fetchHistory, sendMessage]);
 
   const handleClearHistory = useCallback(async () => {
     if (!isGM || !token || !activeCampaign || !window.confirm("Clear entire chronicle history?")) return;
     try { sendMessage(JSON.stringify({ type: "history_cleared" })); setHistory([]); } catch (e) { console.error(e); }
-  }, [isGM, token, activeCampaign]);
-
-  const { isConnected, lastMessage, sendMessage } = useWebSocket(
-    activeCampaign ? `${WS_BASE}/ws/${activeCampaign.room_id}/${clientId}?role=${isGM ? 'gm' : 'player'}&username=${user?.username || 'Guest'}` : ''
-  );
+  }, [isGM, token, activeCampaign, sendMessage]);
 
   const fetchEntities = useCallback(async (locId: number) => {
     if (!token) return;
@@ -117,7 +119,6 @@ function VTTApp() {
       if (res.ok) {
         const data = await res.json();
         setActiveEntities(data);
-        // Only update selected entity if it's currently open (not null)
         setSelectedEntity(prev => {
           if (!prev) return null;
           return data.find((e: Entity) => e.id === prev.id) || prev;
@@ -137,12 +138,14 @@ function VTTApp() {
   const rollDie = useCallback((die: string, label?: string) => {
     const sides = parseInt(die.substring(1));
     const result = Math.floor(Math.random() * sides) + 1;
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const content = `${label ? `${die} (${label})` : die}: ${result}${isSubtleMode ? ' (Subtle)' : ''}`;
+    
     if (activeCampaign && token) {
       fetch(`${API_BASE}/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content: `${user?.username || 'Guest'} rolled ${content}`, campaign_id: activeCampaign.id, is_private: isSubtleMode }) })
       .then(r => r.json()).then(saved => {
-        sendMessage(JSON.stringify({ id: saved.id.toString(), type: 'roll', die, result, timestamp: new Date().toLocaleTimeString(), isSubtle: isSubtleMode, user: user?.username || "Guest", senderId: clientId }));
-      }).catch(() => { sendMessage(JSON.stringify({ id: Math.random().toString(), type: 'roll', die, result, timestamp: new Date().toLocaleTimeString(), isSubtle: isSubtleMode, user: user?.username || "Guest", senderId: clientId })); });
+        sendMessage(JSON.stringify({ id: saved.id.toString(), type: 'roll', die, result, timestamp, isSubtle: isSubtleMode, user: user?.username || "Guest", senderId: clientId, unique_key: Date.now() }));
+      }).catch(() => { sendMessage(JSON.stringify({ id: `fallback-${Date.now()}`, type: 'roll', die, result, timestamp, isSubtle: isSubtleMode, user: user?.username || "Guest", senderId: clientId, unique_key: Date.now() })); });
     }
   }, [activeCampaign, token, user, isSubtleMode, clientId, sendMessage]);
 
@@ -163,9 +166,8 @@ function VTTApp() {
   useEffect(() => {
     if (activeLocation) {
       localStorage.setItem("vtt_active_location", JSON.stringify(activeLocation));
-      const iframe = document.querySelector('iframe');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: "VTT_BRIDGE_MOVE", x: activeLocation.x, y: activeLocation.y, zoom: activeLocation.zoom }, "*");
+      if (iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage({ type: "VTT_BRIDGE_MOVE", x: activeLocation.x, y: activeLocation.y, zoom: activeLocation.zoom }, "*");
       }
     }
     else localStorage.removeItem("vtt_active_location");
@@ -175,48 +177,36 @@ function VTTApp() {
     if (activeCampaign?.id) setIframeKey(prev => prev + 1);
   }, [activeCampaign?.id]);
 
-  // BRIDGE: Listen for capture results and stream from the extension
   useEffect(() => {
-    if (!isGM) return; // Only GM needs to listen for extension results to broadcast them
-
+    if (!isGM) return;
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === "VTT_BRIDGE_CAPTURE_RESULT") {
         window.dispatchEvent(new CustomEvent("VTT_CAMERA_CAPTURED", { detail: event.data }));
       }
       if (event.data.type === "VTT_BRIDGE_STREAM_RESULT") {
-        sendMessage(JSON.stringify({ 
-          type: "canvas_stream", 
-          image: event.data.image,
-          timestamp: Date.now() 
-        }));
+        sendMessage(JSON.stringify({ type: "canvas_stream", image: event.data.image, timestamp: Date.now() }));
       }
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, [isGM, sendMessage]);
 
-  // GM Stream Request Interval
   useEffect(() => {
     if (!isGM || !activeCampaign) return;
     const interval = setInterval(() => {
-      if (iframeRef.current && iframeRef.current.contentWindow) {
-        console.log("[Stream] Sending request to iframe...");
+      if (iframeRef.current?.contentWindow) {
         iframeRef.current.contentWindow.postMessage({ type: "VTT_BRIDGE_STREAM_REQUEST" }, "*");
       }
     }, 1000);
     return () => clearInterval(interval);
   }, [isGM, activeCampaign]);
 
-  // Link Interceptor: Open NPC cards when clicking entity:ID links
   useEffect(() => {
     const path = location.pathname;
     if (path.includes("entity:")) {
       const entityId = parseInt(path.split("entity:")[1]);
       const entity = activeEntities.find(e => e.id === entityId);
-      if (entity) {
-        setSelectedEntity(entity);
-        navigate("/", { replace: true });
-      }
+      if (entity) { setSelectedEntity(entity); navigate("/", { replace: true }); }
     }
   }, [location.pathname, activeEntities, navigate]);
 
@@ -230,12 +220,13 @@ function VTTApp() {
     if (lastMessage) {
       try {
         const data = JSON.parse(lastMessage);
-        const msgId = data.id || `${data.type}-${data.timestamp}`;
+        const msgId = data.id || `${data.type}-${data.timestamp}-${data.unique_key || ''}`;
         if (processedMessages.current.has(msgId)) return;
         processedMessages.current.add(msgId);
         if (data.type === "presence") setActiveUsers(data.users);
         else if (data.type === "location_update") setActiveLocation(data.location);
         else if (data.type === "entities_update") { if (activeLocation?.id === data.locationId) fetchEntities(data.locationId); }
+        else if (data.type === "history_updated") { fetchHistory(); }
         else if (data.type === "canvas_stream") { setStreamImage(data.image); }
         else if (data.type === 'story' || (data.result && data.die)) {
           if (data.result && data.die && !data.isSubtle) { const isD20 = data.die.includes('d20'); setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && isD20, isFail: data.result === 1 && isD20 }); setTimeout(() => setVfxRoll(null), 800); }
@@ -243,7 +234,7 @@ function VTTApp() {
         }
       } catch (e) {}
     }
-  }, [lastMessage, activeLocation?.id, fetchEntities]);
+  }, [lastMessage, activeLocation?.id, fetchEntities, fetchHistory]);
 
   if (!isAuthenticated) {
     return (
@@ -251,7 +242,7 @@ function VTTApp() {
         <div className="space-y-8 p-12 bg-gray-900 rounded-[3rem] border border-gray-800 shadow-2xl relative overflow-hidden">
           <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-2">
             <div className={`h-1.5 w-1.5 rounded-full ${backendOnline === true ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]' : backendOnline === false ? 'bg-red-500' : 'bg-gray-600'}`}></div>
-            <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">{backendOnline === true ? 'Signal Strong' : backendOnline === false ? 'Signal Lost' : 'Checking Signal...'}</span>
+            <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">{backendOnline === true ? 'Signal Strong' : backendOnline === false ? 'Signal Lost' : 'Checking...'}</span>
           </div>
           <h1 className="text-5xl font-black italic tracking-tighter text-gray-100 uppercase relative z-10 pt-4">DND Master</h1>
           <div className="flex flex-col gap-4 relative z-10">
