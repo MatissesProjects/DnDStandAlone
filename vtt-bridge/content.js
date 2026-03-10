@@ -41,8 +41,15 @@ if (window.location.host.includes("excalidraw.com")) {
     return new Promise((resolve) => {
       const requestId = Math.random().toString(36).substring(7);
       
+      // Safety timeout: don't hang the stream if inject.js is slow
+      const timeout = setTimeout(() => {
+        window.removeEventListener("message", handler);
+        resolve({ hitZones: [] });
+      }, 200);
+
       const handler = (event) => {
         if (event.data.type === "VTT_INTERNAL_METADATA_REPLY" && event.data.requestId === requestId) {
+          clearTimeout(timeout);
           window.removeEventListener("message", handler);
           resolve(event.data.metadata);
         }
@@ -74,6 +81,7 @@ if (window.location.host.includes("excalidraw.com")) {
         }, "*");
         return true;
       } catch (e) {
+        console.warn("[VTT Bridge] Capture failed:", e);
         return false;
       }
     }
@@ -91,6 +99,7 @@ if (window.location.host.includes("excalidraw.com")) {
 
     if (event.data.type === "VTT_BRIDGE_STREAM_REQUEST") {
       if (!isStreamingActive) {
+        console.log("[VTT Bridge] Activating Stream Loop");
         isStreamingActive = true;
         setInterval(captureAndSend, 1000); 
       }
@@ -98,6 +107,7 @@ if (window.location.host.includes("excalidraw.com")) {
     }
   });
 
+  // Relay ALL VTT_BRIDGE results back to the VTT parent window
   window.addEventListener("message", (event) => {
       if (event.data && event.data.type && event.data.type.startsWith("VTT_BRIDGE_") && event.data.type.endsWith("_RESULT")) {
           window.parent.postMessage(event.data, "*");
