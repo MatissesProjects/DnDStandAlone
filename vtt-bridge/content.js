@@ -1,44 +1,40 @@
 // Debug log to confirm extension is running
 console.log("[VTT Bridge] Content script active. Probing for Excalidraw...");
 
-// Function to find and expose the Excalidraw API if it exists
-function probeForAPI() {
-  // If it's already there, great
-  if (window.excalidrawAPI) return true;
+// VISUAL INDICATOR: Add a small label to the corner of the iframe
+const debugLabel = document.createElement("div");
+debugLabel.innerHTML = "VTT Bridge: ACTIVE";
+debugLabel.style.position = "fixed";
+debugLabel.style.bottom = "10px";
+debugLabel.style.right = "10px";
+debugLabel.style.background = "red";
+debugLabel.style.color = "white";
+debugLabel.style.padding = "2px 5px";
+debugLabel.style.fontSize = "10px";
+debugLabel.style.zIndex = "999999";
+debugLabel.style.fontWeight = "bold";
+debugLabel.style.borderRadius = "3px";
+debugLabel.style.pointerEvents = "none";
+document.body.appendChild(debugLabel);
 
-  // Try to find it via React internal properties on the container
-  const container = document.querySelector(".excalidraw-container");
-  if (container) {
-    for (const key in container) {
-      if (key.startsWith("__reactProps") || key.startsWith("__reactFiber")) {
-        const props = container[key];
-        // In some versions, the API might be nested in the props of a child
-        // or passed down. This is speculative but worth a shot.
-      }
-    }
-  }
-  return false;
+function injectScript(code) {
+  const script = document.createElement('script');
+  script.textContent = code;
+  (document.head || document.documentElement).appendChild(script);
+  script.remove();
 }
 
 // Listen for messages from the parent VTT window
 window.addEventListener("message", (event) => {
   if (event.data.type === "VTT_BRIDGE_MOVE") {
     const { x, y, zoom } = event.data;
-    console.log("[VTT Bridge] Teleporting to:", { x, y, zoom });
-    
     injectScript(`
       (function() {
         const api = window.excalidrawAPI;
         if (api) {
           api.updateScene({
-            appState: { 
-              scrollX: ${x}, 
-              scrollY: ${y}, 
-              zoom: { value: ${zoom} } 
-            }
+            appState: { scrollX: ${x}, scrollY: ${y}, zoom: { value: ${zoom} } }
           });
-        } else {
-          console.error("[VTT Bridge] API not found. If this is excalidraw.com, ensure the 'Developer' version or a custom build is used that exposes 'window.excalidrawAPI'.");
         }
       })();
     `);
@@ -60,21 +56,31 @@ window.addEventListener("message", (event) => {
       })();
     `);
   }
+
+  if (event.data.type === "VTT_BRIDGE_STREAM_REQUEST") {
+    console.log("[VTT Bridge] Received stream request from VTT");
+    // Try to find the static canvas (where Excalidraw draws the scene)
+    const canvases = Array.from(document.querySelectorAll("canvas"));
+    let targetCanvas = canvases.find(c => c.classList.contains("static")) || canvases[0];
+    
+    if (targetCanvas) {
+      try {
+        const dataUrl = targetCanvas.toDataURL("image/jpeg", 0.5);
+        // Important: Post to self so the generic relay picks it up
+        window.postMessage({
+          type: "VTT_BRIDGE_STREAM_RESULT",
+          image: dataUrl
+        }, "*");
+      } catch (e) {
+        console.warn("[VTT Bridge] Canvas tainted, cannot stream.");
+      }
+    }
+  }
 });
 
-// Relay results back to the VTT
+// Relay ALL VTT_BRIDGE results back to the VTT parent window
 window.addEventListener("message", (event) => {
-    if (event.data.type === "VTT_BRIDGE_CAPTURE_RESULT") {
+    if (event.data && event.data.type && event.data.type.startsWith("VTT_BRIDGE_") && event.data.type.endsWith("_RESULT")) {
         window.parent.postMessage(event.data, "*");
     }
 });
-
-function injectScript(code) {
-  const script = document.createElement('script');
-  script.textContent = code;
-  (document.head || document.documentElement).appendChild(script);
-  script.remove();
-}
-
-// Initial probe
-probeForAPI();

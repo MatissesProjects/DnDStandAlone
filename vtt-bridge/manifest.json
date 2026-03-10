@@ -6,9 +6,9 @@
   "permissions": ["activeTab", "scripting"],
   "content_scripts": [
     {
-      "matches": ["https://excalidraw.com/*"],
+      "matches": ["*://*.excalidraw.com/*"],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ],
   "externally_connectable": {
@@ -18,5 +18,4 @@
       "http://192.168.4.150/*"
     ]
   }
-
 }
