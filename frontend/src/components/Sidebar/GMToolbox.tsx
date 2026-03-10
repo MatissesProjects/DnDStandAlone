@@ -177,6 +177,13 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
     });
   };
 
+  const copyRoomCode = () => {
+    navigator.clipboard.writeText(activeCampaign.room_id).then(() => {
+      setCopyStatus('room_code');
+      setTimeout(() => setCopyStatus(null), 2000);
+    });
+  };
+
   return (
     <aside className="w-[320px] h-full flex-none border-l border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
       <h2 className="text-xl font-black border-b border-gray-800 pb-4 shrink-0 tracking-tighter text-gray-100 uppercase italic">
@@ -423,7 +430,15 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
           <div className="bg-gray-900/80 p-5 rounded-3xl border border-gray-800 shadow-2xl space-y-6">
             <div>
               <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Room Code</p>
-              <p className="text-sm font-black tracking-tight text-indigo-400 font-mono">{activeCampaign.room_id}</p>
+              <div className="flex items-center justify-between bg-gray-950 p-3 rounded-xl border border-gray-800 group/code relative">
+                <p className="text-sm font-black tracking-tight text-indigo-400 font-mono">{activeCampaign.room_id}</p>
+                <button 
+                  onClick={copyRoomCode}
+                  className={`text-[8px] font-black uppercase px-2 py-1 rounded transition-all ${copyStatus === 'room_code' ? 'bg-green-600 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                >
+                  {copyStatus === 'room_code' ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
             </div>
             <div>
               <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Current Locale</p>

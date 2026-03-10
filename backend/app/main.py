@@ -28,7 +28,12 @@ app = FastAPI()
 # Robust CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -308,44 +313,54 @@ def delete_location(
 async def generate_enemy(
     campaign_id: int,
     location_id: int = Query(...),
+    payload: Dict[Any, Any] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     if current_user.role != "gm":
         raise HTTPException(status_code=403, detail="Only GMs can generate enemies")
     
-    location = db.query(models.Location).filter(models.Location.id == location_id).first()
-    if not location:
-        location = models.Location(name="Unknown Wilds", description="A mysterious uncharted area", danger_level=3)
-        
-    history = crud.get_history(db, campaign_id, limit=5)
-    enemy_data = await ai_service.generate_enemy(location, history)
-    return enemy_data
+    try:
+        location = db.query(models.Location).filter(models.Location.id == location_id).first()
+        if not location:
+            location = models.Location(name="Unknown Wilds", description="A mysterious uncharted area", danger_level=3)
+            
+        history = crud.get_history(db, campaign_id, limit=5)
+        enemy_data = await ai_service.generate_enemy(location, history)
+        return enemy_data
+    except Exception as e:
+        logger.error(f"Generate Enemy Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/campaigns/{campaign_id}/generate-lore")
 async def generate_lore(
     campaign_id: int,
     location_id: int = Query(...),
+    payload: Dict[Any, Any] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     if current_user.role != "gm":
         raise HTTPException(status_code=403, detail="Only GMs can generate lore")
     
-    location = db.query(models.Location).filter(models.Location.id == location_id).first()
-    if not location:
-        location = models.Location(name="Unknown Wilds", description="A mysterious uncharted area", danger_level=3)
+    try:
+        location = db.query(models.Location).filter(models.Location.id == location_id).first()
+        if not location:
+            location = models.Location(name="Unknown Wilds", description="A mysterious uncharted area", danger_level=3)
+            
+        history = crud.get_history(db, campaign_id, limit=5)
+        lore_text = await ai_service.generate_lore(location, history)
         
-    history = crud.get_history(db, campaign_id, limit=5)
-    lore_text = await ai_service.generate_lore(location, history)
-    
-    crud.create_history_log(db, schemas.HistoryLogCreate(
-        campaign_id=campaign_id,
-        event_type="lore_update",
-        content=f"AI Lore: {lore_text}"
-    ))
-    
-    return {"lore": lore_text}
+        crud.create_history_log(db, schemas.HistoryLogCreate(
+            campaign_id=campaign_id,
+            event_type="lore_update",
+            content=f"AI Lore: {lore_text}"
+        ))
+        
+        return {"lore": lore_text}
+    except Exception as e:
+        logger.error(f"Generate Lore Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.websocket("/ws/{room_id}/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str, role: str = "player", username: str = "Anonymous"):

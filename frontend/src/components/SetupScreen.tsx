@@ -12,6 +12,8 @@ interface Campaign {
   canvas_state?: any;
 }
 
+const API_BASE = "http://localhost:8000";
+
 const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
   const { isGM, token, logout, user } = useAuth();
   const [roomCode, setRoomCode] = useState('');
@@ -28,7 +30,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
 
   const fetchMyCampaigns = async () => {
     try {
-      const res = await fetch('http://localhost:8000/users/me/campaigns', {
+      const res = await fetch(`${API_BASE}/users/me/campaigns`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -45,7 +47,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('http://localhost:8000/campaigns', {
+      const res = await fetch(`${API_BASE}/campaigns`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -70,7 +72,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
     e.stopPropagation();
     if (!token || !window.confirm("Are you sure? This will delete all history and locations for this campaign.")) return;
     try {
-      const res = await fetch(`http://localhost:8000/campaigns/${id}`, {
+      const res = await fetch(`${API_BASE}/campaigns/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -87,7 +89,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`http://localhost:8000/campaigns/join/${roomCode.toUpperCase()}`);
+      const res = await fetch(`${API_BASE}/campaigns/join/${roomCode.toUpperCase()}`);
       if (!res.ok) throw new Error("Room not found");
       const data = await res.json();
       onJoin(data.id, data.room_id, data);

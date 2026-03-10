@@ -63,7 +63,7 @@ async def login():
         f"&response_type=code"
         f"&scope={scopes}"
     )
-    return {"url": auth_url}
+    return RedirectResponse(url=auth_url)
 
 @router.get("/guest")
 async def guest_login(db: Session = Depends(get_db)):
@@ -125,11 +125,13 @@ async def callback(code: str, db: Session = Depends(get_db)):
 
         user = db.query(models.User).filter(models.User.discord_id == discord_id).first()
         if not user:
-            is_first_user = db.query(models.User).count() == 0
+            # Check if there are any other Discord users (non-guests)
+            has_other_discord_users = db.query(models.User).filter(~models.User.discord_id.startswith("guest_")).count() > 0
+            
             user = models.User(
                 discord_id=discord_id, 
                 username=username, 
-                role="gm" if is_first_user else "player"
+                role="player" if has_other_discord_users else "gm"
             )
             db.add(user)
             db.commit()
