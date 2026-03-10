@@ -75,6 +75,7 @@ function VTTApp() {
   const [generatedLore, setGeneratedLore] = useState<string | null>(null);
   const [iframeKey, setIframeKey] = useState(0);
   const [streamImage, setStreamImage] = useState<string | null>(null);
+  const [hitZones, setHitZones] = useState<any[]>([]);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const excalidrawRoomUrl = useMemo(() => {
@@ -184,7 +185,12 @@ function VTTApp() {
         window.dispatchEvent(new CustomEvent("VTT_CAMERA_CAPTURED", { detail: event.data }));
       }
       if (event.data.type === "VTT_BRIDGE_STREAM_RESULT") {
-        sendMessage(JSON.stringify({ type: "canvas_stream", image: event.data.image, timestamp: Date.now() }));
+        sendMessage(JSON.stringify({ 
+          type: "canvas_stream", 
+          image: event.data.image, 
+          hitZones: event.data.hitZones,
+          timestamp: Date.now() 
+        }));
       }
     };
     window.addEventListener("message", handleMessage);
@@ -227,7 +233,10 @@ function VTTApp() {
         else if (data.type === "location_update") setActiveLocation(data.location);
         else if (data.type === "entities_update") { if (activeLocation?.id === data.locationId) fetchEntities(data.locationId); }
         else if (data.type === "history_updated") { fetchHistory(); }
-        else if (data.type === "canvas_stream") { setStreamImage(data.image); }
+        else if (data.type === "canvas_stream") { 
+          setStreamImage(data.image); 
+          if (data.hitZones) setHitZones(data.hitZones);
+        }
         else if (data.type === 'story' || (data.result && data.die)) {
           if (data.result && data.die && !data.isSubtle) { const isD20 = data.die.includes('d20'); setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && isD20, isFail: data.result === 1 && isD20 }); setTimeout(() => setVfxRoll(null), 800); }
           setHistory(prev => [{ id: data.id, type: 'roll' as const, content: `${data.die}: ${data.result}`, user: data.user, timestamp: data.timestamp, isSubtle: data.isSubtle }, ...prev].slice(0, 100));
@@ -317,9 +326,47 @@ function VTTApp() {
               referrerPolicy="no-referrer-when-downgrade"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-[#1e1e1e]">
+            <div className="w-full h-full flex items-center justify-center bg-[#1e1e1e] relative overflow-hidden">
               {streamImage ? (
-                <img src={streamImage} alt="GM Canvas Stream" className="max-w-full max-h-full object-contain pointer-events-none" />
+                <>
+                  <img src={streamImage} alt="GM Canvas Stream" className="max-w-full max-h-full object-contain pointer-events-none" />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="relative w-full h-full">
+                      {hitZones.map((zone, idx) => {
+                        const entity = activeEntities.find(e => e.id.toString() === zone.id.toString());
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => entity && setSelectedEntity(entity)}
+                            onMouseEnter={(e) => {
+                                const tooltip = e.currentTarget.querySelector('.vtt-tooltip');
+                                if (tooltip) (tooltip as HTMLElement).style.opacity = '1';
+                            }}
+                            onMouseLeave={(e) => {
+                                const tooltip = e.currentTarget.querySelector('.vtt-tooltip');
+                                if (tooltip) (tooltip as HTMLElement).style.opacity = '0';
+                            }}
+                            className="absolute pointer-events-auto group"
+                            style={{
+                              left: `${zone.x}px`,
+                              top: `${zone.y}px`,
+                              width: `${zone.w}px`,
+                              height: `${zone.h}px`,
+                              background: 'transparent',
+                              border: '1px solid transparent',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <div className="vtt-tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest rounded-lg border border-indigo-500/30 whitespace-nowrap opacity-0 transition-opacity pointer-events-none shadow-xl shadow-black/50">
+                                {entity?.name || "Unknown Soul"}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-indigo-500/30"></div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="text-gray-500 font-bold uppercase tracking-widest animate-pulse">Awaiting GM Vision...</div>
               )}
