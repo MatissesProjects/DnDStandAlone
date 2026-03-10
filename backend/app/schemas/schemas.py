@@ -74,6 +74,7 @@ class Entity(EntityBase):
 class HistoryLogBase(BaseModel):
     event_type: str
     content: str
+    is_private: bool = False
 
 class HistoryLogCreate(HistoryLogBase):
     campaign_id: int

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, JSON, DateTime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, JSON, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.database import Base
@@ -45,6 +45,7 @@ class HistoryLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     event_type = Column(String) # "dice_roll", "lore_update", etc.
     content = Column(Text)
+    is_private = Column(Boolean, default=False)
     campaign_id = Column(Integer, ForeignKey("campaigns.id"))
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     campaign = relationship("Campaign")

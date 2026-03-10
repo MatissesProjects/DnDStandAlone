@@ -132,7 +132,8 @@ def read_campaign_history(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    return crud.get_history(db, campaign_id=campaign_id, limit=limit)
+    include_private = current_user.role == "gm"
+    return crud.get_history(db, campaign_id=campaign_id, limit=limit, include_private=include_private)
 
 @app.post("/campaigns/{campaign_id}/history", response_model=schemas.HistoryLog)
 def add_campaign_history(
@@ -370,11 +371,11 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
                     continue
 
                 if message_json.get("isSubtle") is True:
-                    await manager.broadcast(data, room_id, role_limit="gm")
+                    await manager.broadcast(data, room_id, role_limit="gm", sender_id=client_id)
                     if role != "gm":
                         await manager.send_personal_message(data, client_id)
                 else:
-                    await manager.broadcast(data, room_id)
+                    await manager.broadcast(data, room_id, sender_id=client_id)
             except json.JSONDecodeError:
                 await manager.broadcast(data, room_id)
     except WebSocketDisconnect:

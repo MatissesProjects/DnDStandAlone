@@ -123,10 +123,12 @@ def delete_entity(db: Session, entity_id: int):
     return False
 
 # History CRUD
-def get_history(db: Session, campaign_id: int, limit: int = 10):
-    return db.query(models.HistoryLog)\
-        .filter(models.HistoryLog.campaign_id == campaign_id)\
-        .order_by(models.HistoryLog.timestamp.desc())\
+def get_history(db: Session, campaign_id: int, limit: int = 10, include_private: bool = False):
+    query = db.query(models.HistoryLog).filter(models.HistoryLog.campaign_id == campaign_id)
+    if not include_private:
+        query = query.filter(models.HistoryLog.is_private == False)
+    
+    return query.order_by(models.HistoryLog.timestamp.desc())\
         .limit(limit).all()
 
 def create_history_log(db: Session, log: schemas.HistoryLogCreate):
