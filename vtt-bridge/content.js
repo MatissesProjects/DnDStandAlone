@@ -32,18 +32,67 @@ if (window.location.host.includes("excalidraw.com")) {
 
   initDebugLabel();
 
-  function captureAndSend() {
+  // Helper to inject code into the page context to access window.excalidrawAPI
+  function getMetadata() {
+    return new Promise((resolve) => {
+      const requestId = Math.random().toString(36).substring(7);
+      
+      const handler = (event) => {
+        if (event.data.type === "VTT_INTERNAL_METADATA_REPLY" && event.data.requestId === requestId) {
+          window.removeEventListener("message", handler);
+          resolve(event.data.metadata);
+        }
+      };
+      window.addEventListener("message", handler);
+
+      const script = document.createElement('script');
+      script.textContent = `
+        (function() {
+          const api = window.excalidrawAPI;
+          if (api) {
+            const elements = api.getSceneElements();
+            const appState = api.getAppState();
+            
+            // Map world coordinates to viewport coordinates
+            // Excalidraw stores elements in world space.
+            // We need to know where they are relative to the canvas top-left.
+            const hitZones = elements
+              .filter(el => el.link && el.link.startsWith("entity:"))
+              .map(el => {
+                const x = (el.x + appState.scrollX) * appState.zoom.value;
+                const y = (el.y + appState.scrollY) * appState.zoom.value;
+                const w = el.width * appState.zoom.value;
+                const h = el.height * appState.zoom.value;
+                return { id: el.link.split(":")[1], x, y, w, h };
+              });
+
+            window.postMessage({
+              type: "VTT_INTERNAL_METADATA_REPLY",
+              requestId: "${requestId}",
+              metadata: { hitZones }
+            }, "*");
+          }
+        })();
+      `;
+      (document.head || document.documentElement).appendChild(script);
+      script.remove();
+    });
+  }
+
+  async function captureAndSend() {
     const canvases = Array.from(document.querySelectorAll("canvas"));
-    // Look for static canvas, fallback to any canvas over 100px
     let targetCanvas = canvases.find(c => c.classList.contains("static")) || 
                        canvases.find(c => c.width > 100);
     
     if (targetCanvas) {
       try {
         const dataUrl = targetCanvas.toDataURL("image/jpeg", 0.4);
+        const metadata = await getMetadata();
+
         window.postMessage({
           type: "VTT_BRIDGE_STREAM_RESULT",
-          image: dataUrl
+          image: dataUrl,
+          hitZones: metadata.hitZones
         }, "*");
         return true;
       } catch (e) {
@@ -60,7 +109,6 @@ if (window.location.host.includes("excalidraw.com")) {
     script.remove();
   }
 
-  // Listen for messages from the parent VTT window
   window.addEventListener("message", (event) => {
     if (event.data.type === "VTT_BRIDGE_MOVE") {
       const { x, y, zoom } = event.data;
@@ -73,20 +121,16 @@ if (window.location.host.includes("excalidraw.com")) {
     }
 
     if (event.data.type === "VTT_BRIDGE_STREAM_REQUEST") {
-      // If this is the first request, start a high-speed internal loop
       if (!isStreamingActive) {
-        console.log("[VTT Bridge] Starting continuous stream loop...");
         isStreamingActive = true;
         setInterval(() => {
             captureAndSend();
-        }, 1000); // 1 Frame Per Second
+        }, 1000); 
       }
-      // Immediate response to the first request
       captureAndSend();
     }
   });
 
-  // Relay ALL VTT_BRIDGE results back to the VTT parent window
   window.addEventListener("message", (event) => {
       if (event.data && event.data.type && event.data.type.startsWith("VTT_BRIDGE_") && event.data.type.endsWith("_RESULT")) {
           window.parent.postMessage(event.data, "*");
