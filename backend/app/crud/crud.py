@@ -6,8 +6,8 @@ import uuid
 import string
 import random
 
-def generate_room_id(length=6):
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+def generate_room_id(length=20):
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 # Campaign CRUD
 def get_campaign(db: Session, campaign_id: int):
@@ -71,6 +71,14 @@ def update_location(db: Session, location_id: int, location_update: schemas.Loca
     db_location = db.query(models.Location).filter(models.Location.id == location_id).first()
     if db_location:
         update_data = location_update.model_dump(exclude_unset=True)
+        if "canvas_state" in update_data and update_data["canvas_state"]:
+            state = update_data["canvas_state"]
+            print(f"DEBUG: canvas_state keys: {list(state.keys())}")
+            if "elements" in state:
+                print(f"DEBUG: element count: {len(state['elements'])}")
+            if "libraryItems" in state:
+                print(f"DEBUG: library item count: {len(state['libraryItems'])}")
+        
         for key, value in update_data.items():
             setattr(db_location, key, value)
         db.commit()
