@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { UserPresence, MoveProposal, EnemyData, Location, Entity } from '../../types/vtt';
 
 interface GMToolboxProps {
@@ -44,6 +44,113 @@ interface GMToolboxProps {
   isAnchoring?: boolean;
 }
 
+const SHAPES = {
+  TOKEN_NPC: {
+    type: "excalidraw/clipboard",
+    elements: [
+      {
+        type: "ellipse",
+        width: 100,
+        height: 100,
+        strokeColor: "#e03131",
+        backgroundColor: "#ffc9c9",
+        fillStyle: "hachure",
+        strokeWidth: 2,
+        strokeStyle: "solid",
+        roughness: 1,
+        opacity: 100,
+        roundness: { type: 2 },
+        index: "a1"
+      },
+      {
+        type: "text",
+        text: "NPC",
+        fontSize: 20,
+        fontFamily: 1,
+        textAlign: "center",
+        verticalAlign: "middle",
+        width: 40,
+        height: 25,
+        strokeColor: "#e03131",
+        x: 30,
+        y: 37,
+        index: "a2"
+      }
+    ],
+    appState: { viewBackgroundColor: "#ffffff" }
+  },
+  TOKEN_PC: {
+    type: "excalidraw/clipboard",
+    elements: [
+      {
+        type: "ellipse",
+        width: 100,
+        height: 100,
+        strokeColor: "#1971c2",
+        backgroundColor: "#a5d8ff",
+        fillStyle: "hachure",
+        strokeWidth: 2,
+        strokeStyle: "solid",
+        roughness: 1,
+        opacity: 100,
+        roundness: { type: 2 },
+        index: "b1"
+      },
+      {
+        type: "text",
+        text: "PC",
+        fontSize: 20,
+        fontFamily: 1,
+        textAlign: "center",
+        verticalAlign: "middle",
+        width: 40,
+        height: 25,
+        strokeColor: "#1971c2",
+        x: 30,
+        y: 37,
+        index: "b2"
+      }
+    ],
+    appState: { viewBackgroundColor: "#ffffff" }
+  },
+  AOE_ZONE: {
+    type: "excalidraw/clipboard",
+    elements: [
+      {
+        type: "rectangle",
+        width: 200,
+        height: 200,
+        strokeColor: "#f08c00",
+        backgroundColor: "#fff3bf",
+        fillStyle: "cross-hatch",
+        strokeWidth: 1,
+        strokeStyle: "dashed",
+        roughness: 2,
+        opacity: 50,
+        index: "c1"
+      }
+    ]
+  },
+  FOG: {
+    type: "excalidraw/clipboard",
+    elements: [
+      {
+        type: "rectangle",
+        width: 300,
+        height: 200,
+        strokeColor: "#000000",
+        backgroundColor: "#000000",
+        fillStyle: "solid",
+        strokeWidth: 1,
+        strokeStyle: "solid",
+        roughness: 0,
+        opacity: 100,
+        index: "d1"
+      }
+    ]
+  }
+};
+
 const GMToolbox: React.FC<GMToolboxProps> = ({
   isGM, user, isAuthenticated, pendingProposals, onApproveProposal, onRejectProposal,
   isRecording, onToggleRecording, activeUsers, onRequestRoll, onGenerateEnemy, onGenerateLore,
@@ -54,6 +161,16 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile, onSummarize, isSummarizing,
   onClearHistory, isAnchoring
 }) => {
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
+
+  const copyShape = (key: keyof typeof SHAPES) => {
+    const json = JSON.stringify(SHAPES[key]);
+    navigator.clipboard.writeText(json).then(() => {
+      setCopyStatus(key);
+      setTimeout(() => setCopyStatus(null), 2000);
+    });
+  };
+
   return (
     <aside className="w-[320px] h-full flex-none border-l border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
       <h2 className="text-xl font-black border-b border-gray-800 pb-4 shrink-0 tracking-tighter text-gray-100 uppercase italic">
@@ -114,6 +231,37 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                   Wipe Chronicle
                 </button>
               </div>
+            </div>
+
+            <div className="space-y-4 pt-4">
+              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Quick Forge (Copy & Paste)</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={() => copyShape('TOKEN_NPC')} 
+                  className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'TOKEN_NPC' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-red-500/50 hover:text-red-400'}`}
+                >
+                  {copyStatus === 'TOKEN_NPC' ? 'Copied!' : 'NPC Token'}
+                </button>
+                <button 
+                  onClick={() => copyShape('TOKEN_PC')} 
+                  className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'TOKEN_PC' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-blue-500/50 hover:text-blue-400'}`}
+                >
+                  {copyStatus === 'TOKEN_PC' ? 'Copied!' : 'Player Token'}
+                </button>
+                <button 
+                  onClick={() => copyShape('AOE_ZONE')} 
+                  className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'AOE_ZONE' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-yellow-500/50 hover:text-yellow-400'}`}
+                >
+                  {copyStatus === 'AOE_ZONE' ? 'Copied!' : 'AoE Zone'}
+                </button>
+                <button 
+                  onClick={() => copyShape('FOG')} 
+                  className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'FOG' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-500 hover:text-white'}`}
+                >
+                  {copyStatus === 'FOG' ? 'Copied!' : 'Fog Layer'}
+                </button>
+              </div>
+              <p className="text-[7px] text-gray-600 italic text-center uppercase tracking-tighter">Click to copy, then Ctrl+V in Map</p>
             </div>
 
             <div className="space-y-4 pt-2">
