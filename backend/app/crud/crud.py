@@ -6,8 +6,8 @@ import uuid
 import string
 import random
 
-def generate_room_id(length=20):
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+def generate_room_id(length=6):
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
 # Campaign CRUD
 def get_campaign(db: Session, campaign_id: int):
