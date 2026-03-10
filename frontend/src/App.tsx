@@ -331,7 +331,7 @@ function VTTApp() {
                 <>
                   <img src={streamImage} alt="GM Canvas Stream" className="max-w-full max-h-full object-contain pointer-events-none" />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="relative w-full h-full">
+                    <div className="relative w-full h-full max-w-full max-h-full">
                       {hitZones.map((zone, idx) => {
                         const entity = activeEntities.find(e => e.id.toString() === zone.id.toString());
                         return (
@@ -348,10 +348,10 @@ function VTTApp() {
                             }}
                             className="absolute pointer-events-auto group"
                             style={{
-                              left: `${zone.x}px`,
-                              top: `${zone.y}px`,
-                              width: `${zone.w}px`,
-                              height: `${zone.h}px`,
+                              left: `${zone.left}%`,
+                              top: `${zone.top}%`,
+                              width: `${zone.width}%`,
+                              height: `${zone.height}%`,
                               background: 'transparent',
                               border: '1px solid transparent',
                               cursor: 'pointer'

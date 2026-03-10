@@ -35,19 +35,31 @@
         const elements = api.getSceneElements();
         const appState = api.getAppState();
         
-        // Excalidraw zoom value can be complex, ensure we have a number
+        // Use the canvas element directly to get its physical dimensions
+        const canvas = document.querySelector("canvas.static") || document.querySelector("canvas");
+        const canvasWidth = canvas ? canvas.width / window.devicePixelRatio : window.innerWidth;
+        const canvasHeight = canvas ? canvas.height / window.devicePixelRatio : window.innerHeight;
+
         const zoom = typeof appState.zoom === 'number' ? appState.zoom : appState.zoom.value;
 
         const hitZones = elements
           .filter(el => el.link && el.link.startsWith("entity:"))
           .map(el => {
-            // Correct coordinate transformation for the image stream
             // World to Viewport
-            const x = (el.x + appState.scrollX) * zoom;
-            const y = (el.y + appState.scrollY) * zoom;
-            const w = el.width * zoom;
-            const h = el.height * zoom;
-            return { id: el.link.split(":")[1], x, y, w, h };
+            const vx = (el.x + appState.scrollX) * zoom;
+            const vy = (el.y + appState.scrollY) * zoom;
+            const vw = el.width * zoom;
+            const vh = el.height * zoom;
+
+            // Viewport to Percentage (relative to canvas container)
+            // This is key: image on player side will be scaled, percentages keep links fixed to the image content
+            return { 
+              id: el.link.split(":")[1], 
+              left: (vx / canvasWidth) * 100,
+              top: (vy / canvasHeight) * 100,
+              width: (vw / canvasWidth) * 100,
+              height: (vh / canvasHeight) * 100
+            };
           });
 
         window.postMessage({
