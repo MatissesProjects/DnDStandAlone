@@ -468,9 +468,23 @@ function VTTApp() {
       fetch(`http://localhost:8000/campaigns/${activeCampaign.id}/history`, { 
         method: 'POST', 
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ event_type: 'dice_roll', content: `${user?.username || 'Guest'} rolled ${content}`, campaign_id: activeCampaign.id }) 
+        body: JSON.stringify({ 
+          event_type: 'dice_roll', 
+          content: `${user?.username || 'Guest'} rolled ${content}`, 
+          campaign_id: activeCampaign.id,
+          is_private: isSubtleMode 
+        }) 
       }).then(res => res.json()).then(savedLog => {
-        const newRoll = { id: savedLog.id.toString(), type: 'roll' as const, die, result, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: user ? user.username : `Player ${clientId.substring(0, 4)}`, senderId: clientId };
+        const newRoll = { 
+          id: savedLog.id.toString(), 
+          type: 'roll' as const, 
+          die, 
+          result, 
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
+          isSubtle: isSubtleMode, 
+          user: user ? user.username : `Player ${clientId.substring(0, 4)}`, 
+          senderId: clientId 
+        };
         sendMessage(JSON.stringify(newRoll));
       });
     }
