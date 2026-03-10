@@ -31,6 +31,21 @@
         });
       }
 
+      if (subType === "GET_SELECTED") {
+        const selectedElements = api.getSceneElements().filter(el => {
+            const selection = api.getAppState().selectedElementIds;
+            return selection[el.id];
+        });
+        
+        if (selectedElements.length > 0) {
+            window.postMessage({
+                type: "VTT_INTERNAL_SELECTED_REPLY",
+                requestId: requestId,
+                elements: selectedElements
+            }, "*");
+        }
+      }
+
       if (subType === "METADATA") {
         const elements = api.getSceneElements();
         const appState = api.getAppState();

@@ -64,6 +64,16 @@ if (window.location.host.includes("excalidraw.com")) {
     });
   }
 
+  // Listen for internal replies from inject.js and relay them to parent
+  window.addEventListener("message", (event) => {
+    if (event.data.type === "VTT_INTERNAL_SELECTED_REPLY") {
+        window.parent.postMessage({
+            type: "VTT_BRIDGE_SELECTED_RESULT",
+            elements: event.data.elements
+        }, "*");
+    }
+  });
+
   async function captureAndSend() {
     const canvases = Array.from(document.querySelectorAll("canvas"));
     let targetCanvas = canvases.find(c => c.classList.contains("static")) || 
@@ -104,6 +114,15 @@ if (window.location.host.includes("excalidraw.com")) {
         setInterval(captureAndSend, 1000); 
       }
       captureAndSend();
+    }
+
+    if (event.data.type === "VTT_BRIDGE_GET_SELECTED") {
+        const requestId = Math.random().toString(36).substring(7);
+        window.postMessage({
+            type: "VTT_INTERNAL_INJECTED_REQUEST",
+            subType: "GET_SELECTED",
+            requestId
+        }, "*");
     }
   });
 
