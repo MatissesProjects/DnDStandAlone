@@ -1,4 +1,5 @@
 import httpx
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -63,6 +64,33 @@ async def login():
         f"&scope={scopes}"
     )
     return {"url": auth_url}
+
+@router.get("/guest")
+async def guest_login(db: Session = Depends(get_db)):
+    guest_id = f"guest_{uuid.uuid4().hex[:8]}"
+    username = f"Guest_{guest_id[-4:]}"
+    
+    user = models.User(
+        discord_id=guest_id,
+        username=username,
+        role="player"
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    jwt_token = create_access_token(
+        data={"sub": user.discord_id, "role": user.role}
+    )
+    
+    return {
+        "token": jwt_token,
+        "user": {
+            "username": user.username,
+            "role": user.role,
+            "discord_id": user.discord_id
+        }
+    }
 
 @router.get("/callback")
 async def callback(code: str, db: Session = Depends(get_db)):
