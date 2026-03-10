@@ -38,10 +38,6 @@ interface GMToolboxProps {
   onSummarize: () => void;
   isSummarizing: boolean;
   onClearHistory: () => void;
-  onBindEntity?: (entityId: number) => void;
-  onForceSaveCanvas?: () => void;
-  onStoreMap?: () => void;
-  isAnchoring?: boolean;
 }
 
 const SHAPES = {
@@ -166,10 +162,10 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   isRecording, onToggleRecording, activeUsers, onRequestRoll, onGenerateEnemy, onGenerateLore,
   isGenerating, generatedEnemy, generatedLore, onManifestEntity, onManifestLore, 
   onDismissEnemy, onDismissLore, onUpdateGeneratedEnemy, onUpdateGeneratedLore,
-  activeEntities, onSelectEntity, onBindEntity, onForceSaveCanvas, onStoreMap,
+  activeEntities, onSelectEntity, 
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile, onSummarize, isSummarizing,
-  onClearHistory, isAnchoring
+  onClearHistory
 }) => {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
@@ -211,22 +207,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Tools</h3>
               <div className="grid gap-2">
                 <button onClick={onOpenDashboard} className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"> Manage Manifest </button>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={onForceSaveCanvas} 
-                    disabled={isAnchoring}
-                    className="flex-[2] bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 text-white font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 shadow-indigo-900/20 disabled:opacity-70"
-                  > 
-                    {isAnchoring ? 'Anchoring...' : 'Anchor Map'} 
-                  </button>
-                  <button 
-                    onClick={onStoreMap}
-                    className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 font-black py-3 rounded-xl uppercase text-[8px] tracking-tighter transition-all shadow-lg active:scale-95"
-                    title="Store full map in your library"
-                  >
-                    To Lib
-                  </button>
-                </div>
                 <button 
                   onClick={onSummarize} 
                   disabled={isSummarizing}
@@ -422,15 +402,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                     <p className="text-xs font-black truncate text-gray-100 uppercase">{ent.name}</p>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-black text-red-500">{ent.stats?.hp || 0} HP</span>
-                      {isGM && (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); onBindEntity?.(ent.id); }}
-                          className="p-1 hover:bg-indigo-500 rounded text-[8px] font-black uppercase text-gray-500 hover:text-white transition-all border border-transparent hover:border-indigo-400/50"
-                          title="Bind to selected drawing"
-                        >
-                          Bind
-                        </button>
-                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
