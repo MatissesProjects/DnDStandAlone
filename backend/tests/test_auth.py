@@ -64,7 +64,7 @@ async def test_callback_success(mocker):
         
     assert response.status_code == 307
     location = response.headers["location"]
-    assert "http://localhost:5173/auth/callback" in location
+    assert "http://192.168.4.150:5173/auth/callback" in location
     
     # Parse the redirect URL to check params
     parsed = urllib.parse.urlparse(location)

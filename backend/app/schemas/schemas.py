@@ -40,6 +40,9 @@ class LocationBase(BaseModel):
     description: Optional[str] = None
     danger_level: int = 1
     canvas_state: Optional[Dict[str, Any]] = None
+    x: Optional[int] = 0
+    y: Optional[int] = 0
+    zoom: Optional[float] = 1.0
 
 class LocationCreate(LocationBase):
     campaign_id: int
@@ -49,6 +52,9 @@ class LocationUpdate(BaseModel):
     description: Optional[str] = None
     danger_level: Optional[int] = None
     canvas_state: Optional[Dict[str, Any]] = None
+    x: Optional[int] = None
+    y: Optional[int] = None
+    zoom: Optional[float] = None
 
 class Location(LocationBase):
     id: int

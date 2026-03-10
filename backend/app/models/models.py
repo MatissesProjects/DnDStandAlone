@@ -27,6 +27,9 @@ class Location(Base):
     description = Column(Text)
     danger_level = Column(Integer, default=1)
     canvas_state = Column(JSON, nullable=True) # Store Excalidraw elements per location
+    x = Column(Integer, default=0)
+    y = Column(Integer, default=0)
+    zoom = Column(Integer, default=1)
     campaign_id = Column(Integer, ForeignKey("campaigns.id"))
     campaign = relationship("Campaign")
 

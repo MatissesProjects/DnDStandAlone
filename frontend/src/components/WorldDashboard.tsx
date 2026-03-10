@@ -67,7 +67,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
 
   const fetchLocations = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/campaigns/${campaignId}/locations`);
+      const res = await fetch(`http://192.168.4.150:8000/campaigns/${campaignId}/locations`);
       const data = await res.json();
       setLocations(data);
       if (data.length > 0 && !selectedLocId) setSelectedLocId(data[0].id);
@@ -78,7 +78,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
 
   const fetchEntities = async (locId: number) => {
     try {
-      const res = await fetch(`http://localhost:8000/locations/${locId}/entities`);
+      const res = await fetch(`http://192.168.4.150:8000/locations/${locId}/entities`);
       if (res.ok) {
         const data = await res.json();
         setEntities(data);
@@ -92,7 +92,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
     e.preventDefault();
     if (!token) return;
     try {
-      await fetch('http://localhost:8000/locations', {
+      await fetch('http://192.168.4.150:8000/locations', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -113,7 +113,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
     e.preventDefault();
     if (!token || !editingLocation) return;
     try {
-      const res = await fetch(`http://localhost:8000/locations/${editingLocation.id}`, {
+      const res = await fetch(`http://192.168.4.150:8000/locations/${editingLocation.id}`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -134,7 +134,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   const handleDeleteLocation = async (id: number) => {
     if (!token || !window.confirm("Are you sure?")) return;
     try {
-      await fetch(`http://localhost:8000/locations/${id}`, {
+      await fetch(`http://192.168.4.150:8000/locations/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -147,7 +147,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
     e.preventDefault();
     if (!token || !selectedLocId) return;
     try {
-      const res = await fetch('http://localhost:8000/entities', {
+      const res = await fetch('http://192.168.4.150:8000/entities', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newEntityName, location_id: selectedLocId, stats: {}, backstory: "New entity established." })
@@ -162,7 +162,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   const handleDeleteEntity = async (id: number) => {
     if (!token || !window.confirm("Delete entity?")) return;
     try {
-      await fetch(`http://localhost:8000/entities/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      await fetch(`http://192.168.4.150:8000/entities/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (selectedLocId) fetchEntities(selectedLocId);
     } catch (e) { console.error(e); }
   };

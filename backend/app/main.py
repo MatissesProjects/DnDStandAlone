@@ -359,7 +359,9 @@ async def generate_lore(
 
 @app.websocket("/ws/{room_id}/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str, role: str = "player", username: str = "Anonymous"):
+    print(f"[WS] Connection attempt: {client_id} (Role: {role}, Room: {room_id}) from {websocket.client.host}")
     await manager.connect(websocket, client_id, room_id, role, username)
+    print(f"[WS] Connection established: {client_id}")
     try:
         while True:
             data = await websocket.receive_text()
@@ -389,6 +391,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
             except json.JSONDecodeError:
                 await manager.broadcast(data, room_id)
     except WebSocketDisconnect:
+        print(f"[WS] Connection lost abnormally or closed: {client_id}")
         manager.disconnect(client_id, room_id)
 
 if __name__ == "__main__":

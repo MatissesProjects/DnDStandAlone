@@ -46,7 +46,7 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
         <div className="relative h-32 bg-indigo-900/20 flex flex-none items-end p-8 border-b border-gray-800">
           <div className="absolute top-6 right-8">
             <button 
-              onClick={(e) => { e.stopPropagation(); onClose(); }} 
+              onClick={onClose} 
               className="text-gray-500 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>

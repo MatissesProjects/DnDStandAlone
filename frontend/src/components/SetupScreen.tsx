@@ -89,7 +89,9 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/campaigns/join/${roomCode.toUpperCase()}`);
+      const code = roomCode.trim().toUpperCase();
+      console.log(`[Setup] Joining room: ${code}`);
+      const res = await fetch(`${API_BASE}/campaigns/join/${code}`);
       if (!res.ok) throw new Error("Room not found");
       const data = await res.json();
       onJoin(data.id, data.room_id, data);
