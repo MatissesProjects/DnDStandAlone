@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "DND VTT Bridge",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Bridges the DnD VTT to the Excalidraw iframe for camera control.",
   "permissions": ["activeTab", "scripting"],
   "content_scripts": [
@@ -11,6 +11,12 @@
       "run_at": "document_start",
       "all_frames": true,
       "match_about_blank": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["*://*.excalidraw.com/*"]
     }
   ],
   "externally_connectable": {

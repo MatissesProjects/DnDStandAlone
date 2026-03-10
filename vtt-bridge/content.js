@@ -32,7 +32,11 @@ if (window.location.host.includes("excalidraw.com")) {
 
   initDebugLabel();
 
-  // Helper to inject code into the page context to access window.excalidrawAPI
+  // CSP COMPLIANT INJECTION
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('inject.js');
+  (document.head || document.documentElement).appendChild(script);
+
   function getMetadata() {
     return new Promise((resolve) => {
       const requestId = Math.random().toString(36).substring(7);
@@ -45,37 +49,11 @@ if (window.location.host.includes("excalidraw.com")) {
       };
       window.addEventListener("message", handler);
 
-      const script = document.createElement('script');
-      script.textContent = `
-        (function() {
-          const api = window.excalidrawAPI;
-          if (api) {
-            const elements = api.getSceneElements();
-            const appState = api.getAppState();
-            
-            // Map world coordinates to viewport coordinates
-            // Excalidraw stores elements in world space.
-            // We need to know where they are relative to the canvas top-left.
-            const hitZones = elements
-              .filter(el => el.link && el.link.startsWith("entity:"))
-              .map(el => {
-                const x = (el.x + appState.scrollX) * appState.zoom.value;
-                const y = (el.y + appState.scrollY) * appState.zoom.value;
-                const w = el.width * appState.zoom.value;
-                const h = el.height * appState.zoom.value;
-                return { id: el.link.split(":")[1], x, y, w, h };
-              });
-
-            window.postMessage({
-              type: "VTT_INTERNAL_METADATA_REPLY",
-              requestId: "${requestId}",
-              metadata: { hitZones }
-            }, "*");
-          }
-        })();
-      `;
-      (document.head || document.documentElement).appendChild(script);
-      script.remove();
+      window.postMessage({
+        type: "VTT_INTERNAL_INJECTED_REQUEST",
+        subType: "METADATA",
+        requestId
+      }, "*");
     });
   }
 
@@ -102,30 +80,19 @@ if (window.location.host.includes("excalidraw.com")) {
     return false;
   }
 
-  function injectScript(code) {
-    const script = document.createElement('script');
-    script.textContent = code;
-    (document.head || document.documentElement).appendChild(script);
-    script.remove();
-  }
-
   window.addEventListener("message", (event) => {
     if (event.data.type === "VTT_BRIDGE_MOVE") {
-      const { x, y, zoom } = event.data;
-      injectScript(`
-        (function() {
-          const api = window.excalidrawAPI;
-          if (api) { api.updateScene({ appState: { scrollX: ${x}, scrollY: ${y}, zoom: { value: ${zoom} } } }); }
-        })();
-      `);
+      window.postMessage({
+        type: "VTT_INTERNAL_INJECTED_REQUEST",
+        subType: "MOVE",
+        payload: { x: event.data.x, y: event.data.y, zoom: event.data.zoom }
+      }, "*");
     }
 
     if (event.data.type === "VTT_BRIDGE_STREAM_REQUEST") {
       if (!isStreamingActive) {
         isStreamingActive = true;
-        setInterval(() => {
-            captureAndSend();
-        }, 1000); 
+        setInterval(captureAndSend, 1000); 
       }
       captureAndSend();
     }
