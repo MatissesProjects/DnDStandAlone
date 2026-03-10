@@ -49,6 +49,7 @@ const SHAPES = {
     type: "excalidraw/clipboard",
     elements: [
       {
+        id: "npc_bg",
         type: "ellipse",
         width: 100,
         height: 100,
@@ -60,9 +61,11 @@ const SHAPES = {
         roughness: 1,
         opacity: 100,
         roundness: { type: 2 },
+        groupIds: ["npc_token_group"],
         index: "a1"
       },
       {
+        id: "npc_txt",
         type: "text",
         text: "NPC",
         fontSize: 20,
@@ -74,6 +77,7 @@ const SHAPES = {
         strokeColor: "#e03131",
         x: 30,
         y: 37,
+        groupIds: ["npc_token_group"],
         index: "a2"
       }
     ],
@@ -83,6 +87,7 @@ const SHAPES = {
     type: "excalidraw/clipboard",
     elements: [
       {
+        id: "pc_bg",
         type: "ellipse",
         width: 100,
         height: 100,
@@ -94,9 +99,11 @@ const SHAPES = {
         roughness: 1,
         opacity: 100,
         roundness: { type: 2 },
+        groupIds: ["pc_token_group"],
         index: "b1"
       },
       {
+        id: "pc_txt",
         type: "text",
         text: "PC",
         fontSize: 20,
@@ -108,6 +115,7 @@ const SHAPES = {
         strokeColor: "#1971c2",
         x: 30,
         y: 37,
+        groupIds: ["pc_token_group"],
         index: "b2"
       }
     ],
@@ -117,6 +125,7 @@ const SHAPES = {
     type: "excalidraw/clipboard",
     elements: [
       {
+        id: "aoe_rect",
         type: "rectangle",
         width: 200,
         height: 200,
@@ -135,6 +144,7 @@ const SHAPES = {
     type: "excalidraw/clipboard",
     elements: [
       {
+        id: "fog_rect",
         type: "rectangle",
         width: 300,
         height: 200,
