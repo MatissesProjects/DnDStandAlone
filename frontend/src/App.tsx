@@ -304,7 +304,10 @@ function VTTApp() {
           if (data.hitZones) setHitZones(data.hitZones);
         }
         else if (data.type === "player_ping") {
-          setPings(prev => [...prev, data]);
+          setPings(prev => {
+            if (prev.some(p => p.id === data.id)) return prev;
+            return [...prev, { ...data, timestamp: data.timestamp || Date.now() }];
+          });
         }
         else if (data.type === "initiative_update") {
           setCombatants(data.combatants || []);
