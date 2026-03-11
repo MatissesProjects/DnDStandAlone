@@ -14,11 +14,14 @@ import HandoutItem from "./components/Overlay/HandoutItem";
 import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout } from "./types/vtt";
 
 const API_HOSTNAME = window.location.hostname;
-const PROTOCOL = window.location.protocol === "https:" ? "https" : "http";
-const WS_PROTOCOL = window.location.protocol === "https:" ? "wss" : "ws";
+const PROTOCOL = window.location.protocol;
+const WS_PROTOCOL = PROTOCOL === "https:" ? "wss:" : "ws:";
 
-const API_BASE = `${PROTOCOL}://${API_HOSTNAME}:8000`;
-const WS_BASE = `${WS_PROTOCOL}://${API_HOSTNAME}:8000`;
+// Smart Context: Use 8000 for local dev, but use your dedicated subdomain for production
+const IS_LOCAL = ["localhost", "127.0.0.1"].includes(API_HOSTNAME) || API_HOSTNAME.startsWith("192.168.");
+
+const API_BASE = IS_LOCAL ? `${PROTOCOL}//${API_HOSTNAME}:8000` : `https://wss.matissetec.dev`;
+const WS_BASE = IS_LOCAL ? `${WS_PROTOCOL}//${API_HOSTNAME}:8000` : `wss://wss.matissetec.dev`;
 
 function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token, login } = useAuth();
@@ -79,6 +82,7 @@ function VTTApp() {
   const [iframeKey, setIframeKey] = useState(0);
   const [streamImage, setStreamImage] = useState<string | null>(null);
   const [hitZones, setHitZones] = useState<any[]>([]);
+  const [pings, setPings] = useState<any[]>([]);
   const [customForge, setCustomForge] = useState<any[]>(() => {
     try {
       const saved = localStorage.getItem("vtt_custom_forge");
