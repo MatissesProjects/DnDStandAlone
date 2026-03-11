@@ -250,9 +250,13 @@ function VTTApp() {
       }
       if (event.data.type === "VTT_BRIDGE_SELECTED_RESULT") {
         console.log("[Forge] Received selection capture:", event.data.elements.length, "elements");
+        if (!event.data.elements || event.data.elements.length === 0) {
+            alert("No elements were selected to capture!");
+            return;
+        }
         const newPart = {
           id: `custom_${Date.now()}`,
-          name: `Custom Token`, // Simplified default name
+          name: `Custom Token ${customForge.length + 1}`,
           data: {
             type: "excalidraw/clipboard",
             elements: event.data.elements

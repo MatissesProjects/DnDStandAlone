@@ -86,7 +86,7 @@ if (window.location.host.includes("excalidraw.com")) {
         const dataUrl = targetCanvas.toDataURL("image/jpeg", 0.8);
         const metadata = await getMetadata();
 
-        window.postMessage({
+        window.parent.postMessage({
           type: "VTT_BRIDGE_STREAM_RESULT",
           image: dataUrl,
           hitZones: metadata.hitZones
