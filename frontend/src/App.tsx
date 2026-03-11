@@ -15,7 +15,7 @@ import GlassLayer from "./components/Overlay/GlassLayer";
 import AmbientPlayer from "./components/Overlay/AmbientPlayer";
 import InitiativeTracker from "./components/Overlay/InitiativeTracker";
 import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping } from "./types/vtt";
-import { API_BASE, WS_BASE, resolveConfig, currentConfig } from "./config";
+import { resolveConfig, currentConfig } from "./config";
 
 function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token, login } = useAuth();
