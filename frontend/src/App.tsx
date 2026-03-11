@@ -585,12 +585,16 @@ function VTTApp() {
           }}
           onManifestLoot={async (c) => { 
             if (!token || !activeCampaign) return; 
-            const x = 300 + Math.random() * 200;
-            const y = 200 + Math.random() * 200;
+            const x = Math.round(300 + Math.random() * 200);
+            const y = Math.round(200 + Math.random() * 200);
             try {
               const res = await fetch(`${currentConfig.API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Found Loot", content: c, type: "text", campaign_id: activeCampaign.id, x, y }) }); 
               if (res.ok) { fetchHandouts(); sendMessage(JSON.stringify({ type: "handouts_update" })); setGeneratedLoot(null); } 
-              else { const err = await res.json(); alert("Loot manifestation failed: " + (err.detail || "Unknown error")); }
+              else { 
+                const err = await res.json(); 
+                const errMsg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+                alert("Loot manifestation failed: " + (errMsg || "Unknown error")); 
+              }
             } catch (e) { alert("Network error manifested."); }
           }}
           onDismissLoot={() => setGeneratedLoot(null)}
@@ -602,10 +606,17 @@ function VTTApp() {
           onUpdateGeneratedLore={(lore) => setGeneratedLore(lore)}
           onManifestLore={async (c) => { 
             if (!token || !activeCampaign) return; 
-            const x = 200 + Math.random() * 200;
-            const y = 150 + Math.random() * 200;
-            const res = await fetch(`${currentConfig.API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Whispered Lore", content: c, type: "text", campaign_id: activeCampaign.id, x, y }) }); 
-            if (res.ok) { fetchHandouts(); sendMessage(JSON.stringify({ type: "handouts_update" })); setGeneratedLore(null); } 
+            const x = Math.round(200 + Math.random() * 200);
+            const y = Math.round(150 + Math.random() * 200);
+            try {
+              const res = await fetch(`${currentConfig.API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Whispered Lore", content: c, type: "text", campaign_id: activeCampaign.id, x, y }) }); 
+              if (res.ok) { fetchHandouts(); sendMessage(JSON.stringify({ type: "handouts_update" })); setGeneratedLore(null); } 
+              else {
+                const err = await res.json();
+                const errMsg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+                alert("Lore manifestation failed: " + (errMsg || "Unknown error"));
+              }
+            } catch (e) { alert("Network error manifested."); }
           }}
           customForge={customForge}
           onCaptureSelection={() => {
