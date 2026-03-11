@@ -108,7 +108,7 @@ function VTTApp() {
 
   const fetchHistory = useCallback(() => {
     if (!activeCampaign || !token) return;
-    fetch(`${API_BASE}/campaigns/${activeCampaign.id}/history`, { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/history`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json()).then(data => {
         if (Array.isArray(data)) {
           const formatted = data.map((item: any) => ({ id: item.id.toString(), type: item.event_type === 'dice_roll' ? 'roll' : (item.event_type === 'lore_update' ? 'ai' : 'story'), content: item.content, user: "Chronicle", timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: item.is_private }));
@@ -120,7 +120,7 @@ function VTTApp() {
   const handleConsumeHistory = useCallback(async (logId: string) => {
     if (!token || !activeCampaign) return;
     try {
-      const res = await fetch(`${API_BASE}/campaigns/${activeCampaign.id}/history/${logId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/history/${logId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         sendMessage(JSON.stringify({ type: "history_updated", campaignId: activeCampaign.id }));
         fetchHistory();
@@ -150,7 +150,7 @@ function VTTApp() {
   const handleUpdateFog = useCallback(async (zones: any[]) => {
     if (!isGM || !activeLocation || !token) return;
     try {
-      const res = await fetch(`${API_BASE}/locations/${activeLocation.id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fog_data: zones }) });
+      const res = await fetch(`${currentConfig.API_BASE}/locations/${activeLocation.id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fog_data: zones }) });
       if (res.ok) {
         const updated = { ...activeLocation, fog_data: zones };
         setActiveLocation(updated);
@@ -170,7 +170,7 @@ function VTTApp() {
   const fetchEntities = useCallback(async (locId: number) => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/locations/${locId}/entities`);
+      const res = await fetch(`${currentConfig.API_BASE}/locations/${locId}/entities`);
       if (res.ok) {
         const data = await res.json();
         setActiveEntities(data);
@@ -185,7 +185,7 @@ function VTTApp() {
   const fetchHandouts = useCallback(async () => {
     if (!activeCampaign || !token) return;
     try {
-      const res = await fetch(`${API_BASE}/campaigns/${activeCampaign.id}/handouts`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/handouts`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setHandouts(await res.json());
     } catch (e) { console.error(e); }
   }, [activeCampaign, token]);
@@ -197,7 +197,7 @@ function VTTApp() {
     const content = `${label ? `${die} (${label})` : die}: ${result}${isSubtleMode ? ' (Subtle)' : ''}`;
     
     if (activeCampaign && token) {
-      fetch(`${API_BASE}/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content: `${user?.username || 'Guest'} rolled ${content}`, campaign_id: activeCampaign.id, is_private: isSubtleMode }) })
+      fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content: `${user?.username || 'Guest'} rolled ${content}`, campaign_id: activeCampaign.id, is_private: isSubtleMode }) })
       .then(r => r.json()).then(saved => {
         sendMessage(JSON.stringify({ id: saved.id.toString(), type: 'roll', die, result, timestamp, isSubtle: isSubtleMode, user: user?.username || "Guest", senderId: clientId, unique_key: Date.now() }));
       }).catch(() => { sendMessage(JSON.stringify({ id: `fallback-${Date.now()}`, type: 'roll', die, result, timestamp, isSubtle: isSubtleMode, user: user?.username || "Guest", senderId: clientId, unique_key: Date.now() })); });
@@ -206,7 +206,7 @@ function VTTApp() {
 
   useEffect(() => {
     const check = async () => {
-      try { const res = await fetch(`${API_BASE}/health`); setBackendOnline(res.ok); } catch (e) { setBackendOnline(false); }
+      try { const res = await fetch(`${currentConfig.API_BASE}/health`); setBackendOnline(res.ok); } catch (e) { setBackendOnline(false); }
     };
     check();
     const interval = setInterval(check, 10000);
@@ -283,7 +283,7 @@ function VTTApp() {
   }, [location.pathname, activeEntities, navigate]);
 
   useEffect(() => {
-    if (activeCampaign && token) { fetchHistory(); fetchHandouts(); fetch(`${API_BASE}/campaigns/${activeCampaign.id}/locations`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()).then(data => { if (Array.isArray(data) && data.length > 0) { const current = data.find((l: any) => l.id === activeLocation?.id) || data[0]; setActiveLocation(current); } }); }
+    if (activeCampaign && token) { fetchHistory(); fetchHandouts(); fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/locations`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()).then(data => { if (Array.isArray(data) && data.length > 0) { const current = data.find((l: any) => l.id === activeLocation?.id) || data[0]; setActiveLocation(current); } }); }
   }, [activeCampaign, token]);
 
   useEffect(() => { if (activeLocation && token) fetchEntities(activeLocation.id); }, [activeLocation?.id, token, fetchEntities]);
@@ -385,18 +385,18 @@ function VTTApp() {
       {selectedEntity && (
         <NPCDetailCard entity={selectedEntity} isGM={isGM} onClose={() => setSelectedEntity(null)} onUpdateStats={async (id, upd) => {
             const current = activeEntities.find(e => e.id === id); if (!current) return;
-            const res = await fetch(`${API_BASE}/entities/${id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ stats: { ...current.stats, ...upd } }) });
+            const res = await fetch(`${currentConfig.API_BASE}/entities/${id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ stats: { ...current.stats, ...upd } }) });
             if (res.ok) { sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation?.id, senderId: clientId })); fetchEntities(activeLocation?.id || 0); }
           }} 
           onUpdateEntity={async (id, upd) => {
-            const res = await fetch(`${API_BASE}/entities/${id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(upd) });
+            const res = await fetch(`${currentConfig.API_BASE}/entities/${id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(upd) });
             if (res.ok) { sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation?.id, senderId: clientId })); fetchEntities(activeLocation?.id || 0); }
           }} 
           onRoll={(name, lbl, bonus) => {
             const res = Math.floor(Math.random() * 20) + 1;
             const content = `${name} rolled d20 (${lbl}): ${res + (bonus||0)}${isSubtleMode ? ' (Subtle)' : ''}`;
             if (activeCampaign && token) {
-                fetch(`${API_BASE}/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content, campaign_id: activeCampaign.id, is_private: isSubtleMode }) }).then(r => r.json()).then(saved => {
+                fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content, campaign_id: activeCampaign.id, is_private: isSubtleMode }) }).then(r => r.json()).then(saved => {
                     sendMessage(JSON.stringify({ id: saved.id.toString(), type: 'roll', die: 'd20', result: res + (bonus||0), timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: isSubtleMode, user: name, senderId: clientId }));
                 });
             }
@@ -423,7 +423,7 @@ function VTTApp() {
       <div className="fixed inset-0 pointer-events-none z-40">
         {handouts.map(h => (
           <div key={h.id} className="pointer-events-auto">
-            <HandoutItem handout={h} isGM={isGM} onDelete={async (id) => { if (!isGM) return; const res = await fetch(`${API_BASE}/handouts/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchHandouts(); } }} onMove={async (id, x, y) => { if (!isGM) return; await fetch(`${API_BASE}/handouts/${id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ x, y }) }); }} />
+            <HandoutItem handout={h} isGM={isGM} onDelete={async (id) => { if (!isGM) return; const res = await fetch(`${currentConfig.API_BASE}/handouts/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchHandouts(); } }} onMove={async (id, x, y) => { if (!isGM) return; await fetch(`${currentConfig.API_BASE}/handouts/${id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ x, y }) }); }} />
           </div>
         ))}
       </div>
@@ -510,7 +510,7 @@ function VTTApp() {
             setIsGenerating(true); 
             try { 
               const locId = activeLocation?.id || 1;
-              const url = `${API_BASE}/campaigns/${activeCampaign.id}/generate-enemy?location_id=${locId}`;
+              const url = `${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/generate-enemy?location_id=${locId}`;
               const res = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) }); 
               setGeneratedEnemy(await res.json()); 
             } catch (e) { alert("AI Generation failed."); } finally { setIsGenerating(false); } 
@@ -520,7 +520,7 @@ function VTTApp() {
             setIsGenerating(true); 
             try { 
               const locId = activeLocation?.id || 1;
-              const res = await fetch(`${API_BASE}/campaigns/${activeCampaign.id}/generate-lore?location_id=${locId}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) }); 
+              const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/generate-lore?location_id=${locId}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) }); 
               setGeneratedLore((await res.json()).lore); 
             } catch (e) { console.error(e); } finally { setIsGenerating(false); } 
           }} 
@@ -529,15 +529,15 @@ function VTTApp() {
             if (!activeLocation) { alert("Please create or select a Location in the Dashboard first!"); return; }
             if (!generatedEnemy || !token) return;
             try {
-              const res = await fetch(`${API_BASE}/entities`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: generatedEnemy.name, location_id: activeLocation.id, stats: generatedEnemy.stats, backstory: generatedEnemy.backstory }) }); 
+              const res = await fetch(`${currentConfig.API_BASE}/entities`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: generatedEnemy.name, location_id: activeLocation.id, stats: generatedEnemy.stats, backstory: generatedEnemy.backstory }) }); 
               if (res.ok) { setGeneratedEnemy(null); sendMessage(JSON.stringify({ type: "entities_update", locationId: activeLocation.id, senderId: clientId })); fetchEntities(activeLocation.id); } 
               else { const err = await res.json(); alert("Materialization failed: " + (err.detail || "Unknown error")); }
             } catch (e) { alert("Network error."); }
           }} 
           activeEntities={activeEntities} onSelectEntity={setSelectedEntity} activeLocation={activeLocation} activeCampaign={activeCampaign}
           onOpenDashboard={() => setIsDashboardOpen(true)} playerClass={playerClass} playerLevel={playerLevel} playerInventory={playerInventory} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
-          setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} setPlayerInventory={setPlayerInventory} onUpdateProfile={async () => { if (!token) return; const res = await fetch(`${API_BASE}/users/me`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ class_name: playerClass, level: playerLevel, inventory: playerInventory }) }); if (res.ok) { setIsEditingProfile(false); sendMessage(JSON.stringify({ type: "user_update", class_name: playerClass, level: playerLevel, inventory: playerInventory })); } }}
-          onSummarize={async () => { if (!token || !activeCampaign) return; setIsSummarizing(true); try { const res = await fetch(`${API_BASE}/campaigns/${activeCampaign.id}/summarize`, { headers: { 'Authorization': `Bearer ${token}` } }); setCampaignSummary((await res.json()).summary); } catch (e) { console.error(e); } finally { setIsSummarizing(false); } }} 
+          setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} setPlayerInventory={setPlayerInventory} onUpdateProfile={async () => { if (!token) return; const res = await fetch(`${currentConfig.API_BASE}/users/me`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ class_name: playerClass, level: playerLevel, inventory: playerInventory }) }); if (res.ok) { setIsEditingProfile(false); sendMessage(JSON.stringify({ type: "user_update", class_name: playerClass, level: playerLevel, inventory: playerInventory })); } }}
+          onSummarize={async () => { if (!token || !activeCampaign) return; setIsSummarizing(true); try { const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/summarize`, { headers: { 'Authorization': `Bearer ${token}` } }); setCampaignSummary((await res.json()).summary); } catch (e) { console.error(e); } finally { setIsSummarizing(false); } }} 
           isSummarizing={isSummarizing}
           onClearHistory={handleClearHistory}
           onMoveToScene={(userId, sceneId) => sendMessage(JSON.stringify({ type: 'move_to_scene', target_id: userId, scene_id: sceneId }))}
@@ -545,7 +545,7 @@ function VTTApp() {
           onToggleFog={async () => {
             if (!isGM || !activeLocation || !token) return;
             const newState = !activeLocation.is_fog_active;
-            const res = await fetch(`${API_BASE}/locations/${activeLocation.id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ is_fog_active: newState }) });
+            const res = await fetch(`${currentConfig.API_BASE}/locations/${activeLocation.id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ is_fog_active: newState }) });
             if (res.ok) {
                 const updated = { ...activeLocation, is_fog_active: newState };
                 setActiveLocation(updated);
@@ -557,11 +557,11 @@ function VTTApp() {
             setIsGenerating(true);
             try {
               const locId = activeLocation?.id || 1;
-              const res = await fetch(`${API_BASE}/campaigns/${activeCampaign.id}/generate-loot?location_id=${locId}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+              const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/generate-loot?location_id=${locId}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
               setGeneratedLoot((await res.json()).loot);
             } catch (e) { console.error(e); } finally { setIsGenerating(false); }
           }}
-          onManifestLoot={async (c) => { if (!token || !activeCampaign) return; const res = await fetch(`${API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Found Loot", content: c, type: "text", campaign_id: activeCampaign.id, x: 500, y: 400 }) }); if (res.ok) { fetchHandouts(); setGeneratedLoot(null); } }}
+          onManifestLoot={async (c) => { if (!token || !activeCampaign) return; const res = await fetch(`${currentConfig.API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Found Loot", content: c, type: "text", campaign_id: activeCampaign.id, x: 500, y: 400 }) }); if (res.ok) { fetchHandouts(); setGeneratedLoot(null); } }}
           onDismissLoot={() => setGeneratedLoot(null)}
           generatedLoot={generatedLoot}
           onDismissEnemy={() => setGeneratedEnemy(null)}
@@ -569,7 +569,7 @@ function VTTApp() {
           onDismissLore={() => setGeneratedLore(null)}
           onUpdateGeneratedEnemy={(enemy) => setGeneratedEnemy(enemy)}
           onUpdateGeneratedLore={(lore) => setGeneratedLore(lore)}
-          onManifestLore={async (c) => { if (!token || !activeCampaign) return; const res = await fetch(`${API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Whispered Lore", content: c, type: "text", campaign_id: activeCampaign.id, x: 400, y: 300 }) }); if (res.ok) { fetchHandouts(); setGeneratedLore(null); } }}
+          onManifestLore={async (c) => { if (!token || !activeCampaign) return; const res = await fetch(`${currentConfig.API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Whispered Lore", content: c, type: "text", campaign_id: activeCampaign.id, x: 400, y: 300 }) }); if (res.ok) { fetchHandouts(); setGeneratedLore(null); } }}
           customForge={customForge}
           onCaptureSelection={() => {
             if (iframeRef.current?.contentWindow) {
