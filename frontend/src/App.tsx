@@ -14,8 +14,11 @@ import HandoutItem from "./components/Overlay/HandoutItem";
 import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout } from "./types/vtt";
 
 const API_HOSTNAME = window.location.hostname;
-const API_BASE = `http://${API_HOSTNAME}:8000`;
-const WS_BASE = `ws://${API_HOSTNAME}:8000`;
+const PROTOCOL = window.location.protocol === "https:" ? "https" : "http";
+const WS_PROTOCOL = window.location.protocol === "https:" ? "wss" : "ws";
+
+const API_BASE = `${PROTOCOL}://${API_HOSTNAME}:8000`;
+const WS_BASE = `${WS_PROTOCOL}://${API_HOSTNAME}:8000`;
 
 function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token, login } = useAuth();

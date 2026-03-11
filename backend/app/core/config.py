@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # Discord OAuth2
     DISCORD_CLIENT_ID: str = ""
     DISCORD_CLIENT_SECRET: str = ""
-    DISCORD_REDIRECT_URI: str = "http://192.168.4.150:5173/auth/callback"
+    DISCORD_REDIRECT_URI: str = "https://dnd.matissetec.dev/auth/callback"
     
     # AI - Gemini
     GEMINI_API_KEY: Optional[str] = None

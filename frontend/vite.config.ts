@@ -11,4 +11,9 @@ export default defineConfig({
   define: {
     "process.env.IS_PREACT": JSON.stringify("false"),
   },
+  server: {
+    allowedHosts: [
+      'dnd.matissetec.dev'
+    ]
+  }
 })
