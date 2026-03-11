@@ -25,9 +25,9 @@
 - [x] Implement structured JSON output parsing.
 
 ## Track E: Advanced Interactivity (The Glass Layer)
-- [ ] Implement transparent React overlay over the Excalidraw canvas.
-- [ ] Build the Ping System (Click -> Broadcast -> Ripple VFX).
-- [ ] Implement Measurement Tools.
+- [x] Implement transparent React overlay over the Excalidraw canvas.
+- [x] Build the Ping System (Click -> Broadcast -> Ripple VFX).
+- [x] Implement Measurement Tools.
 
 ## Track F: The Whisper Network (Messaging)
 - [ ] Implement targeted WebSocket messaging.

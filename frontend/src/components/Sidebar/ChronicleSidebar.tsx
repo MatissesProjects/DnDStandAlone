@@ -1,5 +1,5 @@
-import React from 'react';
-import type { HistoryItem } from '../../types/vtt';
+import React, { useState } from 'react';
+import type { HistoryItem, UserPresence } from '../../types/vtt';
 
 interface ChronicleSidebarProps {
   isConnected: boolean;
@@ -12,6 +12,8 @@ interface ChronicleSidebarProps {
   isSubtleMode: boolean;
   setIsSubtleMode: (val: boolean) => void;
   onConsumeHistory: (id: string) => void;
+  activeUsers: UserPresence[];
+  onWhisper: (targetId: string, msg: string) => void;
 }
 
 const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
@@ -23,8 +25,21 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
   history,
   isSubtleMode,
   setIsSubtleMode,
-  onConsumeHistory
+  onConsumeHistory,
+  activeUsers,
+  onWhisper
 }) => {
+  const [whisperTarget, setWhisperTarget] = useState<string>('');
+  const [whisperMsg, setWhisperMsg] = useState<string>('');
+
+  const handleSendWhisper = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (whisperTarget && whisperMsg) {
+      onWhisper(whisperTarget, whisperMsg);
+      setWhisperMsg('');
+    }
+  };
+
   return (
     <aside className="w-[300px] h-full flex-none border-r border-gray-800 p-4 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
       <div className="flex justify-between items-center border-b border-gray-800 pb-4 shrink-0">
@@ -59,7 +74,7 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
                 <div className="flex justify-between items-center mb-1">
                   <div className="flex items-center gap-1.5">
                     <span className={`text-[8px] font-black uppercase tracking-widest ${item.type === 'story' ? 'text-indigo-500' : (item.isSubtle ? 'text-purple-400' : 'text-blue-600')}`}>
-                      {item.isSubtle ? 'HIDDEN ROLL' : item.type.toUpperCase()}
+                      {item.isSubtle ? (item.content.includes('Whisper') ? 'WHISPER' : 'HIDDEN ROLL') : item.type.toUpperCase()}
                     </span>
                     {item.isSubtle && (
                       <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -86,10 +101,44 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 pt-3 border-t border-gray-800/50 shrink-0">
-        <div className="flex justify-between items-center text-gray-100">
-          <h3 className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">Fate</h3>
-          {isGM && (
+      <div className="pt-3 border-t border-gray-800/50 space-y-4 shrink-0">
+        {/* Whisper Section */}
+        <section className="space-y-2">
+          <h3 className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">Whisper Network</h3>
+          <form onSubmit={handleSendWhisper} className="space-y-1.5">
+            <select 
+              value={whisperTarget} 
+              onChange={e => setWhisperTarget(e.target.value)}
+              className="w-full bg-gray-900 border border-gray-800 rounded-lg px-2 py-1.5 text-[10px] text-gray-400 focus:outline-none focus:border-indigo-500/50"
+            >
+              <option value="">Select Target...</option>
+              {activeUsers.map(u => (
+                <option key={u.id} value={u.id}>{u.username} ({u.role.toUpperCase()})</option>
+              ))}
+            </select>
+            <div className="flex gap-1">
+              <input 
+                type="text" 
+                placeholder="Type a secret..." 
+                value={whisperMsg}
+                onChange={e => setWhisperMsg(e.target.value)}
+                className="flex-1 bg-gray-950 border border-gray-800 rounded-lg px-3 py-1.5 text-[10px] focus:outline-none focus:border-indigo-500/50"
+              />
+              <button 
+                type="submit" 
+                disabled={!whisperTarget || !whisperMsg}
+                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:grayscale px-3 py-1.5 rounded-lg transition-all"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              </button>
+            </div>
+          </form>
+        </section>
+
+        {/* Dice Section */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center text-gray-100">
+            <h3 className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">Fate</h3>
             <div className="flex p-0.5 bg-gray-900 rounded-lg border border-gray-800">
               <button 
                 onClick={() => setIsSubtleMode(false)}
@@ -101,17 +150,17 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
                 onClick={() => setIsSubtleMode(true)}
                 className={`px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-tighter transition-all ${isSubtleMode ? 'bg-purple-900/40 text-purple-400 shadow-sm border border-purple-500/20' : 'text-gray-600 hover:text-gray-400'}`}
               >
-                Hidden
+                {isGM ? 'Hidden' : 'Secret'}
               </button>
             </div>
-          )}
-        </div>
-        <div className="grid grid-cols-3 gap-1.5">
-          {['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].map(die => (
-            <button key={die} onClick={() => onRoll(die)} className={`bg-gray-950 hover:bg-gray-800 active:bg-gray-700 text-[9px] font-black py-1.5 rounded-lg border transition-all shadow-sm active:scale-95 ${isSubtleMode ? 'border-purple-900/50 hover:border-purple-500/50 text-purple-300/70' : 'border-gray-800 hover:border-gray-600 text-gray-400'}`}>
-              {die}
-            </button>
-          ))}
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].map(die => (
+              <button key={die} onClick={() => onRoll(die)} className={`bg-gray-950 hover:bg-gray-800 active:bg-gray-700 text-[9px] font-black py-1.5 rounded-lg border transition-all shadow-sm active:scale-95 ${isSubtleMode ? 'border-purple-900/50 hover:border-purple-500/50 text-purple-300/70' : 'border-gray-800 hover:border-gray-600 text-gray-400'}`}>
+                {die}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </aside>

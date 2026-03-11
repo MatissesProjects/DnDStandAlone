@@ -292,6 +292,18 @@ function VTTApp() {
         else if (data.type === "player_ping") {
           setPings(prev => [...prev, data]);
         }
+        else if (data.type === "whisper") {
+          const isFromMe = data.senderId === clientId;
+          const targetName = activeUsers.find(u => u.id === data.target_id)?.username || "Unknown";
+          setHistory(prev => [{ 
+            id: data.id, 
+            type: 'story' as const, 
+            content: `${isFromMe ? `Whisper to ${targetName}` : `Whisper from ${data.user}`}: ${data.content}`, 
+            user: data.user, 
+            timestamp: data.timestamp,
+            isSubtle: true // Whispers are always private
+          }, ...prev].slice(0, 100));
+        }
         else if (data.type === 'story' || (data.result && data.die)) {
           if (data.result && data.die && !data.isSubtle) { const isD20 = data.die.includes('d20'); setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && isD20, isFail: data.result === 1 && isD20 }); setTimeout(() => setVfxRoll(null), 800); }
           setHistory(prev => [{ id: data.id, type: 'roll' as const, content: `${data.die}: ${data.result}`, user: data.user, timestamp: data.timestamp, isSubtle: data.isSubtle }, ...prev].slice(0, 100));
@@ -366,7 +378,7 @@ function VTTApp() {
       <button onClick={() => setLeftSidebarOpen(!leftSidebarOpen)} className={`fixed bottom-8 left-8 z-[60] p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!leftSidebarOpen ? 'translate-x-0' : 'translate-x-[340px]'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{leftSidebarOpen ? <polyline points="15 18 9 12 15 6"></polyline> : <polyline points="9 18 15 12 9 6"></polyline>}</svg></button>
       <button onClick={() => setRightSidebarOpen(!rightSidebarOpen)} className={`fixed bottom-8 right-8 z-[60] p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!rightSidebarOpen ? 'translate-x-0' : 'translate-x-[-320px]'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{rightSidebarOpen ? <polyline points="9 18 15 12 9 6"></polyline> : <polyline points="15 18 9 12 15 6"></polyline>}</svg></button>
 
-      {leftSidebarOpen && <ChronicleSidebar isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} onConsumeHistory={handleConsumeHistory} />}
+      {leftSidebarOpen && <ChronicleSidebar isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} onConsumeHistory={handleConsumeHistory} activeUsers={activeUsers} onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))} />}
 
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
           {isGM ? (
