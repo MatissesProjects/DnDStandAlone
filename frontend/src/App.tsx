@@ -83,6 +83,7 @@ function VTTApp() {
   const [generatedLoot, setGeneratedLoot] = useState<string | null>(null);
   const [iframeKey, setIframeKey] = useState(0);
   const [streamImage, setStreamImage] = useState<string | null>(null);
+  const [streamAspectRatio, setStreamAspectRatio] = useState<number | null>(null);
   const [hitZones, setHitZones] = useState<any[]>([]);
   const [pings, setPings] = useState<any[]>([]);
   const [combatants, setCombatants] = useState<any[]>([]);
