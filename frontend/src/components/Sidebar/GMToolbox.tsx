@@ -42,6 +42,7 @@ interface GMToolboxProps {
   onClearHistory: () => void;
   onMoveToScene?: (userId: string, sceneId: string) => void;
   onAddToInitiative?: (name: string, isPlayer: boolean) => void;
+  onToggleFog?: () => void;
   customForge?: any[];
   onCaptureSelection?: () => void;
   onDeleteCustomToken?: (id: string) => void;
@@ -167,6 +168,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Tools</h3>
               <div className="grid gap-2">
                 <button onClick={onOpenDashboard} className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"> Manage Manifest </button>
+                <button onClick={onToggleFog} className={`w-full font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 border ${activeLocation?.is_fog_active ? 'bg-purple-600 border-purple-400 text-white' : 'bg-gray-900 hover:bg-gray-800 border-gray-800 text-gray-400'}`}> {activeLocation?.is_fog_active ? 'Fog Active' : 'Shroud World'} </button>
                 <button onClick={onSummarize} disabled={isSummarizing} className="w-full bg-indigo-900/20 hover:bg-indigo-900/40 border border-indigo-500/20 text-indigo-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50"> {isSummarizing ? 'Recounting...' : "Chronicler's Summary"} </button>
                 <button onClick={onClearHistory} className="w-full bg-red-900/10 hover:bg-red-900/30 border border-red-900/20 text-red-400 font-black py-2 rounded-lg uppercase text-[8px] tracking-[0.2em] transition-all"> Wipe Chronicle </button>
               </div>

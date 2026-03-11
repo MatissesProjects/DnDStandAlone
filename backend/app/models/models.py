@@ -33,6 +33,8 @@ class Location(Base):
     y = Column(Integer, default=0)
     zoom = Column(Integer, default=1)
     ambient_audio = Column(String, nullable=True) # URL to audio file
+    is_fog_active = Column(Boolean, default=False)
+    fog_data = Column(JSON, nullable=True) # Store revealed areas
     campaign_id = Column(Integer, ForeignKey("campaigns.id"))
     campaign = relationship("Campaign")
 

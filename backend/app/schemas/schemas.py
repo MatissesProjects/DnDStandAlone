@@ -49,6 +49,8 @@ class LocationBase(BaseModel):
     y: Optional[int] = 0
     zoom: Optional[float] = 1.0
     ambient_audio: Optional[str] = None
+    is_fog_active: Optional[bool] = False
+    fog_data: Optional[Dict[str, Any]] = None
 
 class LocationCreate(LocationBase):
     campaign_id: int
@@ -62,6 +64,8 @@ class LocationUpdate(BaseModel):
     y: Optional[int] = None
     zoom: Optional[float] = None
     ambient_audio: Optional[str] = None
+    is_fog_active: Optional[bool] = None
+    fog_data: Optional[Dict[str, Any]] = None
 
 class Location(LocationBase):
     id: int

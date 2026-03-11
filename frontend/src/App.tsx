@@ -150,6 +150,18 @@ function VTTApp() {
     setPings(prev => [...prev, ping]);
   }, [isGM, user, sendMessage]);
 
+  const handleUpdateFog = useCallback(async (zones: any[]) => {
+    if (!isGM || !activeLocation || !token) return;
+    try {
+      const res = await fetch(`${API_BASE}/locations/${activeLocation.id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fog_data: zones }) });
+      if (res.ok) {
+        const updated = { ...activeLocation, fog_data: zones };
+        setActiveLocation(updated);
+        sendMessage(JSON.stringify({ type: "location_update", location: updated, senderId: clientId }));
+      }
+    } catch (e) { console.error(e); }
+  }, [isGM, activeLocation, token, clientId, sendMessage]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -428,7 +440,7 @@ function VTTApp() {
                 allow="clipboard-read; clipboard-write; storage-access; focus-without-user-activation"
                 referrerPolicy="no-referrer-when-downgrade"
               />
-              <GlassLayer onPing={handlePing} pings={pings} isGM={isGM} />
+              <GlassLayer onPing={handlePing} pings={pings} isGM={isGM} isFogActive={activeLocation?.is_fog_active || false} fogZones={activeLocation?.fog_data || []} onUpdateFog={handleUpdateFog} />
             </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-[#1e1e1e] relative overflow-hidden">
@@ -437,7 +449,7 @@ function VTTApp() {
                   <img src={streamImage} alt="GM Canvas Stream" className="max-w-full max-h-full object-contain pointer-events-none" />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="relative w-full h-full max-w-full max-h-full pointer-events-none">
-                      <GlassLayer onPing={handlePing} pings={pings} isGM={isGM} />
+                      <GlassLayer onPing={handlePing} pings={pings} isGM={isGM} isFogActive={activeLocation?.is_fog_active || false} fogZones={activeLocation?.fog_data || []} />
                       {hitZones.map((zone, idx) => {
                         const entity = activeEntities.find(e => e.id.toString() === zone.id.toString());
                         return (
@@ -522,6 +534,16 @@ function VTTApp() {
           onClearHistory={handleClearHistory}
           onMoveToScene={(userId, sceneId) => sendMessage(JSON.stringify({ type: 'move_to_scene', target_id: userId, scene_id: sceneId }))}
           onAddToInitiative={handleAddToInitiative}
+          onToggleFog={async () => {
+            if (!isGM || !activeLocation || !token) return;
+            const newState = !activeLocation.is_fog_active;
+            const res = await fetch(`${API_BASE}/locations/${activeLocation.id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ is_fog_active: newState }) });
+            if (res.ok) {
+                const updated = { ...activeLocation, is_fog_active: newState };
+                setActiveLocation(updated);
+                sendMessage(JSON.stringify({ type: "location_update", location: updated, senderId: clientId }));
+            }
+          }}
           onDismissEnemy={() => setGeneratedEnemy(null)}
 
           onDismissLore={() => setGeneratedLore(null)}

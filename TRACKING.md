@@ -40,8 +40,8 @@
 - [x] Implement Dynamic Audio Sequencing.
 
 ## Track H: Combat & Visual Hacks
-- [ ] Automated Initiative Tracker.
-- [ ] LitRPG-Style Inventory & Stat Tracking.
+- [x] Automated Initiative Tracker.
+- [x] LitRPG-Style Inventory & Stat Tracking.
 - [ ] Fog of War workaround.
 
 ## Track I: Expanded AI Utility

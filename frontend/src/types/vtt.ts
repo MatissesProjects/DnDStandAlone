@@ -59,6 +59,11 @@ export interface Location {
   description: string;
   danger_level: number;
   ambient_audio?: string;
+  is_fog_active?: boolean;
+  fog_data?: any;
+  x: number;
+  y: number;
+  zoom: number;
 }
 
 export interface Entity {
