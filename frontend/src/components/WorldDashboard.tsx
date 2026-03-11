@@ -20,6 +20,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   const [newLocName, setNewLocName] = useState('');
   const [newLocDesc, setNewLocDesc] = useState('');
   const [newLocAudio, setNewLocAudio] = useState('');
+  const [newLocScale, setNewLocScale] = useState(5);
   const [newLocX, setNewLocX] = useState(0);
   const [newLocY, setNewLocY] = useState(0);
   const [newLocZoom, setNewLocZoom] = useState(1);
@@ -103,6 +104,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
           description: newLocDesc, 
           campaign_id: campaignId,
           ambient_audio: newLocAudio,
+          map_scale: newLocScale,
           x: newLocX,
           y: newLocY,
           zoom: newLocZoom
@@ -124,6 +126,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
           name: editingLocation.name, 
           description: editingLocation.description,
           ambient_audio: editingLocation.ambient_audio,
+          map_scale: editingLocation.map_scale,
           x: editingLocation.x,
           y: editingLocation.y,
           zoom: editingLocation.zoom
@@ -214,6 +217,10 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
                       <div className="space-y-1">
                         <p className="text-[8px] font-black text-gray-600 uppercase ml-2">Zoom</p>
                         <input type="number" step="0.1" value={editingLocation ? editingLocation.zoom : newLocZoom} onChange={e => editingLocation ? setEditingLocation({...editingLocation, zoom: Number(e.target.value)}) : setNewLocZoom(Number(e.target.value))} className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[8px] font-black text-gray-600 uppercase ml-2">Grid Scale (ft)</p>
+                        <input type="number" value={editingLocation ? (editingLocation.map_scale || 5) : newLocScale} onChange={e => editingLocation ? setEditingLocation({...editingLocation, map_scale: Number(e.target.value)}) : setNewLocScale(Number(e.target.value))} className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50" />
                       </div>
                     </div>
                     <input type="text" placeholder="Location Name" value={editingLocation ? editingLocation.name : newLocName} onChange={e => editingLocation ? setEditingLocation({...editingLocation, name: e.target.value}) : setNewLocName(e.target.value)} className="bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-indigo-500/50 shadow-inner" />

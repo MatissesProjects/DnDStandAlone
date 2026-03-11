@@ -23,6 +23,7 @@ add_column("users", "bio", "TEXT")
 
 # Track G: Ambient Audio
 add_column("locations", "ambient_audio", "TEXT")
+add_column("locations", "map_scale", "INTEGER DEFAULT 5")
 
 # Track H: Fog of War
 add_column("locations", "is_fog_active", "BOOLEAN DEFAULT 0")

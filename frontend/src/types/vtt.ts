@@ -64,6 +64,7 @@ export interface Location {
   x: number;
   y: number;
   zoom: number;
+  map_scale?: number;
 }
 
 export interface Entity {

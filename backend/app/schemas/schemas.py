@@ -53,6 +53,7 @@ class LocationBase(BaseModel):
     y: Optional[int] = 0
     zoom: Optional[float] = 1.0
     ambient_audio: Optional[str] = None
+    map_scale: Optional[int] = 5
     is_fog_active: Optional[bool] = False
     fog_data: Optional[Dict[str, Any]] = None
 

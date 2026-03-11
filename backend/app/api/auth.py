@@ -129,6 +129,20 @@ async def simple_login(payload: dict, db: Session = Depends(get_db)):
         }
     }
 
+@router.post("/promote")
+async def promote_to_gm(payload: dict, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    key = payload.get("key")
+    if not key or key != settings.GM_KEY:
+        raise HTTPException(status_code=403, detail="Invalid GM Elevation Key")
+    
+    current_user.role = "gm"
+    db.commit()
+    db.refresh(current_user)
+    
+    # Issue a new token with updated role
+    jwt_token = create_access_token(data={"sub": current_user.discord_id, "role": current_user.role})
+    return {"token": jwt_token, "user": current_user}
+
 @router.get("/callback")
 async def callback(code: str, db: Session = Depends(get_db)):
     # Exchange code for token

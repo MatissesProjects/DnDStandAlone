@@ -14,10 +14,11 @@ interface GlassLayerProps {
   isGM: boolean;
   isFogActive: boolean;
   fogZones: FogZone[];
+  mapScale?: number;
   onUpdateFog?: (zones: FogZone[]) => void;
 }
 
-const GlassLayer: React.FC<GlassLayerProps> = ({ onPing, pings, isGM, isFogActive, fogZones, onUpdateFog }) => {
+const GlassLayer: React.FC<GlassLayerProps> = ({ onPing, pings, isGM, isFogActive, fogZones, mapScale = 5, onUpdateFog }) => {
   const [measurement, setMeasurement] = useState<{ start: { x: number, y: number }, current: { x: number, y: number } } | null>(null);
   const [isClearingFog, setIsClearingFog] = useState(false);
 
@@ -109,8 +110,9 @@ const GlassLayer: React.FC<GlassLayerProps> = ({ onPing, pings, isGM, isFogActiv
     if (!measurement) return 0;
     const dx = measurement.current.x - measurement.start.x;
     const dy = measurement.current.y - measurement.start.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    return Math.round(dist / 2); 
+    // Map is assumed to be 50 "grid units" wide at 100% zoom contextually
+    const units = Math.sqrt(dx * dx + dy * dy) / 2;
+    return Math.round(units * mapScale);
   };
 
   return (

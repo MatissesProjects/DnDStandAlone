@@ -10,8 +10,10 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "your-secret-key-change-this-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 1 week
-    
-    # Discord OAuth2
+    GM_KEY: str = "master_of_dungeons" # Default key for elevation
+
+    # Discord
+ OAuth2
     DISCORD_CLIENT_ID: str = ""
     DISCORD_CLIENT_SECRET: str = ""
     DISCORD_REDIRECT_URI: str = "https://dnd.matissetec.dev/auth/callback"
