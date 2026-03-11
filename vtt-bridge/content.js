@@ -81,7 +81,9 @@ if (window.location.host.includes("excalidraw.com")) {
     
     if (targetCanvas) {
       try {
-        const dataUrl = targetCanvas.toDataURL("image/jpeg", 0.4);
+        // Higher quality 0.8 (up from 0.4) for better visibility
+        // Using image/jpeg as it is generally well-supported and efficient for this use case
+        const dataUrl = targetCanvas.toDataURL("image/jpeg", 0.8);
         const metadata = await getMetadata();
 
         window.postMessage({
