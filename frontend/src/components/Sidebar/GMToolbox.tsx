@@ -14,13 +14,17 @@ interface GMToolboxProps {
   onRequestRoll: (targetId: string, die: string, label: string) => void;
   onGenerateEnemy: () => void;
   onGenerateLore: () => void;
+  onGenerateLoot?: () => void;
   isGenerating: boolean;
   generatedEnemy: EnemyData | null;
   generatedLore: string | null;
+  generatedLoot?: string | null;
   onManifestEntity: () => void;
   onManifestLore?: (content: string) => void;
+  onManifestLoot?: (content: string) => void;
   onDismissEnemy: () => void;
   onDismissLore: () => void;
+  onDismissLoot?: () => void;
   onUpdateGeneratedEnemy?: (enemy: EnemyData) => void;
   onUpdateGeneratedLore?: (lore: string) => void;
   activeEntities: Entity[];
@@ -134,9 +138,9 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   isGenerating, generatedEnemy, generatedLore, onManifestEntity, onManifestLore, 
   onDismissEnemy, onDismissLore, onUpdateGeneratedEnemy, onUpdateGeneratedLore,
   activeEntities, onSelectEntity, 
-  activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, isEditingProfile,
-  setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile, onSummarize, isSummarizing,
-  onClearHistory, customForge, onCaptureSelection, onDeleteCustomToken, onRenameCustomToken
+  activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, playerInventory, isEditingProfile,
+  setIsEditingProfile, setPlayerClass, setPlayerLevel, setPlayerInventory, onUpdateProfile, onSummarize, isSummarizing,
+  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, customForge, onCaptureSelection, onDeleteCustomToken, onRenameCustomToken
 }) => {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
@@ -275,12 +279,15 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">AI Weaver</h3>
               <div className="grid gap-3">
                 <button onClick={onGenerateEnemy} disabled={isGenerating} className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest shadow-blue-900/20"> Manifest Enemy </button>
-                <button onClick={onGenerateLore} disabled={isGenerating} className="w-full bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-indigo-500/20 text-xs uppercase tracking-widest shadow-indigo-900/20"> Script Lore </button>
+                <div className="flex gap-2">
+                  <button onClick={onGenerateLore} disabled={isGenerating} className="flex-1 bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 text-white font-black py-3 rounded-2xl shadow-lg transition-all border border-indigo-500/20 text-[10px] uppercase tracking-widest shadow-indigo-900/20"> Script Lore </button>
+                  <button onClick={onGenerateLoot} disabled={isGenerating} className="flex-1 bg-amber-700 hover:bg-amber-600 active:bg-amber-800 text-white font-black py-3 rounded-2xl shadow-lg transition-all border border-amber-500/20 text-[10px] uppercase tracking-widest shadow-amber-900/20"> Forge Loot </button>
+                </div>
               </div>
               
-              {(generatedEnemy || generatedLore) && (
+              {(generatedEnemy || generatedLore || generatedLoot) && (
                 <div className="mt-4 p-5 bg-gray-900 rounded-[1.5rem] border border-indigo-500/30 shadow-2xl animate-in zoom-in-95 duration-300 relative group/weave">
-                  <button onClick={() => { onDismissEnemy(); onDismissLore(); }} className="absolute -top-2 -right-2 bg-gray-800 hover:bg-red-900/40 text-gray-500 hover:text-red-500 rounded-full p-1.5 border border-gray-700 transition-all opacity-0 group-hover/weave:opacity-100 z-10" title="Dismiss weave">
+                  <button onClick={() => { onDismissEnemy(); onDismissLore(); onDismissLoot?.(); }} className="absolute -top-2 -right-2 bg-gray-800 hover:bg-red-900/40 text-gray-500 hover:text-red-500 rounded-full p-1.5 border border-gray-700 transition-all opacity-0 group-hover/weave:opacity-100 z-10" title="Dismiss weave">
                     <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </button>
                   {generatedLore && (
@@ -290,6 +297,15 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                         <button onClick={() => onManifestLore?.(generatedLore)} className="text-[8px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-full border border-indigo-400/30 font-black uppercase tracking-widest transition-all"> Manifest </button>
                       </div>
                       <textarea value={generatedLore} onChange={(e) => onUpdateGeneratedLore?.(e.target.value)} className="w-full bg-gray-950 border border-indigo-500/20 rounded-xl p-3 text-xs text-gray-200 leading-relaxed italic focus:outline-none focus:border-indigo-500/50 resize-none h-32" />
+                    </div>
+                  )}
+                  {generatedLoot && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-[0.2em]">Found Loot</h4>
+                        <button onClick={() => onManifestLoot?.(generatedLoot)} className="text-[8px] bg-amber-600 hover:bg-amber-500 text-white px-2 py-1 rounded-full border border-amber-400/30 font-black uppercase tracking-widest transition-all"> Distribute </button>
+                      </div>
+                      <textarea value={generatedLoot} readOnly className="w-full bg-gray-950 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-200 leading-relaxed italic focus:outline-none h-24" />
                     </div>
                   )}
                   {generatedEnemy && (

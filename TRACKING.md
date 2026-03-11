@@ -42,7 +42,7 @@
 ## Track H: Combat & Visual Hacks
 - [x] Automated Initiative Tracker.
 - [x] LitRPG-Style Inventory & Stat Tracking.
-- [ ] Fog of War workaround.
+- [x] Fog of War workaround.
 
 ## Track I: Expanded AI Utility
 - [ ] Automated Session Recaps.

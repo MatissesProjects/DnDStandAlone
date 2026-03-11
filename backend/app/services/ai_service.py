@@ -112,6 +112,28 @@ class GeminiService:
             return response['message']['content'].strip()
         except Exception as e: return "The shadows remain silent."
 
+    async def generate_loot(self, location: models.Location, history: List[models.HistoryLog]) -> str:
+        context = self._format_context(location, history)
+        prompt = f"""
+        You are a D&D DM assistant. Based on the current location and recent events, 
+        generate a thematic loot table or a specific magical item found.
+        Make it narratively consistent (e.g. aquatic loot in a flooded temple).
+        
+        Context:
+        {context}
+        
+        Provide a concise description of the loot found.
+        """
+        if self.client:
+            try:
+                response = self.client.models.generate_content(model=settings.GEMINI_MODEL, contents=prompt)
+                return response.text.strip()
+            except Exception as e: print(f"Gemini loot failed: {e}")
+        try:
+            response = await self.ollama_client.chat(model=settings.OLLAMA_MODEL, messages=[{'role': 'user', 'content': prompt}])
+            return response['message']['content'].strip()
+        except Exception as e: return "You find nothing but dust and echoes."
+
     async def summarize_session(self, history: List[models.HistoryLog]) -> str:
         if not history:
             return "No chronicle entries found to summarize."

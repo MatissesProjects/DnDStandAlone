@@ -83,6 +83,7 @@ function VTTApp() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEnemy, setGeneratedEnemy] = useState<EnemyData | null>(null);
   const [generatedLore, setGeneratedLore] = useState<string | null>(null);
+  const [generatedLoot, setGeneratedLoot] = useState<string | null>(null);
   const [iframeKey, setIframeKey] = useState(0);
   const [streamImage, setStreamImage] = useState<string | null>(null);
   const [hitZones, setHitZones] = useState<any[]>([]);
@@ -544,6 +545,18 @@ function VTTApp() {
                 sendMessage(JSON.stringify({ type: "location_update", location: updated, senderId: clientId }));
             }
           }}
+          onGenerateLoot={async () => {
+            if (!token || !activeCampaign) return;
+            setIsGenerating(true);
+            try {
+              const locId = activeLocation?.id || 1;
+              const res = await fetch(`${API_BASE}/campaigns/${activeCampaign.id}/generate-loot?location_id=${locId}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+              setGeneratedLoot((await res.json()).loot);
+            } catch (e) { console.error(e); } finally { setIsGenerating(false); }
+          }}
+          onManifestLoot={async (c) => { if (!token || !activeCampaign) return; const res = await fetch(`${API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Found Loot", content: c, type: "text", campaign_id: activeCampaign.id, x: 500, y: 400 }) }); if (res.ok) { fetchHandouts(); setGeneratedLoot(null); } }}
+          onDismissLoot={() => setGeneratedLoot(null)}
+          generatedLoot={generatedLoot}
           onDismissEnemy={() => setGeneratedEnemy(null)}
 
           onDismissLore={() => setGeneratedLore(null)}
