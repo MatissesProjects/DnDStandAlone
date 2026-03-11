@@ -163,7 +163,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   };
 
   return (
-    <aside className="w-[320px] h-full flex-none border-l border-gray-800 p-5 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
+    <aside className="w-[320px] max-w-[85vw] h-full flex-none border-l border-gray-800 p-5 flex flex-col bg-gray-950 absolute md:relative right-0 z-50 overflow-hidden shadow-2xl transition-all">
       <h2 className="text-xl font-black border-b border-gray-800 pb-4 shrink-0 tracking-tighter text-gray-100 uppercase italic">
         {isGM ? 'Grand Master' : 'Adventurer'}
       </h2>

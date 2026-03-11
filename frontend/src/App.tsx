@@ -64,8 +64,11 @@ function VTTApp() {
   const [handouts, setHandouts] = useState<Handout[]>([]);
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
-  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
-  const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
+  
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(!isMobile);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(!isMobile);
+  
   const processedMessages = useRef<Set<string>>(new Set());
   const [playerClass, setPlayerClass] = useState(user?.class_name || "");
   const [playerLevel, setPlayerLevel] = useState(user?.level || 1);
@@ -459,8 +462,8 @@ function VTTApp() {
         ))}
       </div>
 
-      <button onClick={() => setLeftSidebarOpen(!leftSidebarOpen)} className={`fixed bottom-8 left-8 z-[60] p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!leftSidebarOpen ? 'translate-x-0' : 'translate-x-[340px]'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{leftSidebarOpen ? <polyline points="15 18 9 12 15 6"></polyline> : <polyline points="9 18 15 12 9 6"></polyline>}</svg></button>
-      <button onClick={() => setRightSidebarOpen(!rightSidebarOpen)} className={`fixed bottom-8 right-8 z-[60] p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!rightSidebarOpen ? 'translate-x-0' : 'translate-x-[-320px]'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{rightSidebarOpen ? <polyline points="9 18 15 12 9 6"></polyline> : <polyline points="15 18 9 12 15 6"></polyline>}</svg></button>
+      <button onClick={() => setLeftSidebarOpen(!leftSidebarOpen)} className={`fixed bottom-4 md:bottom-8 left-4 md:left-8 z-[60] p-3 md:p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!leftSidebarOpen ? 'translate-x-0' : 'translate-x-[80vw] md:translate-x-[340px]'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{leftSidebarOpen ? <polyline points="15 18 9 12 15 6"></polyline> : <polyline points="9 18 15 12 9 6"></polyline>}</svg></button>
+      <button onClick={() => setRightSidebarOpen(!rightSidebarOpen)} className={`fixed bottom-4 md:bottom-8 right-4 md:right-8 z-[60] p-3 md:p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!rightSidebarOpen ? 'translate-x-0' : '-translate-x-[80vw] md:-translate-x-[320px]'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{rightSidebarOpen ? <polyline points="9 18 15 12 9 6"></polyline> : <polyline points="15 18 9 12 15 6"></polyline>}</svg></button>
 
       {leftSidebarOpen && <ChronicleSidebar isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} onConsumeHistory={handleConsumeHistory} activeUsers={activeUsers} onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))} />}
 
@@ -484,46 +487,44 @@ function VTTApp() {
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-[#1e1e1e] relative overflow-hidden">
               {streamImage ? (
-                <>
-                  <img src={streamImage} alt="GM Canvas Stream" className="max-w-full max-h-full object-contain pointer-events-none" />
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="relative w-full h-full max-w-full max-h-full pointer-events-none">
-                      <GlassLayer onPing={handlePing} pings={pings} isGM={isGM} isFogActive={activeLocation?.is_fog_active || false} fogZones={activeLocation?.fog_data || []} mapScale={activeLocation?.map_scale} />
-                      {hitZones.map((zone, idx) => {
-                        const entity = activeEntities.find(e => e.id.toString() === zone.id.toString());
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => entity && setSelectedEntity(entity)}
-                            onMouseEnter={(e) => {
-                                const tooltip = e.currentTarget.querySelector('.vtt-tooltip');
-                                if (tooltip) (tooltip as HTMLElement).style.opacity = '1';
-                            }}
-                            onMouseLeave={(e) => {
-                                const tooltip = e.currentTarget.querySelector('.vtt-tooltip');
-                                if (tooltip) (tooltip as HTMLElement).style.opacity = '0';
-                            }}
-                            className="absolute pointer-events-auto group"
-                            style={{
-                              left: `${zone.left}%`,
-                              top: `${zone.top}%`,
-                              width: `${zone.width}%`,
-                              height: `${zone.height}%`,
-                              background: 'transparent',
-                              border: '1px solid transparent',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <div className="vtt-tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest rounded-lg border border-indigo-500/30 whitespace-nowrap opacity-0 transition-opacity pointer-events-none shadow-xl shadow-black/50">
-                                {entity?.name || "Unknown Soul"}
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-indigo-500/30"></div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                <div className="relative inline-block max-w-full max-h-full pointer-events-none">
+                  <img src={streamImage} alt="GM Canvas Stream" className="max-w-full max-h-full object-contain pointer-events-none block" />
+                  <div className="absolute inset-0 pointer-events-none">
+                    <GlassLayer onPing={handlePing} pings={pings} isGM={isGM} isFogActive={activeLocation?.is_fog_active || false} fogZones={activeLocation?.fog_data || []} mapScale={activeLocation?.map_scale} />
+                    {hitZones.map((zone, idx) => {
+                      const entity = activeEntities.find(e => e.id.toString() === zone.id.toString());
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => entity && setSelectedEntity(entity)}
+                          onMouseEnter={(e) => {
+                              const tooltip = e.currentTarget.querySelector('.vtt-tooltip');
+                              if (tooltip) (tooltip as HTMLElement).style.opacity = '1';
+                          }}
+                          onMouseLeave={(e) => {
+                              const tooltip = e.currentTarget.querySelector('.vtt-tooltip');
+                              if (tooltip) (tooltip as HTMLElement).style.opacity = '0';
+                          }}
+                          className="absolute pointer-events-auto group"
+                          style={{
+                            left: `${zone.left}%`,
+                            top: `${zone.top}%`,
+                            width: `${zone.width}%`,
+                            height: `${zone.height}%`,
+                            background: 'transparent',
+                            border: '1px solid transparent',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <div className="vtt-tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest rounded-lg border border-indigo-500/30 whitespace-nowrap opacity-0 transition-opacity pointer-events-none shadow-xl shadow-black/50">
+                              {entity?.name || "Unknown Soul"}
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-indigo-500/30"></div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                </>
+                </div>
               ) : (
                 <div className="text-gray-500 font-bold uppercase tracking-widest animate-pulse">Awaiting GM Vision...</div>
               )}

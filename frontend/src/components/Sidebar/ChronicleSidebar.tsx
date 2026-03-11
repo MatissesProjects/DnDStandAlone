@@ -41,7 +41,7 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
   };
 
   return (
-    <aside className="w-[300px] h-full flex-none border-r border-gray-800 p-4 flex flex-col bg-gray-950 z-20 overflow-hidden shadow-2xl">
+    <aside className="w-[300px] max-w-[85vw] h-full flex-none border-r border-gray-800 p-4 flex flex-col bg-gray-950 absolute md:relative z-50 overflow-hidden shadow-2xl transition-all">
       <div className="flex justify-between items-center border-b border-gray-800 pb-4 shrink-0">
         <div>
           <h2 className="text-lg font-black tracking-tighter text-gray-100 uppercase italic">Chronicle</h2>

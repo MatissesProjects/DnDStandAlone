@@ -205,9 +205,8 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
                     </button>
                   </div>
                   <form onSubmit={editingLocation ? handleUpdateLocation : handleCreateLocation} className="grid grid-cols-1 gap-5">
-                    <div className="grid grid-cols-3 gap-4 mb-2">
-                      <div className="space-y-1">
-                        <p className="text-[8px] font-black text-gray-600 uppercase ml-2">X Coord</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+                      <div className="space-y-1">                        <p className="text-[8px] font-black text-gray-600 uppercase ml-2">X Coord</p>
                         <input type="number" value={editingLocation ? editingLocation.x : newLocX} onChange={e => editingLocation ? setEditingLocation({...editingLocation, x: Number(e.target.value)}) : setNewLocX(Number(e.target.value))} className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50" />
                       </div>
                       <div className="space-y-1">
@@ -253,7 +252,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
                 <section className="bg-gray-900/60 p-8 rounded-3xl border border-gray-800 shadow-inner">
                   <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6">Manifest Entity</h3>
                   <form onSubmit={handleCreateEntity} className="grid grid-cols-1 gap-5">
-                    <div className="grid grid-cols-2 gap-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <input type="text" placeholder="Entity Name" value={newEntityName} onChange={e => setNewEntityName(e.target.value)} className="bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-indigo-500/50 shadow-inner" />
                       <select value={selectedLocId || ''} onChange={e => setSelectedLocId(Number(e.target.value))} className="bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-indigo-500/50 text-gray-400 shadow-inner"><option value="" disabled>Target Locale</option>{locations.map(loc => (<option key={loc.id} value={loc.id}>{loc.name}</option>))}</select>
                     </div>
@@ -262,7 +261,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
                 </section>
                 <section>
                   <div className="flex justify-between items-center mb-6"><h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Manifested Entities</h3><select value={selectedLocId || ''} onChange={e => setSelectedLocId(Number(e.target.value))} className="bg-transparent border-none text-[10px] font-black text-indigo-400 uppercase tracking-widest focus:outline-none cursor-pointer">{locations.map(loc => (<option key={loc.id} value={loc.id} className="bg-gray-900">{loc.name}</option>))}</select></div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {entities.map(ent => (
                       <div key={ent.id} className="p-5 rounded-3xl bg-gray-900 border border-gray-800 hover:border-gray-700 transition-all flex flex-col group">
                         <div className="flex justify-between items-start mb-3"><h4 className="font-black text-gray-100 uppercase tracking-tight truncate flex-1">{ent.name}</h4><button onClick={() => handleDeleteEntity(ent.id)} className="p-1.5 opacity-0 group-hover:opacity-100 bg-red-900/20 text-red-500 rounded-lg hover:bg-red-900/40 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button></div>
