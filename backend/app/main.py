@@ -41,6 +41,10 @@ app.include_router(auth.router)
 async def health_check(db: Session = Depends(get_db)):
     return {"status": "ok", "db_connected": True}
 
+@app.get("/ping")
+def ping():
+    return {"pong": True}
+
 @app.patch("/users/me", response_model=schemas.User)
 def update_me(
     user_update: schemas.UserUpdate,
@@ -355,6 +359,28 @@ async def generate_lore(
         return {"lore": lore_text}
     except Exception as e:
         logger.error(f"Generate Lore Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/campaigns/{campaign_id}/generate-loot")
+async def generate_loot(
+    campaign_id: int,
+    location_id: int = Query(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can generate loot")
+    
+    try:
+        location = db.query(models.Location).filter(models.Location.id == location_id).first()
+        if not location:
+            location = models.Location(name="Unknown Wilds", description="A mysterious uncharted area", danger_level=3)
+            
+        history = crud.get_history(db, campaign_id, limit=10)
+        loot_text = await ai_service.generate_loot(location, history)
+        return {"loot": loot_text}
+    except Exception as e:
+        logger.error(f"Generate Loot Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.websocket("/ws/{room_id}/{client_id}")

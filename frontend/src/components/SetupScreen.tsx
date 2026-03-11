@@ -5,14 +5,7 @@ interface SetupScreenProps {
   onJoin: (campaignId: number, roomId: string, campaign?: any) => void;
 }
 
-interface Campaign {
-  id: number;
-  name: string;
-  room_id: string;
-  canvas_state?: any;
-}
-
-const API_BASE = "https://wss.matissetec.dev";
+import { API_BASE } from '../config';
 
 const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
   const { isGM, token, logout, user } = useAuth();

@@ -15,21 +15,17 @@ import GlassLayer from "./components/Overlay/GlassLayer";
 import AmbientPlayer from "./components/Overlay/AmbientPlayer";
 import InitiativeTracker from "./components/Overlay/InitiativeTracker";
 import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping } from "./types/vtt";
-
-const API_HOSTNAME = window.location.hostname;
-const PROTOCOL = window.location.protocol;
-const WS_PROTOCOL = PROTOCOL === "https:" ? "wss:" : "ws:";
-
-// Smart Context: Use 8000 for local dev, but use your dedicated subdomain for production
-const IS_LOCAL = ["localhost", "127.0.0.1"].includes(API_HOSTNAME) || API_HOSTNAME.startsWith("192.168.");
-
-const API_BASE = IS_LOCAL ? `${PROTOCOL}//${API_HOSTNAME}:8000` : `https://wss.matissetec.dev`;
-const WS_BASE = IS_LOCAL ? `${WS_PROTOCOL}//${API_HOSTNAME}:8000` : `wss://wss.matissetec.dev`;
+import { API_BASE, WS_BASE, resolveConfig, currentConfig } from "./config";
 
 function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token, login } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isConfiguring, setIsConfiguring] = useState(true);
+
+  useEffect(() => {
+    resolveConfig().then(() => setIsConfiguring(false));
+  }, []);
   
   const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(() => {
     try {
@@ -350,6 +346,17 @@ function VTTApp() {
     setCurrentTurn(0);
   }, [isGM, combatants, sendMessage]);
 
+  if (isConfiguring) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans text-center">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-t-indigo-500 border-gray-800 animate-spin"></div>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Synchronizing Reality...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans text-center">
@@ -360,8 +367,8 @@ function VTTApp() {
           </div>
           <h1 className="text-5xl font-black italic tracking-tighter text-gray-100 uppercase relative z-10 pt-4">DND Master</h1>
           <div className="flex flex-col gap-4 relative z-10">
-            <a href={`${API_BASE}/auth/login`} className="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 shadow-xl shadow-indigo-950/40 block text-center">Authenticate via Discord</a>
-            <button onClick={() => { setIsLoggingIn(true); fetch(`${API_BASE}/auth/guest`).then(r => r.json()).then(d => login(d.token, d.user)).catch(() => alert("Backend unreachable")).finally(() => setIsLoggingIn(false)); }} disabled={isLoggingIn} className="px-10 py-4 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:opacity-50 text-gray-400 hover:text-white rounded-2xl font-black uppercase tracking-widest transition-all border border-gray-700 active:scale-95">{isLoggingIn ? "Generating Soul..." : "Join as Guest"}</button>
+            <a href={`${currentConfig.API_BASE}/auth/login`} className="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 shadow-xl shadow-indigo-950/40 block text-center">Authenticate via Discord</a>
+            <button onClick={() => { setIsLoggingIn(true); fetch(`${currentConfig.API_BASE}/auth/guest`).then(r => r.json()).then(d => login(d.token, d.user)).catch(() => alert(`Backend unreachable at ${currentConfig.API_BASE}`)).finally(() => setIsLoggingIn(false)); }} disabled={isLoggingIn} className="px-10 py-4 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:opacity-50 text-gray-400 hover:text-white rounded-2xl font-black uppercase tracking-widest transition-all border border-gray-700 active:scale-95">{isLoggingIn ? "Generating Soul..." : "Join as Guest"}</button>
           </div>
           <div className="pt-4 relative z-10"><button onClick={() => { localStorage.clear(); window.location.reload(); }} className="text-[10px] text-gray-600 hover:text-red-400 uppercase font-black tracking-widest transition-all">Clear Session & Reset</button></div>
         </div>

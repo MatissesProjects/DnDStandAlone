@@ -1,21 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import type { Location, Entity } from '../types/vtt';
+import { API_BASE } from '../config';
 
 interface WorldDashboardProps {
   campaignId: number;
   onClose: () => void;
-  onSetActive: (loc: Location) => void;
+  onSetActive: (location: Location) => void;
   activeLocationId?: number;
 }
 
-// Smart Context: Use 8000 for local dev, but use your dedicated subdomain for production
-const API_HOSTNAME = window.location.hostname;
-const PROTOCOL = window.location.protocol;
-const IS_LOCAL = ["localhost", "127.0.0.1"].includes(API_HOSTNAME) || API_HOSTNAME.startsWith("192.168.");
-const API_BASE = IS_LOCAL ? `${PROTOCOL}//${API_HOSTNAME}:8000` : `https://wss.matissetec.dev`;
-
 const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, onSetActive, activeLocationId }) => {
+
   const { token } = useAuth();
   const [locations, setLocations] = useState<Location[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
