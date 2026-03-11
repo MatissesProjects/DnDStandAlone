@@ -38,6 +38,10 @@ interface GMToolboxProps {
   onSummarize: () => void;
   isSummarizing: boolean;
   onClearHistory: () => void;
+  customForge?: any[];
+  onCaptureSelection?: () => void;
+  onDeleteCustomToken?: (id: string) => void;
+  onRenameCustomToken?: (id: string, name: string) => void;
 }
 
 const SHAPES = {
@@ -116,44 +120,6 @@ const SHAPES = {
       }
     ],
     appState: { viewBackgroundColor: "#ffffff" }
-  },
-  AOE_ZONE: {
-    type: "excalidraw/clipboard",
-    elements: [
-      {
-        id: "aoe_rect",
-        type: "rectangle",
-        width: 200,
-        height: 200,
-        strokeColor: "#f08c00",
-        backgroundColor: "#fff3bf",
-        fillStyle: "cross-hatch",
-        strokeWidth: 1,
-        strokeStyle: "dashed",
-        roughness: 2,
-        opacity: 50,
-        index: "c1"
-      }
-    ]
-  },
-  FOG: {
-    type: "excalidraw/clipboard",
-    elements: [
-      {
-        id: "fog_rect",
-        type: "rectangle",
-        width: 300,
-        height: 200,
-        strokeColor: "#000000",
-        backgroundColor: "#000000",
-        fillStyle: "solid",
-        strokeWidth: 1,
-        strokeStyle: "solid",
-        roughness: 0,
-        opacity: 100,
-        index: "d1"
-      }
-    ]
   }
 };
 
@@ -165,7 +131,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   activeEntities, onSelectEntity, 
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, onUpdateProfile, onSummarize, isSummarizing,
-  onClearHistory
+  onClearHistory, customForge, onCaptureSelection, onDeleteCustomToken, onRenameCustomToken
 }) => {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
@@ -191,82 +157,70 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
       </h2>
       
       <div className="flex-1 overflow-y-auto space-y-8 pr-1 custom-scrollbar">
-        {isGM && pendingProposals.length > 0 && (
-          <div className="space-y-4 pt-4">
-            <h3 className="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em]">Pending Manuevers</h3>
-            <div className="space-y-3">
-              {pendingProposals.map(prop => (
-                <div key={prop.elementId} className="bg-indigo-950/20 p-4 rounded-2xl border border-indigo-500/30 animate-in slide-in-from-right duration-300">
-                  <p className="text-[10px] font-black text-gray-300 uppercase mb-3"><span className="text-indigo-400">{prop.username}</span> suggests move</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => onApproveProposal(prop)} className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-[9px] font-black py-2 rounded-lg uppercase tracking-tighter">Approve</button>
-                    <button onClick={() => onRejectProposal(prop)} className="flex-1 bg-gray-800 hover:bg-red-900/40 text-[9px] font-black py-2 rounded-lg uppercase tracking-tighter border border-gray-700">Reject</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {isGM ? (
           <>
             <div className="space-y-4 pt-4">
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Tools</h3>
               <div className="grid gap-2">
                 <button onClick={onOpenDashboard} className="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"> Manage Manifest </button>
-                <button 
-                  onClick={onSummarize} 
-                  disabled={isSummarizing}
-                  className="w-full bg-indigo-900/20 hover:bg-indigo-900/40 border border-indigo-500/20 text-indigo-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50"
-                > 
-                  {isSummarizing ? 'Recounting...' : "Chronicler's Summary"} 
-                </button>
-                <button 
-                  onClick={onClearHistory}
-                  className="w-full bg-red-900/10 hover:bg-red-900/30 border border-red-900/20 text-red-400 font-black py-2 rounded-lg uppercase text-[8px] tracking-[0.2em] transition-all"
-                >
-                  Wipe Chronicle
-                </button>
+                <button onClick={onSummarize} disabled={isSummarizing} className="w-full bg-indigo-900/20 hover:bg-indigo-900/40 border border-indigo-500/20 text-indigo-300 font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50"> {isSummarizing ? 'Recounting...' : "Chronicler's Summary"} </button>
+                <button onClick={onClearHistory} className="w-full bg-red-900/10 hover:bg-red-900/30 border border-red-900/20 text-red-400 font-black py-2 rounded-lg uppercase text-[8px] tracking-[0.2em] transition-all"> Wipe Chronicle </button>
               </div>
             </div>
 
             <div className="space-y-4 pt-4">
-              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Quick Forge (Copy & Paste)</h3>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex justify-between items-center">
+                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Quick Forge</h3>
                 <button 
-                  onClick={() => copyShape('TOKEN_NPC')} 
-                  className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'TOKEN_NPC' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-red-500/50 hover:text-red-400'}`}
+                  onClick={onCaptureSelection}
+                  className="text-[8px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-full font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
                 >
-                  {copyStatus === 'TOKEN_NPC' ? 'Copied!' : 'NPC Token'}
-                </button>
-                <button 
-                  onClick={() => copyShape('TOKEN_PC')} 
-                  className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'TOKEN_PC' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-blue-500/50 hover:text-blue-400'}`}
-                >
-                  {copyStatus === 'TOKEN_PC' ? 'Copied!' : 'Player Token'}
-                </button>
-                <button 
-                  onClick={() => copyShape('AOE_ZONE')} 
-                  className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'AOE_ZONE' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-yellow-500/50 hover:text-yellow-400'}`}
-                >
-                  {copyStatus === 'AOE_ZONE' ? 'Copied!' : 'AoE Zone'}
-                </button>
-                <button 
-                  onClick={() => copyShape('FOG')} 
-                  className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'FOG' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-500 hover:text-white'}`}
-                >
-                  {copyStatus === 'FOG' ? 'Copied!' : 'Fog Layer'}
+                  Capture Selection
                 </button>
               </div>
-              <p className="text-[7px] text-gray-600 italic text-center uppercase tracking-tighter">Click to copy, then Ctrl+V in Map</p>
-            </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => copyShape('TOKEN_NPC')} className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'TOKEN_NPC' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-red-500/50 hover:text-red-400'}`}> {copyStatus === 'TOKEN_NPC' ? 'Copied!' : 'NPC Token'} </button>
+                <button onClick={() => copyShape('TOKEN_PC')} className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'TOKEN_PC' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-blue-500/50 hover:text-blue-400'}`}> {copyStatus === 'TOKEN_PC' ? 'Copied!' : 'Player Token'} </button>
+              </div>
 
-            <div className="space-y-4 pt-2">
-              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Narration</h3>
-              <button onClick={onToggleRecording} className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all border ${isRecording ? 'bg-red-600 border-red-400 shadow-[0_0_20px_rgba(220,38,38,0.3)] animate-pulse' : 'bg-gray-900 border-gray-800 hover:bg-gray-800'}`}>
-                <div className={`h-2.5 w-2.5 rounded-full ${isRecording ? 'bg-white' : 'bg-red-600'}`}></div>
-                {isRecording ? 'Narration Active' : 'Start Chronicle'}
-              </button>
+              {customForge && customForge.length > 0 && (
+                <div className="space-y-2 mt-4 pt-4 border-t border-gray-800/50">
+                  <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Custom Forge</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {customForge.map(token => (
+                      <div key={token.id} className="flex gap-1 group/token items-center">
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(JSON.stringify(token.data)).then(() => {
+                              setCopyStatus(token.id);
+                              setTimeout(() => setCopyStatus(null), 2000);
+                            });
+                          }}
+                          className={`flex-1 text-left px-3 py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all truncate ${copyStatus === token.id ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900/40 border-gray-800 text-gray-400 hover:border-indigo-500/50 hover:text-indigo-300'}`}
+                        >
+                          {copyStatus === token.id ? 'Ready to Paste!' : token.name}
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const newName = window.prompt("Enter token name:", token.name);
+                            if (newName && onRenameCustomToken) onRenameCustomToken(token.id, newName);
+                          }}
+                          className="p-2 rounded-lg border border-gray-800 bg-gray-950 text-gray-600 hover:text-white transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button 
+                          onClick={() => onDeleteCustomToken?.(token.id)}
+                          className="p-2 rounded-lg border border-gray-800 bg-gray-950 text-gray-600 hover:text-red-500 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <p className="text-[7px] text-gray-600 italic text-center uppercase tracking-tighter">Click to copy, then Ctrl+V in Map</p>
             </div>
 
             <div className="space-y-4 pt-2">
@@ -299,30 +253,16 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               
               {(generatedEnemy || generatedLore) && (
                 <div className="mt-4 p-5 bg-gray-900 rounded-[1.5rem] border border-indigo-500/30 shadow-2xl animate-in zoom-in-95 duration-300 relative group/weave">
-                  <button 
-                    onClick={() => { onDismissEnemy(); onDismissLore(); }}
-                    className="absolute -top-2 -right-2 bg-gray-800 hover:bg-red-900/40 text-gray-500 hover:text-red-500 rounded-full p-1.5 border border-gray-700 transition-all opacity-0 group-hover/weave:opacity-100 z-10"
-                    title="Dismiss weave"
-                  >
+                  <button onClick={() => { onDismissEnemy(); onDismissLore(); }} className="absolute -top-2 -right-2 bg-gray-800 hover:bg-red-900/40 text-gray-500 hover:text-red-500 rounded-full p-1.5 border border-gray-700 transition-all opacity-0 group-hover/weave:opacity-100 z-10" title="Dismiss weave">
                     <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </button>
-
                   {generatedLore && (
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Whispered Lore</h4>
-                        <button 
-                          onClick={() => onManifestLore?.(generatedLore)}
-                          className="text-[8px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-full border border-indigo-400/30 font-black uppercase tracking-widest transition-all"
-                        >
-                          Manifest
-                        </button>
+                        <button onClick={() => onManifestLore?.(generatedLore)} className="text-[8px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-full border border-indigo-400/30 font-black uppercase tracking-widest transition-all"> Manifest </button>
                       </div>
-                      <textarea 
-                        value={generatedLore}
-                        onChange={(e) => onUpdateGeneratedLore?.(e.target.value)}
-                        className="w-full bg-gray-950 border border-indigo-500/20 rounded-xl p-3 text-xs text-gray-200 leading-relaxed italic focus:outline-none focus:border-indigo-500/50 resize-none h-32"
-                      />
+                      <textarea value={generatedLore} onChange={(e) => onUpdateGeneratedLore?.(e.target.value)} className="w-full bg-gray-950 border border-indigo-500/20 rounded-xl p-3 text-xs text-gray-200 leading-relaxed italic focus:outline-none focus:border-indigo-500/50 resize-none h-32" />
                     </div>
                   )}
                   {generatedEnemy && (
@@ -332,31 +272,14 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                         <button onClick={onManifestEntity} className="text-[8px] bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded-full border border-blue-400/30 font-black uppercase tracking-widest transition-all">Materialize</button>
                       </div>
                       <div className="space-y-3">
-                        <input 
-                          type="text"
-                          value={generatedEnemy.name}
-                          onChange={(e) => onUpdateGeneratedEnemy?.({ ...generatedEnemy, name: e.target.value })}
-                          className="w-full bg-gray-950 border border-blue-500/20 rounded-lg px-3 py-2 text-sm font-black text-gray-100 uppercase tracking-tight focus:outline-none focus:border-blue-500/50"
-                        />
-                        <textarea 
-                          value={generatedEnemy.backstory}
-                          onChange={(e) => onUpdateGeneratedEnemy?.({ ...generatedEnemy, backstory: e.target.value })}
-                          className="w-full bg-gray-950 border border-blue-500/20 rounded-lg px-3 py-2 text-[10px] text-gray-400 leading-relaxed italic focus:outline-none focus:border-blue-500/50 resize-none h-20"
-                        />
+                        <input type="text" value={generatedEnemy.name} onChange={(e) => onUpdateGeneratedEnemy?.({ ...generatedEnemy, name: e.target.value })} className="w-full bg-gray-950 border border-blue-500/20 rounded-lg px-3 py-2 text-sm font-black text-gray-100 uppercase tracking-tight focus:outline-none focus:border-blue-500/50" />
+                        <textarea value={generatedEnemy.backstory} onChange={(e) => onUpdateGeneratedEnemy?.({ ...generatedEnemy, backstory: e.target.value })} className="w-full bg-gray-950 border border-blue-500/20 rounded-lg px-3 py-2 text-[10px] text-gray-400 leading-relaxed italic focus:outline-none focus:border-blue-500/50 resize-none h-20" />
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
                         {Object.entries(generatedEnemy.stats || {}).filter(([k]) => k.length === 3).map(([key, val]) => (
                           <div key={key} className="bg-gray-950 p-2 rounded-xl border border-gray-800 text-center shadow-inner relative group/stat">
                             <p className="text-[8px] font-black text-gray-600 uppercase tracking-tighter mb-0.5">{key}</p>
-                            <input 
-                              type="number"
-                              value={val as number}
-                              onChange={(e) => onUpdateGeneratedEnemy?.({ 
-                                ...generatedEnemy, 
-                                stats: { ...generatedEnemy.stats, [key]: parseInt(e.target.value) || 0 } 
-                              })}
-                              className="w-full bg-transparent text-center text-xs font-black text-white focus:outline-none"
-                            />
+                            <input type="number" value={val as number} onChange={(e) => onUpdateGeneratedEnemy?.({ ...generatedEnemy, stats: { ...generatedEnemy.stats, [key]: parseInt(e.target.value) || 0 } })} className="w-full bg-transparent text-center text-xs font-black text-white focus:outline-none" />
                           </div>
                         ))}
                       </div>
@@ -372,7 +295,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <div className="w-20 h-20 bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-5 border border-indigo-500/30 shadow-2xl relative group">
                 <span className="text-2xl font-black text-indigo-300 relative z-10">{user ? user.username.substring(0, 2).toUpperCase() : '??'}</span>
               </div>
-              
               {isEditingProfile ? (
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
                   <input type="text" placeholder="Class" value={playerClass} onChange={e => setPlayerClass(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50" />
@@ -391,7 +313,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                   <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mb-8">{playerClass || 'Class Unknown'} • Level {playerLevel}</p>
                 </div>
               )}
-              
               <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent w-full my-8 shadow-inner"></div>
               <p className="text-[10px] text-gray-500 font-bold leading-relaxed italic px-4 uppercase tracking-widest opacity-60">Suggestions are sent to the Master for arbitration.</p>
             </div>
@@ -407,9 +328,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
                     <p className="text-xs font-black truncate text-gray-100 uppercase">{ent.name}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text-red-500">{ent.stats?.hp || 0} HP</span>
-                    </div>
+                    <div className="flex items-center gap-2"><span className="text-[10px] font-black text-red-500">{ent.stats?.hp || 0} HP</span></div>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {(ent.stats?.conditions || []).map((c: string) => (
@@ -432,12 +351,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <p className="text-[9px] text-gray-600 uppercase font-black mb-2 tracking-tighter opacity-80">Room Code</p>
               <div className="flex items-center justify-between bg-gray-950 p-3 rounded-xl border border-gray-800 group/code relative">
                 <p className="text-sm font-black tracking-tight text-indigo-400 font-mono">{activeCampaign.room_id}</p>
-                <button 
-                  onClick={copyRoomCode}
-                  className={`text-[8px] font-black uppercase px-2 py-1 rounded transition-all ${copyStatus === 'room_code' ? 'bg-green-600 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
-                >
-                  {copyStatus === 'room_code' ? 'Copied!' : 'Copy'}
-                </button>
+                <button onClick={copyRoomCode} className={`text-[8px] font-black uppercase px-2 py-1 rounded transition-all ${copyStatus === 'room_code' ? 'bg-green-600 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}> {copyStatus === 'room_code' ? 'Copied!' : 'Copy'} </button>
               </div>
             </div>
             <div>

@@ -76,7 +76,17 @@ function VTTApp() {
   const [iframeKey, setIframeKey] = useState(0);
   const [streamImage, setStreamImage] = useState<string | null>(null);
   const [hitZones, setHitZones] = useState<any[]>([]);
+  const [customForge, setCustomForge] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem("vtt_custom_forge");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
+  });
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem("vtt_custom_forge", JSON.stringify(customForge));
+  }, [customForge]);
 
   const excalidrawRoomUrl = useMemo(() => {
     if (!activeCampaign) return "";
@@ -191,6 +201,17 @@ function VTTApp() {
           hitZones: event.data.hitZones,
           timestamp: Date.now() 
         }));
+      }
+      if (event.data.type === "VTT_BRIDGE_SELECTED_RESULT") {
+        const newPart = {
+          id: `custom_${Date.now()}`,
+          name: `Custom Token ${customForge.length + 1}`,
+          data: {
+            type: "excalidraw/clipboard",
+            elements: event.data.elements
+          }
+        };
+        setCustomForge(prev => [...prev, newPart]);
       }
     };
     window.addEventListener("message", handleMessage);
@@ -419,6 +440,14 @@ function VTTApp() {
           onUpdateGeneratedEnemy={(enemy) => setGeneratedEnemy(enemy)}
           onUpdateGeneratedLore={(lore) => setGeneratedLore(lore)}
           onManifestLore={async (c) => { if (!token || !activeCampaign) return; const res = await fetch(`${API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Whispered Lore", content: c, type: "text", campaign_id: activeCampaign.id, x: 400, y: 300 }) }); if (res.ok) { fetchHandouts(); setGeneratedLore(null); } }}
+          customForge={customForge}
+          onCaptureSelection={() => {
+            if (iframeRef.current?.contentWindow) {
+              iframeRef.current.contentWindow.postMessage({ type: "VTT_BRIDGE_GET_SELECTED" }, "*");
+            }
+          }}
+          onDeleteCustomToken={(id) => setCustomForge(prev => prev.filter(t => t.id !== id))}
+          onRenameCustomToken={(id, name) => setCustomForge(prev => prev.map(t => t.id === id ? { ...t, name } : t))}
           />      )}
     </div>
   );
