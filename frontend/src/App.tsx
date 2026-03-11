@@ -12,6 +12,7 @@ import GMToolbox from "./components/Sidebar/GMToolbox";
 import NPCDetailCard from "./components/Overlay/NPCDetailCard";
 import HandoutItem from "./components/Overlay/HandoutItem";
 import GlassLayer from "./components/Overlay/GlassLayer";
+import AmbientPlayer from "./components/Overlay/AmbientPlayer";
 import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping } from "./types/vtt";
 
 const API_HOSTNAME = window.location.hostname;
@@ -380,6 +381,8 @@ function VTTApp() {
 
       {leftSidebarOpen && <ChronicleSidebar isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} onConsumeHistory={handleConsumeHistory} activeUsers={activeUsers} onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))} />}
 
+      <AmbientPlayer url={activeLocation?.ambient_audio || null} />
+
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
           {isGM ? (
             <div className="w-full h-full relative">
@@ -485,7 +488,9 @@ function VTTApp() {
           onSummarize={async () => { if (!token || !activeCampaign) return; setIsSummarizing(true); try { const res = await fetch(`${API_BASE}/campaigns/${activeCampaign.id}/summarize`, { headers: { 'Authorization': `Bearer ${token}` } }); setCampaignSummary((await res.json()).summary); } catch (e) { console.error(e); } finally { setIsSummarizing(false); } }} 
           isSummarizing={isSummarizing}
           onClearHistory={handleClearHistory}
+          onMoveToScene={(userId, sceneId) => sendMessage(JSON.stringify({ type: 'move_to_scene', target_id: userId, scene_id: sceneId }))}
           onDismissEnemy={() => setGeneratedEnemy(null)}
+
           onDismissLore={() => setGeneratedLore(null)}
           onUpdateGeneratedEnemy={(enemy) => setGeneratedEnemy(enemy)}
           onUpdateGeneratedLore={(lore) => setGeneratedLore(lore)}

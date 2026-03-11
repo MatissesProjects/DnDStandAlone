@@ -9,6 +9,12 @@ interface WorldDashboardProps {
   activeLocationId?: number;
 }
 
+// Smart Context: Use 8000 for local dev, but use your dedicated subdomain for production
+const API_HOSTNAME = window.location.hostname;
+const PROTOCOL = window.location.protocol;
+const IS_LOCAL = ["localhost", "127.0.0.1"].includes(API_HOSTNAME) || API_HOSTNAME.startsWith("192.168.");
+const API_BASE = IS_LOCAL ? `${PROTOCOL}//${API_HOSTNAME}:8000` : `https://wss.matissetec.dev`;
+
 const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, onSetActive, activeLocationId }) => {
   const { token } = useAuth();
   const [locations, setLocations] = useState<Location[]>([]);
@@ -17,6 +23,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   
   const [newLocName, setNewLocName] = useState('');
   const [newLocDesc, setNewLocDesc] = useState('');
+  const [newLocAudio, setNewLocAudio] = useState('');
   const [newLocX, setNewLocX] = useState(0);
   const [newLocY, setNewLocY] = useState(0);
   const [newLocZoom, setNewLocZoom] = useState(1);
@@ -67,7 +74,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
 
   const fetchLocations = async () => {
     try {
-      const res = await fetch(`http://192.168.4.150:8000/campaigns/${campaignId}/locations`);
+      const res = await fetch(`${API_BASE}/campaigns/${campaignId}/locations`);
       const data = await res.json();
       setLocations(data);
       if (data.length > 0 && !selectedLocId) setSelectedLocId(data[0].id);
@@ -78,7 +85,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
 
   const fetchEntities = async (locId: number) => {
     try {
-      const res = await fetch(`http://192.168.4.150:8000/locations/${locId}/entities`);
+      const res = await fetch(`${API_BASE}/locations/${locId}/entities`);
       if (res.ok) {
         const data = await res.json();
         setEntities(data);
@@ -92,19 +99,20 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
     e.preventDefault();
     if (!token) return;
     try {
-      await fetch('http://192.168.4.150:8000/locations', {
+      await fetch(`${API_BASE}/locations`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           name: newLocName, 
           description: newLocDesc, 
           campaign_id: campaignId,
+          ambient_audio: newLocAudio,
           x: newLocX,
           y: newLocY,
           zoom: newLocZoom
         })
       });
-      setNewLocName(''); setNewLocDesc(''); setNewLocX(0); setNewLocY(0); setNewLocZoom(1);
+      setNewLocName(''); setNewLocDesc(''); setNewLocAudio(''); setNewLocX(0); setNewLocY(0); setNewLocZoom(1);
       fetchLocations();
     } catch (e) { console.error(e); }
   };
@@ -113,12 +121,13 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
     e.preventDefault();
     if (!token || !editingLocation) return;
     try {
-      const res = await fetch(`http://192.168.4.150:8000/locations/${editingLocation.id}`, {
+      const res = await fetch(`${API_BASE}/locations/${editingLocation.id}`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           name: editingLocation.name, 
           description: editingLocation.description,
+          ambient_audio: editingLocation.ambient_audio,
           x: editingLocation.x,
           y: editingLocation.y,
           zoom: editingLocation.zoom
@@ -134,7 +143,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   const handleDeleteLocation = async (id: number) => {
     if (!token || !window.confirm("Are you sure?")) return;
     try {
-      await fetch(`http://192.168.4.150:8000/locations/${id}`, {
+      await fetch(`${API_BASE}/locations/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -147,7 +156,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
     e.preventDefault();
     if (!token || !selectedLocId) return;
     try {
-      const res = await fetch('http://192.168.4.150:8000/entities', {
+      const res = await fetch(`${API_BASE}/entities`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newEntityName, location_id: selectedLocId, stats: {}, backstory: "New entity established." })
@@ -162,7 +171,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   const handleDeleteEntity = async (id: number) => {
     if (!token || !window.confirm("Delete entity?")) return;
     try {
-      await fetch(`http://192.168.4.150:8000/entities/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      await fetch(`${API_BASE}/entities/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (selectedLocId) fetchEntities(selectedLocId);
     } catch (e) { console.error(e); }
   };
@@ -212,6 +221,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
                       </div>
                     </div>
                     <input type="text" placeholder="Location Name" value={editingLocation ? editingLocation.name : newLocName} onChange={e => editingLocation ? setEditingLocation({...editingLocation, name: e.target.value}) : setNewLocName(e.target.value)} className="bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-indigo-500/50 shadow-inner" />
+                    <input type="text" placeholder="Ambient Audio URL (Direct link to .mp3/.wav)" value={editingLocation ? (editingLocation.ambient_audio || '') : newLocAudio} onChange={e => editingLocation ? setEditingLocation({...editingLocation, ambient_audio: e.target.value}) : setNewLocAudio(e.target.value)} className="bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-indigo-500/50 shadow-inner" />
                     <textarea placeholder="Atmospheric Description" value={editingLocation ? editingLocation.description : newLocDesc} onChange={e => editingLocation ? setEditingLocation({...editingLocation, description: e.target.value}) : setNewLocDesc(e.target.value)} className="bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-indigo-500/50 h-28 resize-none shadow-inner" />
                     <div className="flex gap-3"><button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-indigo-900/20 active:scale-95">{editingLocation ? 'Commit Changes' : 'Add to Manifest'}</button>{editingLocation && <button type="button" onClick={() => setEditingLocation(null)} className="px-8 bg-gray-800 hover:bg-gray-700 text-white font-black py-4 rounded-xl uppercase text-[10px] tracking-widest border border-gray-700 transition-all active:scale-95">Cancel</button>}</div>
                   </form>

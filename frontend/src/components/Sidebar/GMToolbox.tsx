@@ -38,6 +38,7 @@ interface GMToolboxProps {
   onSummarize: () => void;
   isSummarizing: boolean;
   onClearHistory: () => void;
+  onMoveToScene?: (userId: string, sceneId: string) => void;
   customForge?: any[];
   onCaptureSelection?: () => void;
   onDeleteCustomToken?: (id: string) => void;
@@ -235,6 +236,26 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                       </div>
                       <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>
                     </div>
+                    
+                    {/* Scene Switcher (Switchboard) */}
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Active Scene</span>
+                        <span className="text-[8px] font-black text-indigo-500 uppercase px-1.5 py-0.5 bg-indigo-500/10 rounded border border-indigo-500/20">{u.scene_id || 'main'}</span>
+                      </div>
+                      <div className="flex gap-1">
+                        {['main', 'alpha', 'beta'].map(sid => (
+                          <button 
+                            key={sid}
+                            onClick={() => onMoveToScene?.(u.id, sid)}
+                            className={`flex-1 text-[7px] font-black uppercase py-1 rounded transition-all border ${u.scene_id === sid || (!u.scene_id && sid === 'main') ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-950 border-gray-800 text-gray-600 hover:text-gray-400'}`}
+                          >
+                            {sid}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="flex gap-2">
                       <button onClick={() => onRequestRoll(u.id, 'd20', 'Perception')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all"> Perception </button>
                       <button onClick={() => onRequestRoll(u.id, 'd20', 'Stealth')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all"> Stealth </button>

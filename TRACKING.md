@@ -30,9 +30,9 @@
 - [x] Implement Measurement Tools.
 
 ## Track F: The Whisper Network (Messaging)
-- [ ] Implement targeted WebSocket messaging.
-- [ ] Add Digital "Note Passing".
-- [ ] Implement "Blind Inquiries".
+- [x] Implement targeted WebSocket messaging.
+- [x] Add Digital "Note Passing".
+- [x] Implement "Blind Inquiries".
 
 ## Track G: Orchestration & Ambience (Split Party & Audio)
 - [ ] Refactor WebSocket manager for sub-rooms.

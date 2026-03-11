@@ -30,6 +30,7 @@ class Location(Base):
     x = Column(Integer, default=0)
     y = Column(Integer, default=0)
     zoom = Column(Integer, default=1)
+    ambient_audio = Column(String, nullable=True) # URL to audio file
     campaign_id = Column(Integer, ForeignKey("campaigns.id"))
     campaign = relationship("Campaign")
 

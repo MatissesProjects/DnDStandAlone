@@ -358,9 +358,9 @@ async def generate_lore(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.websocket("/ws/{room_id}/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str, role: str = "player", username: str = "Anonymous"):
-    print(f"[WS] Connection attempt: {client_id} (Role: {role}, Room: {room_id}) from {websocket.client.host}")
-    await manager.connect(websocket, client_id, room_id, role, username)
+async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str, role: str = "player", username: str = "Anonymous", scene_id: str = "main"):
+    print(f"[WS] Connection attempt: {client_id} (Role: {role}, Room: {room_id}, Scene: {scene_id}) from {websocket.client.host}")
+    await manager.connect(websocket, client_id, room_id, role, username, scene_id=scene_id)
     print(f"[WS] Connection established: {client_id}")
     try:
         while True:
@@ -374,6 +374,13 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
                         "class_name": message_json.get("class_name"),
                         "level": message_json.get("level")
                     })
+                    continue
+
+                if message_json.get("type") == "move_to_scene" and role == "gm":
+                    target_id = message_json.get("target_id")
+                    new_scene = message_json.get("scene_id")
+                    if target_id and new_scene:
+                        await manager.update_user_metadata(target_id, room_id, {"scene_id": new_scene})
                     continue
 
                 if message_json.get("type") == "request_roll" and role == "gm":

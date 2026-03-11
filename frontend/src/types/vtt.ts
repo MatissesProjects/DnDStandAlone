@@ -11,6 +11,7 @@ export interface UserPresence {
   id: string;
   username: string;
   role: string;
+  scene_id?: string;
   class_name?: string;
   level?: number;
 }
@@ -57,6 +58,7 @@ export interface Location {
   name: string;
   description: string;
   danger_level: number;
+  ambient_audio?: string;
 }
 
 export interface Entity {

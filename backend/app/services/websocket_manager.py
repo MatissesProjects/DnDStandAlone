@@ -14,10 +14,10 @@ class ConnectionManager:
         # room_map[room_id] = set(user_ids)
         self.room_map: Dict[str, Set[str]] = {}
         
-        # user_metadata[user_id] = {"username": str, "role": str, "room_id": str, "class_name": str, "level": int}
+        # user_metadata[user_id] = {"username": str, "role": str, "room_id": str, "scene_id": str, "class_name": str, "level": int}
         self.user_metadata: Dict[str, Dict[str, Any]] = {}
 
-    async def connect(self, websocket: WebSocket, user_id: str, room_id: str, role: str, username: str, class_name: str = None, level: int = 1):
+    async def connect(self, websocket: WebSocket, user_id: str, room_id: str, role: str, username: str, class_name: str = None, level: int = 1, scene_id: str = "main"):
         await websocket.accept()
         
         # If this user was already connected, clean up the old one first
@@ -32,6 +32,7 @@ class ConnectionManager:
             "username": username,
             "role": role,
             "room_id": room_id,
+            "scene_id": scene_id,
             "class_name": class_name,
             "level": level
         }
@@ -79,6 +80,7 @@ class ConnectionManager:
                     "id": u_id,
                     "username": meta["username"],
                     "role": meta["role"],
+                    "scene_id": meta.get("scene_id", "main"),
                     "class_name": meta.get("class_name"),
                     "level": meta.get("level", 1)
                 })
@@ -86,34 +88,49 @@ class ConnectionManager:
         message = json.dumps({"type": "presence", "users": users})
         await self.broadcast(message, room_id)
 
-    async def broadcast(self, message: str, room_id: str, role_limit: str = None, sender_id: str = None):
+    async def broadcast(self, message: str, room_id: str, role_limit: str = None, sender_id: str = None, scene_limit: bool = True):
         if room_id not in self.room_map:
             return
 
         is_subtle = False
+        sender_scene = "main"
         try:
             msg_data = json.loads(message)
             is_subtle = msg_data.get("isSubtle") is True
+            # Some messages should always be room-wide
+            if msg_data.get("type") in ["location_update", "presence"]:
+                scene_limit = False
         except:
             pass
 
+        if sender_id and sender_id in self.user_metadata:
+            sender_scene = self.user_metadata[sender_id].get("scene_id", "main")
+
         target_user_ids = list(self.room_map[room_id]) # Use list to avoid set size change errors
         for user_id in target_user_ids:
+            user_meta = self.user_metadata.get(user_id, {})
+            user_role = user_meta.get("role")
+            user_scene = user_meta.get("scene_id", "main")
+
             # If subtle, only GMs or the original sender can see it
             if is_subtle:
-                user_role = self.user_metadata.get(user_id, {}).get("role")
                 if user_role != "gm" and user_id != sender_id:
                     continue
             
+            # Scene Limitation: Players only see things from their own scene
+            # GMs see everything (scene_limit=True but GMs bypass it)
+            if scene_limit and user_role != "gm" and user_id != sender_id:
+                if user_scene != sender_scene:
+                    continue
+
             # If there's a specific role limit
-            if role_limit and self.user_metadata.get(user_id, {}).get("role") != role_limit:
+            if role_limit and user_role != role_limit:
                 continue
                 
             if user_id in self.active_connections:
                 try:
                     await self.active_connections[user_id].send_text(message)
                 except Exception:
-                    # Connection is dead, but disconnect() will handle cleanup
                     pass
 
     async def send_personal_message(self, message: str, user_id: str):

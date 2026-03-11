@@ -43,6 +43,7 @@ class LocationBase(BaseModel):
     x: Optional[int] = 0
     y: Optional[int] = 0
     zoom: Optional[float] = 1.0
+    ambient_audio: Optional[str] = None
 
 class LocationCreate(LocationBase):
     campaign_id: int
@@ -55,6 +56,7 @@ class LocationUpdate(BaseModel):
     x: Optional[int] = None
     y: Optional[int] = None
     zoom: Optional[float] = None
+    ambient_audio: Optional[str] = None
 
 class Location(LocationBase):
     id: int
