@@ -48,6 +48,8 @@ interface GMToolboxProps {
   onAddToInitiative?: (name: string, isPlayer: boolean) => void;
   onToggleFog?: () => void;
   onPromote?: (key: string) => void;
+  showSpinner: boolean;
+  onToggleSpinner: (val: boolean) => void;
   customForge?: any[];
   onCaptureSelection?: () => void;
   onDeleteCustomToken?: (id: string) => void;
@@ -277,7 +279,16 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
             </div>
 
             <div className="space-y-4 pt-2">
-              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">AI Weaver</h3>
+              <div className="flex justify-between items-center">
+                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">AI Weaver</h3>
+                <button 
+                  onClick={() => onToggleSpinner(!showSpinner)}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-full border transition-all text-[8px] font-black uppercase tracking-widest ${showSpinner ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_10px_rgba(99,102,241,0.4)]' : 'bg-gray-900 border-gray-800 text-gray-500 hover:text-gray-300'}`}
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full ${showSpinner ? 'bg-white animate-pulse' : 'bg-gray-700'}`}></div>
+                  Visual Fate
+                </button>
+              </div>
               <div className="grid gap-3">
                 <button onClick={onGenerateEnemy} disabled={isGenerating} className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest shadow-blue-900/20"> Manifest Enemy </button>
                 <div className="flex gap-2">

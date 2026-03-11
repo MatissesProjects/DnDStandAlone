@@ -15,6 +15,7 @@ import GlassLayer from "./components/Overlay/GlassLayer";
 import AmbientPlayer from "./components/Overlay/AmbientPlayer";
 import InitiativeTracker from "./components/Overlay/InitiativeTracker";
 import AccountLogin from "./components/Overlay/AccountLogin";
+import FateSpinner from "./components/Overlay/FateSpinner";
 import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping } from "./types/vtt";
 import { resolveConfig, currentConfig } from "./config";
 
@@ -73,6 +74,7 @@ function VTTApp() {
   const [vfxRoll, setVfxRoll] = useState<{ id: string, result: number, isCrit: boolean, isFail: boolean } | null>(null);
   const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [showSpinner, setShowSpinner] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isSubtleMode, setIsSubtleMode] = useState(false);
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
@@ -84,6 +86,7 @@ function VTTApp() {
   const [iframeKey, setIframeKey] = useState(0);
   const [streamImage, setStreamImage] = useState<string | null>(null);
   const [streamAspectRatio, setStreamAspectRatio] = useState<number | null>(null);
+  const [spinnerData, setSpinnerState] = useState<{ options: string[], resultIndex: number } | null>(null);
   const [hitZones, setHitZones] = useState<any[]>([]);
   const [pings, setPings] = useState<any[]>([]);
   const [combatants, setCombatants] = useState<any[]>([]);
@@ -306,6 +309,9 @@ function VTTApp() {
         else if (data.type === "entities_update") { if (activeLocation?.id === data.locationId) fetchEntities(data.locationId); }
         else if (data.type === "history_updated") { fetchHistory(); }
         else if (data.type === "handouts_update") { fetchHandouts(); }
+        else if (data.type === "spinner_trigger") {
+          setSpinnerState({ options: data.options, resultIndex: data.resultIndex });
+        }
         else if (data.type === "canvas_stream") { 
           setStreamImage(data.image); 
           if (data.hitZones) setHitZones(data.hitZones);
@@ -399,6 +405,14 @@ function VTTApp() {
     <div className={`flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none transition-all duration-300 ${(vfxRoll?.isCrit || vfxRoll?.isFail) ? 'animate-big-shake' : vfxRoll ? 'animate-shake' : ''}`}>
       {isDashboardOpen && <WorldDashboard campaignId={activeCampaign.id} onClose={() => setIsDashboardOpen(false)} onSetActive={(loc) => { setActiveLocation(loc); sendMessage(JSON.stringify({ type: "location_update", location: loc, senderId: clientId })); }} activeLocationId={activeLocation?.id} />}
       
+      {spinnerData && (
+        <FateSpinner 
+          options={spinnerData.options} 
+          resultIndex={spinnerData.resultIndex} 
+          onFinished={() => setSpinnerState(null)} 
+        />
+      )}
+
       {selectedEntity && (
         <NPCDetailCard entity={selectedEntity} isGM={isGM} onClose={() => setSelectedEntity(null)} onUpdateStats={async (id, upd) => {
             const current = activeEntities.find(e => e.id === id); if (!current) return;
@@ -524,13 +538,28 @@ function VTTApp() {
           activeUsers={activeUsers} onRequestRoll={(targetId, die, lbl) => sendMessage(JSON.stringify({ type: "request_roll", target_id: targetId, die, label: lbl }))}
           onGenerateEnemy={async () => { 
             if (!token || !activeCampaign) return; 
-            setIsGenerating(true); 
-            try { 
-              const locId = activeLocation?.id || 1;
-              const url = `${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/generate-enemy?location_id=${locId}`;
-              const res = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) }); 
-              setGeneratedEnemy(await res.json()); 
-            } catch (e) { alert("AI Generation failed."); } finally { setIsGenerating(false); } 
+            
+            const triggerEnemyGen = async () => {
+                setIsGenerating(true); 
+                try { 
+                  const locId = activeLocation?.id || 1;
+                  const url = `${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/generate-enemy?location_id=${locId}`;
+                  const res = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) }); 
+                  setGeneratedEnemy(await res.json()); 
+                } catch (e) { alert("AI Generation failed."); } finally { setIsGenerating(false); } 
+            };
+
+            if (showSpinner) {
+                const options = ["Minion", "Elite", "Boss", "Legendary", "Cursed", "Ancient"];
+                const resultIndex = Math.floor(Math.random() * options.length);
+                sendMessage(JSON.stringify({ type: 'spinner_trigger', options, resultIndex }));
+                // Local optimistic trigger
+                setSpinnerState({ options, resultIndex });
+                // Delay generation until spin finished (approx 4s + buffer)
+                setTimeout(triggerEnemyGen, 5000);
+            } else {
+                triggerEnemyGen();
+            }
           }} 
           onGenerateLore={async () => { 
             if (!token || !activeCampaign) return; 
@@ -602,6 +631,8 @@ function VTTApp() {
           onDismissEnemy={() => setGeneratedEnemy(null)}
 
           onDismissLore={() => setGeneratedLore(null)}
+          showSpinner={showSpinner}
+          onToggleSpinner={setShowSpinner}
           onUpdateGeneratedEnemy={(enemy) => setGeneratedEnemy(enemy)}
           onUpdateGeneratedLore={(lore) => setGeneratedLore(lore)}
           onManifestLore={async (c) => { 
