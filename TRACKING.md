@@ -3,23 +3,47 @@
 ## Track A: Frontend & VTT (React / UI)
 - [x] Initialize React + Vite project.
 - [x] Install and render `@excalidraw/excalidraw`.
-- [x] Build the layout skeleton (Canvas area, Dice Sidebar, GM Tools Sidebar).
+- [x] Build the layout skeleton.
 - [x] Create UI for standard and "subtle" dice rolls.
-- [ ] Build the AI generation interface (loading states, accepting/rejecting generated enemies).
+- [x] Build the AI generation interface.
 
 ## Track B: Backend API & Real-time (Python / FastAPI)
 - [x] Initialize FastAPI project and setup CORS.
-- [x] Setup WebSocket manager to handle active connections and broadcast messages.
+- [x] Setup WebSocket manager.
 - [x] Create Discord OAuth2 login flow.
-- [x] Build logic to separate GM WebSocket events from Player WebSocket events (for subtle rolls).
+- [x] Build logic for GM/Player WebSocket event separation.
 
 ## Track C: Data & World State (Database)
-- [x] Spin up a local PostgreSQL database (via docker-compose).
-- [x] Define SQLAlchemy (or similar ORM) models.
-- [x] Write CRUD endpoints for the GM to update the world state.
+- [x] Spin up a local database.
+- [x] Define SQLAlchemy models.
+- [x] Write CRUD endpoints for world state.
 
 ## Track D: AI Pipeline (Gemini)
-- [x] Get Gemini API key and set up the Python client.
-- [x] Draft a master prompt template with placeholders.
-- [x] Build a utility function that pulls history and formats them.
-- [x] Ensure Gemini outputs response in a strictly formatted structure (JSON).
+- [x] Get Gemini API key.
+- [x] Draft prompt templates.
+- [x] Build history context gathering.
+- [x] Implement structured JSON output parsing.
+
+## Track E: Advanced Interactivity (The Glass Layer)
+- [ ] Implement transparent React overlay over the Excalidraw canvas.
+- [ ] Build the Ping System (Click -> Broadcast -> Ripple VFX).
+- [ ] Implement Measurement Tools.
+
+## Track F: The Whisper Network (Messaging)
+- [ ] Implement targeted WebSocket messaging.
+- [ ] Add Digital "Note Passing".
+- [ ] Implement "Blind Inquiries".
+
+## Track G: Orchestration & Ambience (Split Party & Audio)
+- [ ] Refactor WebSocket manager for sub-rooms.
+- [ ] Build the GM Switchboard UI.
+- [ ] Implement Dynamic Audio Sequencing.
+
+## Track H: Combat & Visual Hacks
+- [ ] Automated Initiative Tracker.
+- [ ] LitRPG-Style Inventory & Stat Tracking.
+- [ ] Fog of War workaround.
+
+## Track I: Expanded AI Utility
+- [ ] Automated Session Recaps.
+- [ ] Context-Aware Loot Generation.
