@@ -9,6 +9,8 @@ class User(Base):
     discord_id = Column(String, unique=True, index=True)
     username = Column(String)
     role = Column(String, default="player") # "gm" or "player"
+    avatar_url = Column(String, nullable=True)
+    bio = Column(Text, nullable=True)
     class_name = Column(String, nullable=True)
     level = Column(Integer, default=1)
     inventory = Column(Text, nullable=True) # Simple text-based inventory for now

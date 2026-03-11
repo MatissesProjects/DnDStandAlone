@@ -52,6 +52,11 @@ async def health_check(db: Session = Depends(get_db)):
 def ping():
     return {"pong": True}
 
+@app.get("/characters", response_model=List[schemas.User])
+def list_characters(db: Session = Depends(get_db)):
+    # Simple character list for the login screen
+    return db.query(models.User).filter(~models.User.discord_id.startswith("guest_")).all()
+
 @app.patch("/users/me", response_model=schemas.User)
 def update_me(
     user_update: schemas.UserUpdate,

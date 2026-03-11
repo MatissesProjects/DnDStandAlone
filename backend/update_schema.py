@@ -18,6 +18,8 @@ def add_column(table, column, type):
 
 # Track H: Inventory
 add_column("users", "inventory", "TEXT")
+add_column("users", "avatar_url", "TEXT")
+add_column("users", "bio", "TEXT")
 
 # Track G: Ambient Audio
 add_column("locations", "ambient_audio", "TEXT")

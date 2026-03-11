@@ -14,6 +14,7 @@ import HandoutItem from "./components/Overlay/HandoutItem";
 import GlassLayer from "./components/Overlay/GlassLayer";
 import AmbientPlayer from "./components/Overlay/AmbientPlayer";
 import InitiativeTracker from "./components/Overlay/InitiativeTracker";
+import AccountLogin from "./components/Overlay/AccountLogin";
 import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping } from "./types/vtt";
 import { resolveConfig, currentConfig } from "./config";
 
@@ -361,22 +362,7 @@ function VTTApp() {
   }
 
   if (!isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans text-center">
-        <div className="space-y-8 p-12 bg-gray-900 rounded-[3rem] border border-gray-800 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-2">
-            <div className={`h-1.5 w-1.5 rounded-full ${backendOnline === true ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]' : backendOnline === false ? 'bg-red-500' : 'bg-gray-600'}`}></div>
-            <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">{backendOnline === true ? 'Signal Strong' : backendOnline === false ? 'Signal Lost' : 'Checking...'}</span>
-          </div>
-          <h1 className="text-5xl font-black italic tracking-tighter text-gray-100 uppercase relative z-10 pt-4">DND Master</h1>
-          <div className="flex flex-col gap-4 relative z-10">
-            <a href={`${currentConfig.API_BASE}/auth/login`} className="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 shadow-xl shadow-indigo-950/40 block text-center">Authenticate via Discord</a>
-            <button onClick={() => { setIsLoggingIn(true); fetch(`${currentConfig.API_BASE}/auth/guest`).then(r => r.json()).then(d => login(d.token, d.user)).catch(() => alert(`Backend unreachable at ${currentConfig.API_BASE}`)).finally(() => setIsLoggingIn(false)); }} disabled={isLoggingIn} className="px-10 py-4 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:opacity-50 text-gray-400 hover:text-white rounded-2xl font-black uppercase tracking-widest transition-all border border-gray-700 active:scale-95">{isLoggingIn ? "Generating Soul..." : "Join as Guest"}</button>
-          </div>
-          <div className="pt-4 relative z-10"><button onClick={() => { localStorage.clear(); window.location.reload(); }} className="text-[10px] text-gray-600 hover:text-red-400 uppercase font-black tracking-widest transition-all">Clear Session & Reset</button></div>
-        </div>
-      </div>
-    );
+    return <AccountLogin onLogin={login} onGuest={() => { setIsLoggingIn(true); fetch(`${currentConfig.API_BASE}/auth/guest`).then(r => r.json()).then(d => login(d.token, d.user)).catch(() => alert(`Backend unreachable at ${currentConfig.API_BASE}`)).finally(() => setIsLoggingIn(false)); }} isLoggingIn={isLoggingIn} backendOnline={backendOnline} />;
   }
 
   if (!activeCampaign) return <SetupScreen onJoin={(id, roomId, campaign) => setActiveCampaign({id, room_id: roomId, canvas_state: campaign?.canvas_state})} />;

@@ -7,11 +7,15 @@ class UserBase(BaseModel):
     discord_id: str
     username: str
     role: str = "player"
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
     class_name: Optional[str] = None
     level: Optional[int] = 1
     inventory: Optional[str] = None
 
 class UserUpdate(BaseModel):
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
     class_name: Optional[str] = None
     level: Optional[int] = None
     inventory: Optional[str] = None

@@ -92,6 +92,43 @@ async def guest_login(db: Session = Depends(get_db)):
         }
     }
 
+@router.post("/login")
+async def simple_login(payload: dict, db: Session = Depends(get_db)):
+    username = payload.get("username")
+    if not username:
+        raise HTTPException(status_code=400, detail="Username required")
+    
+    user = db.query(models.User).filter(models.User.username == username).first()
+    
+    if not user:
+        # Create new "account"
+        user = models.User(
+            discord_id=f"user_{uuid.uuid4().hex[:8]}",
+            username=username,
+            role="player"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    jwt_token = create_access_token(
+        data={"sub": user.discord_id, "role": user.role}
+    )
+    
+    return {
+        "token": jwt_token,
+        "user": {
+            "username": user.username,
+            "role": user.role,
+            "discord_id": user.discord_id,
+            "avatar_url": user.avatar_url,
+            "class_name": user.class_name,
+            "level": user.level,
+            "inventory": user.inventory,
+            "bio": user.bio
+        }
+    }
+
 @router.get("/callback")
 async def callback(code: str, db: Session = Depends(get_db)):
     # Exchange code for token
