@@ -587,8 +587,11 @@ function VTTApp() {
             if (!token || !activeCampaign) return; 
             const x = 300 + Math.random() * 200;
             const y = 200 + Math.random() * 200;
-            const res = await fetch(`${currentConfig.API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Found Loot", content: c, type: "text", campaign_id: activeCampaign.id, x, y }) }); 
-            if (res.ok) { fetchHandouts(); sendMessage(JSON.stringify({ type: "handouts_update" })); setGeneratedLoot(null); } 
+            try {
+              const res = await fetch(`${currentConfig.API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Found Loot", content: c, type: "text", campaign_id: activeCampaign.id, x, y }) }); 
+              if (res.ok) { fetchHandouts(); sendMessage(JSON.stringify({ type: "handouts_update" })); setGeneratedLoot(null); } 
+              else { const err = await res.json(); alert("Loot manifestation failed: " + (err.detail || "Unknown error")); }
+            } catch (e) { alert("Network error manifested."); }
           }}
           onDismissLoot={() => setGeneratedLoot(null)}
           generatedLoot={generatedLoot}
