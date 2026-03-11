@@ -99,9 +99,26 @@ class GeminiService:
         if ollama_result: return ollama_result
         return {"name": "Error", "stats": {"hp": 0, "ac": 0}, "backstory": "Failed AI generation."}
 
-    async def generate_lore(self, location: models.Location, history: List[models.HistoryLog]) -> str:
+    async def generate_lore(self, location: models.Location, history: List[models.HistoryLog], user_context: str = "") -> str:
         context = self._format_context(location, history)
-        prompt = f"You are a D&D DM assistant. Based on context, provide 3 atmospheric sentences of lore.\n\n{context}"
+        prompt = f"""
+        You are a D&D DM assistant. Based on the current location, recent history, 
+        and any specific context provided by the GM, generate or augment a piece of "Whispered Lore".
+        
+        The lore should be atmospheric, descriptive, and narratively consistent.
+        
+        Location: {location.name}
+        Description: {location.description}
+        
+        Recent History:
+        {context}
+        
+        GM's Draft/Context:
+        "{user_context}"
+        
+        If the GM provided a draft, refine and expand upon it. If not, generate something new.
+        Keep the output concise (1-3 paragraphs) and focus on sensory details or secrets.
+        """
         if self.client:
             try:
                 response = self.client.models.generate_content(model=settings.GEMINI_MODEL, contents=prompt)

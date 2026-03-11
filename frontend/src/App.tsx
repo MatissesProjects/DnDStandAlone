@@ -537,7 +537,11 @@ function VTTApp() {
             setIsGenerating(true); 
             try { 
               const locId = activeLocation?.id || 1;
-              const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/generate-lore?location_id=${locId}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) }); 
+              const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/generate-lore?location_id=${locId}`, { 
+                method: 'POST', 
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ context: generatedLore }) // Pass current draft as context
+              }); 
               setGeneratedLore((await res.json()).lore); 
             } catch (e) { console.error(e); } finally { setIsGenerating(false); } 
           }} 

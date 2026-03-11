@@ -360,13 +360,12 @@ async def generate_lore(
             location = models.Location(name="Unknown Wilds", description="A mysterious uncharted area", danger_level=3)
             
         history = crud.get_history(db, campaign_id, limit=5)
-        lore_text = await ai_service.generate_lore(location, history)
         
-        crud.create_history_log(db, schemas.HistoryLogCreate(
-            campaign_id=campaign_id,
-            event_type="lore_update",
-            content=f"AI Lore: {lore_text}"
-        ))
+        user_context = ""
+        if payload and "context" in payload:
+            user_context = payload["context"]
+            
+        lore_text = await ai_service.generate_lore(location, history, user_context=user_context)
         
         return {"lore": lore_text}
     except Exception as e:

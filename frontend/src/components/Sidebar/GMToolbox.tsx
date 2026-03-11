@@ -281,23 +281,36 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <div className="grid gap-3">
                 <button onClick={onGenerateEnemy} disabled={isGenerating} className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest shadow-blue-900/20"> Manifest Enemy </button>
                 <div className="flex gap-2">
-                  <button onClick={onGenerateLore} disabled={isGenerating} className="flex-1 bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 text-white font-black py-3 rounded-2xl shadow-lg transition-all border border-indigo-500/20 text-[10px] uppercase tracking-widest shadow-indigo-900/20"> Script Lore </button>
+                  <button onClick={() => {
+                    if (!generatedLore) onUpdateGeneratedLore?.("");
+                  }} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-black py-3 rounded-2xl shadow-lg transition-all border border-gray-700 text-[10px] uppercase tracking-widest"> Draft Lore </button>
+                  <button onClick={onGenerateLore} disabled={isGenerating} className="flex-1 bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 text-white font-black py-3 rounded-2xl shadow-lg transition-all border border-indigo-500/20 text-[10px] uppercase tracking-widest shadow-indigo-900/20"> {generatedLore ? 'Augment AI' : 'Script Lore'} </button>
                   <button onClick={onGenerateLoot} disabled={isGenerating} className="flex-1 bg-amber-700 hover:bg-amber-600 active:bg-amber-800 text-white font-black py-3 rounded-2xl shadow-lg transition-all border border-amber-500/20 text-[10px] uppercase tracking-widest shadow-amber-900/20"> Forge Loot </button>
                 </div>
               </div>
               
-              {(generatedEnemy || generatedLore || generatedLoot) && (
+              {(generatedEnemy || generatedLore !== null || generatedLoot) && (
                 <div className="mt-4 p-5 bg-gray-900 rounded-[1.5rem] border border-indigo-500/30 shadow-2xl animate-in zoom-in-95 duration-300 relative group/weave">
                   <button onClick={() => { onDismissEnemy(); onDismissLore(); onDismissLoot?.(); }} className="absolute -top-2 -right-2 bg-gray-800 hover:bg-red-900/40 text-gray-500 hover:text-red-500 rounded-full p-1.5 border border-gray-700 transition-all opacity-0 group-hover/weave:opacity-100 z-10" title="Dismiss weave">
                     <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </button>
-                  {generatedLore && (
+                  {generatedLore !== null && (
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Whispered Lore</h4>
-                        <button onClick={() => onManifestLore?.(generatedLore)} className="text-[8px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-full border border-indigo-400/30 font-black uppercase tracking-widest transition-all"> Manifest </button>
+                        <div className="flex gap-1">
+                            {generatedLore.length > 0 && (
+                                <button onClick={onGenerateLore} disabled={isGenerating} className="text-[8px] bg-indigo-900/40 hover:bg-indigo-900/60 text-indigo-300 px-2 py-1 rounded-full border border-indigo-500/20 font-black uppercase tracking-widest transition-all"> {isGenerating ? 'Weaving...' : 'Augment'} </button>
+                            )}
+                            <button onClick={() => onManifestLore?.(generatedLore)} disabled={!generatedLore} className="text-[8px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-full border border-indigo-400/30 font-black uppercase tracking-widest transition-all disabled:opacity-50"> Manifest </button>
+                        </div>
                       </div>
-                      <textarea value={generatedLore} onChange={(e) => onUpdateGeneratedLore?.(e.target.value)} className="w-full bg-gray-950 border border-indigo-500/20 rounded-xl p-3 text-xs text-gray-200 leading-relaxed italic focus:outline-none focus:border-indigo-500/50 resize-none h-32" />
+                      <textarea 
+                        value={generatedLore} 
+                        placeholder="Write your own lore or let AI begin the tale..."
+                        onChange={(e) => onUpdateGeneratedLore?.(e.target.value)} 
+                        className="w-full bg-gray-950 border border-indigo-500/20 rounded-xl p-3 text-xs text-gray-200 leading-relaxed italic focus:outline-none focus:border-indigo-500/50 resize-none h-32" 
+                      />
                     </div>
                   )}
                   {generatedLoot && (
