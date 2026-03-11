@@ -84,3 +84,12 @@ export interface Handout {
   y: number;
   campaign_id: number;
 }
+
+export interface Ping {
+  id: string;
+  x: number;
+  y: number;
+  color: string;
+  username: string;
+  timestamp: number;
+}

@@ -11,7 +11,8 @@ import ChronicleSidebar from "./components/Sidebar/ChronicleSidebar";
 import GMToolbox from "./components/Sidebar/GMToolbox";
 import NPCDetailCard from "./components/Overlay/NPCDetailCard";
 import HandoutItem from "./components/Overlay/HandoutItem";
-import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout } from "./types/vtt";
+import GlassLayer from "./components/Overlay/GlassLayer";
+import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping } from "./types/vtt";
 
 const API_HOSTNAME = window.location.hostname;
 const PROTOCOL = window.location.protocol;
@@ -130,6 +131,28 @@ function VTTApp() {
     try { sendMessage(JSON.stringify({ type: "history_cleared" })); setHistory([]); } catch (e) { console.error(e); }
   }, [isGM, token, activeCampaign, sendMessage]);
 
+  const handlePing = useCallback((x: number, y: number) => {
+    const ping: Ping = {
+      id: `ping-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      x,
+      y,
+      color: isGM ? '#818cf8' : '#fb7185', // Indigo for GM, Rose for Players
+      username: user?.username || 'Guest',
+      timestamp: Date.now()
+    };
+    sendMessage(JSON.stringify({ type: 'player_ping', ...ping }));
+    // Optimistic update
+    setPings(prev => [...prev, ping]);
+  }, [isGM, user, sendMessage]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setPings(prev => prev.filter(p => now - p.timestamp < 3000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const fetchEntities = useCallback(async (locId: number) => {
     if (!token) return;
     try {
@@ -210,9 +233,10 @@ function VTTApp() {
         }));
       }
       if (event.data.type === "VTT_BRIDGE_SELECTED_RESULT") {
+        console.log("[Forge] Received selection capture:", event.data.elements.length, "elements");
         const newPart = {
           id: `custom_${Date.now()}`,
-          name: `Custom Token ${customForge.length + 1}`,
+          name: `Custom Token`, // Simplified default name
           data: {
             type: "excalidraw/clipboard",
             elements: event.data.elements
@@ -264,6 +288,9 @@ function VTTApp() {
         else if (data.type === "canvas_stream") { 
           setStreamImage(data.image); 
           if (data.hitZones) setHitZones(data.hitZones);
+        }
+        else if (data.type === "player_ping") {
+          setPings(prev => [...prev, data]);
         }
         else if (data.type === 'story' || (data.result && data.die)) {
           if (data.result && data.die && !data.isSubtle) { const isD20 = data.die.includes('d20'); setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && isD20, isFail: data.result === 1 && isD20 }); setTimeout(() => setVfxRoll(null), 800); }
@@ -343,23 +370,27 @@ function VTTApp() {
 
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
           {isGM ? (
-            <iframe 
-              key={iframeKey}
-              ref={iframeRef}
-              src={excalidrawRoomUrl} 
-              className="w-full h-full border-none bg-white block"
-              style={{ width: '100%', height: '100%', minHeight: '100vh' }}
-              title="Excalidraw Canvas"
-              allow="clipboard-read; clipboard-write; storage-access; focus-without-user-activation"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
+            <div className="w-full h-full relative">
+              <iframe 
+                key={iframeKey}
+                ref={iframeRef}
+                src={excalidrawRoomUrl} 
+                className="w-full h-full border-none bg-white block"
+                style={{ width: '100%', height: '100%', minHeight: '100vh' }}
+                title="Excalidraw Canvas"
+                allow="clipboard-read; clipboard-write; storage-access; focus-without-user-activation"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+              <GlassLayer onPing={handlePing} pings={pings} isGM={isGM} />
+            </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-[#1e1e1e] relative overflow-hidden">
               {streamImage ? (
                 <>
                   <img src={streamImage} alt="GM Canvas Stream" className="max-w-full max-h-full object-contain pointer-events-none" />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="relative w-full h-full max-w-full max-h-full">
+                    <div className="relative w-full h-full max-w-full max-h-full pointer-events-none">
+                      <GlassLayer onPing={handlePing} pings={pings} isGM={isGM} />
                       {hitZones.map((zone, idx) => {
                         const entity = activeEntities.find(e => e.id.toString() === zone.id.toString());
                         return (
