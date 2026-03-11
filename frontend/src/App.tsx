@@ -305,6 +305,7 @@ function VTTApp() {
         else if (data.type === "location_update") setActiveLocation(data.location);
         else if (data.type === "entities_update") { if (activeLocation?.id === data.locationId) fetchEntities(data.locationId); }
         else if (data.type === "history_updated") { fetchHistory(); }
+        else if (data.type === "handouts_update") { fetchHandouts(); }
         else if (data.type === "canvas_stream") { 
           setStreamImage(data.image); 
           if (data.hitZones) setHitZones(data.hitZones);
@@ -578,7 +579,7 @@ function VTTApp() {
               setGeneratedLoot((await res.json()).loot);
             } catch (e) { console.error(e); } finally { setIsGenerating(false); }
           }}
-          onManifestLoot={async (c) => { if (!token || !activeCampaign) return; const res = await fetch(`${currentConfig.API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Found Loot", content: c, type: "text", campaign_id: activeCampaign.id, x: 500, y: 400 }) }); if (res.ok) { fetchHandouts(); setGeneratedLoot(null); } }}
+          onManifestLoot={async (c) => { if (!token || !activeCampaign) return; const res = await fetch(`${currentConfig.API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Found Loot", content: c, type: "text", campaign_id: activeCampaign.id, x: 500, y: 400 }) }); if (res.ok) { fetchHandouts(); sendMessage(JSON.stringify({ type: "handouts_update" })); setGeneratedLoot(null); } }}
           onDismissLoot={() => setGeneratedLoot(null)}
           generatedLoot={generatedLoot}
           onDismissEnemy={() => setGeneratedEnemy(null)}
@@ -586,7 +587,7 @@ function VTTApp() {
           onDismissLore={() => setGeneratedLore(null)}
           onUpdateGeneratedEnemy={(enemy) => setGeneratedEnemy(enemy)}
           onUpdateGeneratedLore={(lore) => setGeneratedLore(lore)}
-          onManifestLore={async (c) => { if (!token || !activeCampaign) return; const res = await fetch(`${currentConfig.API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Whispered Lore", content: c, type: "text", campaign_id: activeCampaign.id, x: 400, y: 300 }) }); if (res.ok) { fetchHandouts(); setGeneratedLore(null); } }}
+          onManifestLore={async (c) => { if (!token || !activeCampaign) return; const res = await fetch(`${currentConfig.API_BASE}/handouts`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: "Whispered Lore", content: c, type: "text", campaign_id: activeCampaign.id, x: 400, y: 300 }) }); if (res.ok) { fetchHandouts(); sendMessage(JSON.stringify({ type: "handouts_update" })); setGeneratedLore(null); } }}
           customForge={customForge}
           onCaptureSelection={() => {
             if (iframeRef.current?.contentWindow) {
