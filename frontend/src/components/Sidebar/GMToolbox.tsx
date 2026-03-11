@@ -141,7 +141,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   activeEntities, onSelectEntity, 
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, playerInventory, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, setPlayerInventory, onUpdateProfile, onSummarize, isSummarizing,
-  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, customForge, onCaptureSelection, onDeleteCustomToken, onRenameCustomToken
+  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, onPromote, customForge, onCaptureSelection, onDeleteCustomToken, onRenameCustomToken
 }) => {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
