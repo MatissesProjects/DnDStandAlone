@@ -134,9 +134,9 @@ const SHAPES = {
 
 const GMToolbox: React.FC<GMToolboxProps> = ({
   isGM, user, isAuthenticated, pendingProposals, onApproveProposal, onRejectProposal,
-  isRecording, onToggleRecording, activeUsers, onRequestRoll, onGenerateEnemy, onGenerateLore,
-  isGenerating, generatedEnemy, generatedLore, onManifestEntity, onManifestLore, 
-  onDismissEnemy, onDismissLore, onUpdateGeneratedEnemy, onUpdateGeneratedLore,
+  isRecording, onToggleRecording, activeUsers, onRequestRoll, onGenerateEnemy, onGenerateLore, onGenerateLoot,
+  isGenerating, generatedEnemy, generatedLore, generatedLoot, onManifestEntity, onManifestLore, onManifestLoot,
+  onDismissEnemy, onDismissLore, onDismissLoot, onUpdateGeneratedEnemy, onUpdateGeneratedLore,
   activeEntities, onSelectEntity, 
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, playerInventory, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, setPlayerInventory, onUpdateProfile, onSummarize, isSummarizing,

@@ -438,7 +438,7 @@ function VTTApp() {
                 className="w-full h-full border-none bg-white block"
                 style={{ width: '100%', height: '100%', minHeight: '100vh' }}
                 title="Excalidraw Canvas"
-                allow="clipboard-read; clipboard-write; storage-access; focus-without-user-activation"
+                allow="clipboard-read; clipboard-write; storage-access"
                 referrerPolicy="no-referrer-when-downgrade"
               />
               <GlassLayer onPing={handlePing} pings={pings} isGM={isGM} isFogActive={activeLocation?.is_fog_active || false} fogZones={activeLocation?.fog_data || []} onUpdateFog={handleUpdateFog} />

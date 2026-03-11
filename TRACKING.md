@@ -45,5 +45,5 @@
 - [x] Fog of War workaround.
 
 ## Track I: Expanded AI Utility
-- [ ] Automated Session Recaps.
-- [ ] Context-Aware Loot Generation.
+- [x] Automated Session Recaps.
+- [x] Context-Aware Loot Generation.
