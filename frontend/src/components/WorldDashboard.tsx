@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import type { Location, Entity } from '../types/vtt';
-import { API_BASE } from '../config';
+import { currentConfig } from '../config';
 
 interface WorldDashboardProps {
   campaignId: number;
@@ -70,7 +70,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
 
   const fetchLocations = async () => {
     try {
-      const res = await fetch(`${API_BASE}/campaigns/${campaignId}/locations`);
+      const res = await fetch(`${currentConfig.API_BASE}/campaigns/${campaignId}/locations`);
       const data = await res.json();
       setLocations(data);
       if (data.length > 0 && !selectedLocId) setSelectedLocId(data[0].id);
@@ -81,7 +81,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
 
   const fetchEntities = async (locId: number) => {
     try {
-      const res = await fetch(`${API_BASE}/locations/${locId}/entities`);
+      const res = await fetch(`${currentConfig.API_BASE}/locations/${locId}/entities`);
       if (res.ok) {
         const data = await res.json();
         setEntities(data);
@@ -95,7 +95,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
     e.preventDefault();
     if (!token) return;
     try {
-      await fetch(`${API_BASE}/locations`, {
+      await fetch(`${currentConfig.API_BASE}/locations`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -117,7 +117,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
     e.preventDefault();
     if (!token || !editingLocation) return;
     try {
-      const res = await fetch(`${API_BASE}/locations/${editingLocation.id}`, {
+      const res = await fetch(`${currentConfig.API_BASE}/locations/${editingLocation.id}`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -139,7 +139,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   const handleDeleteLocation = async (id: number) => {
     if (!token || !window.confirm("Are you sure?")) return;
     try {
-      await fetch(`${API_BASE}/locations/${id}`, {
+      await fetch(`${currentConfig.API_BASE}/locations/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -152,7 +152,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
     e.preventDefault();
     if (!token || !selectedLocId) return;
     try {
-      const res = await fetch(`${API_BASE}/entities`, {
+      const res = await fetch(`${currentConfig.API_BASE}/entities`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newEntityName, location_id: selectedLocId, stats: {}, backstory: "New entity established." })
@@ -167,7 +167,7 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   const handleDeleteEntity = async (id: number) => {
     if (!token || !window.confirm("Delete entity?")) return;
     try {
-      await fetch(`${API_BASE}/entities/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      await fetch(`${currentConfig.API_BASE}/entities/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (selectedLocId) fetchEntities(selectedLocId);
     } catch (e) { console.error(e); }
   };

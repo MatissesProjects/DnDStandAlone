@@ -53,7 +53,7 @@ function VTTApp() {
   }, [user?.discord_id]);
 
   const { isConnected, lastMessage, sendMessage } = useWebSocket(
-    activeCampaign ? `${WS_BASE}/ws/${activeCampaign.room_id}/${clientId}?role=${isGM ? 'gm' : 'player'}&username=${user?.username || 'Guest'}` : ''
+    activeCampaign ? `${currentConfig.WS_BASE}/ws/${activeCampaign.room_id}/${clientId}?role=${isGM ? 'gm' : 'player'}&username=${user?.username || 'Guest'}` : ''
   );
 
   const [isLoggingIn, setIsLoggingIn] = useState(false);

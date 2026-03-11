@@ -5,7 +5,7 @@ interface SetupScreenProps {
   onJoin: (campaignId: number, roomId: string, campaign?: any) => void;
 }
 
-import { API_BASE } from '../config';
+import { currentConfig } from '../config';
 
 const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
   const { isGM, token, logout, user } = useAuth();
@@ -23,7 +23,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
 
   const fetchMyCampaigns = async () => {
     try {
-      const res = await fetch(`${API_BASE}/users/me/campaigns`, {
+      const res = await fetch(`${currentConfig.API_BASE}/users/me/campaigns`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -40,7 +40,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/campaigns`, {
+      const res = await fetch(`${currentConfig.API_BASE}/campaigns`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -65,7 +65,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
     e.stopPropagation();
     if (!token || !window.confirm("Are you sure? This will delete all history and locations for this campaign.")) return;
     try {
-      const res = await fetch(`${API_BASE}/campaigns/${id}`, {
+      const res = await fetch(`${currentConfig.API_BASE}/campaigns/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -84,7 +84,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
     try {
       const code = roomCode.trim().toUpperCase();
       console.log(`[Setup] Joining room: ${code}`);
-      const res = await fetch(`${API_BASE}/campaigns/join/${code}`);
+      const res = await fetch(`${currentConfig.API_BASE}/campaigns/join/${code}`);
       if (!res.ok) throw new Error("Room not found");
       const data = await res.json();
       onJoin(data.id, data.room_id, data);
