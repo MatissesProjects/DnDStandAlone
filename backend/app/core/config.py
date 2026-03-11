@@ -12,8 +12,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 1 week
     GM_KEY: str = "master_of_dungeons" # Default key for elevation
 
-    # Discord
- OAuth2
+    # Discord OAuth2
     DISCORD_CLIENT_ID: str = ""
     DISCORD_CLIENT_SECRET: str = ""
     DISCORD_REDIRECT_URI: str = "https://dnd.matissetec.dev/auth/callback"

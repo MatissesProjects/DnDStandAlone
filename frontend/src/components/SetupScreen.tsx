@@ -83,13 +83,26 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
     setError(null);
     try {
       const code = roomCode.trim().toUpperCase();
-      console.log(`[Setup] Joining room: ${code}`);
-      const res = await fetch(`${currentConfig.API_BASE}/campaigns/join/${code}`);
-      if (!res.ok) throw new Error("Room not found");
+      console.log(`[Setup] Joining room: ${code} at ${currentConfig.API_BASE}`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const res = await fetch(`${currentConfig.API_BASE}/campaigns/join/${code}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Room not found or server error");
+      }
       const data = await res.json();
+      console.log("[Setup] Room joined successfully:", data);
       onJoin(data.id, data.room_id, data);
     } catch (e: any) {
-      setError(e.message);
+      console.error("[Setup] Join error:", e);
+      setError(e.name === 'AbortError' ? "Connection timed out. Server might be slow." : e.message);
     } finally {
       setLoading(false);
     }
