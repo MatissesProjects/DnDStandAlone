@@ -35,9 +35,9 @@
 - [x] Implement "Blind Inquiries".
 
 ## Track G: Orchestration & Ambience (Split Party & Audio)
-- [ ] Refactor WebSocket manager for sub-rooms.
-- [ ] Build the GM Switchboard UI.
-- [ ] Implement Dynamic Audio Sequencing.
+- [x] Refactor WebSocket manager for sub-rooms.
+- [x] Build the GM Switchboard UI.
+- [x] Implement Dynamic Audio Sequencing.
 
 ## Track H: Combat & Visual Hacks
 - [ ] Automated Initiative Tracker.

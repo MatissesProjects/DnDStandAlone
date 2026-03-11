@@ -8,6 +8,7 @@ interface NPCDetailCardProps {
   onUpdateStats: (entityId: number, statsUpdate: any) => void;
   onUpdateEntity?: (entityId: number, update: any) => void;
   onRoll: (entityName: string, label: string, bonus?: number) => void;
+  onAddToInitiative?: (name: string, isPlayer: boolean) => void;
 }
 
 const CONDITIONS = [
@@ -155,7 +156,15 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
             </div>
           </div>
 
-          <div className="pt-4 flex justify-center">
+          <div className="pt-4 flex flex-col items-center gap-3">
+            {isGM && onAddToInitiative && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onAddToInitiative(entity.name, false); }}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-2xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 border border-indigo-400/20"
+              >
+                Summon to Initiative
+              </button>
+            )}
             <button 
               onClick={(e) => { e.stopPropagation(); onClose(); }}
               className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-gray-700 shadow-lg active:scale-95"

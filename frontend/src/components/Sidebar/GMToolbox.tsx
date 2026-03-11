@@ -30,15 +30,18 @@ interface GMToolboxProps {
   onOpenDashboard: () => void;
   playerClass: string;
   playerLevel: number;
+  playerInventory?: string;
   isEditingProfile: boolean;
   setIsEditingProfile: (val: boolean) => void;
   setPlayerClass: (val: string) => void;
   setPlayerLevel: (val: number) => void;
+  setPlayerInventory?: (val: string) => void;
   onUpdateProfile: () => void;
   onSummarize: () => void;
   isSummarizing: boolean;
   onClearHistory: () => void;
   onMoveToScene?: (userId: string, sceneId: string) => void;
+  onAddToInitiative?: (name: string, isPlayer: boolean) => void;
   customForge?: any[];
   onCaptureSelection?: () => void;
   onDeleteCustomToken?: (id: string) => void;
@@ -257,6 +260,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                     </div>
 
                     <div className="flex gap-2">
+                      <button onClick={() => onAddToInitiative?.(u.username, true)} className="flex-1 text-[9px] bg-indigo-600/40 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all border border-indigo-500/30"> Initiative </button>
                       <button onClick={() => onRequestRoll(u.id, 'd20', 'Perception')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all"> Perception </button>
                       <button onClick={() => onRequestRoll(u.id, 'd20', 'Stealth')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all"> Stealth </button>
                     </div>
@@ -323,6 +327,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                     <span className="text-[10px] font-black text-gray-500 uppercase">Level</span>
                     <input type="number" min="1" max="20" value={playerLevel} onChange={e => setPlayerLevel(Number(e.target.value))} className="flex-1 bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50" />
                   </div>
+                  <textarea placeholder="Inventory (Gold, Items, etc.)" value={playerInventory} onChange={e => setPlayerInventory?.(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50 resize-none h-20" />
                   <div className="flex gap-2">
                     <button onClick={onUpdateProfile} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Save</button>
                     <button onClick={() => setIsEditingProfile(false)} className="flex-1 bg-gray-800 hover:bg-gray-700 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-gray-700">Cancel</button>
@@ -331,7 +336,8 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               ) : (
                 <div onClick={() => setIsEditingProfile(true)} className="cursor-pointer group">
                   <h3 className="font-black text-gray-100 uppercase tracking-tighter mb-1 text-xl group-hover:text-indigo-400 transition-colors">{user?.username}</h3>
-                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mb-8">{playerClass || 'Class Unknown'} • Level {playerLevel}</p>
+                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mb-4">{playerClass || 'Class Unknown'} • Level {playerLevel}</p>
+                  {playerInventory && <p className="text-[9px] text-gray-500 italic line-clamp-2 px-4">Bag: {playerInventory}</p>}
                 </div>
               )}
               <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent w-full my-8 shadow-inner"></div>

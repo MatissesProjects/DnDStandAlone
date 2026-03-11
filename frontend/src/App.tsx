@@ -13,6 +13,7 @@ import NPCDetailCard from "./components/Overlay/NPCDetailCard";
 import HandoutItem from "./components/Overlay/HandoutItem";
 import GlassLayer from "./components/Overlay/GlassLayer";
 import AmbientPlayer from "./components/Overlay/AmbientPlayer";
+import InitiativeTracker from "./components/Overlay/InitiativeTracker";
 import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping } from "./types/vtt";
 
 const API_HOSTNAME = window.location.hostname;
@@ -70,6 +71,7 @@ function VTTApp() {
   const processedMessages = useRef<Set<string>>(new Set());
   const [playerClass, setPlayerClass] = useState(user?.class_name || "");
   const [playerLevel, setPlayerLevel] = useState(user?.level || 1);
+  const [playerInventory, setPlayerInventory] = useState(user?.inventory || "");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [vfxRoll, setVfxRoll] = useState<{ id: string, result: number, isCrit: boolean, isFail: boolean } | null>(null);
   const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
@@ -85,6 +87,8 @@ function VTTApp() {
   const [streamImage, setStreamImage] = useState<string | null>(null);
   const [hitZones, setHitZones] = useState<any[]>([]);
   const [pings, setPings] = useState<any[]>([]);
+  const [combatants, setCombatants] = useState<any[]>([]);
+  const [currentTurn, setCurrentTurn] = useState(0);
   const [customForge, setCustomForge] = useState<any[]>(() => {
     try {
       const saved = localStorage.getItem("vtt_custom_forge");
@@ -293,6 +297,10 @@ function VTTApp() {
         else if (data.type === "player_ping") {
           setPings(prev => [...prev, data]);
         }
+        else if (data.type === "initiative_update") {
+          setCombatants(data.combatants || []);
+          setCurrentTurn(data.currentTurn || 0);
+        }
         else if (data.type === "whisper") {
           const isFromMe = data.senderId === clientId;
           const targetName = activeUsers.find(u => u.id === data.target_id)?.username || "Unknown";
@@ -312,6 +320,22 @@ function VTTApp() {
       } catch (e) {}
     }
   }, [lastMessage, activeLocation?.id, fetchEntities, fetchHistory]);
+
+  const handleAddToInitiative = useCallback((name: string, isPlayer: boolean) => {
+    if (!isGM) return;
+    const initiative = Math.floor(Math.random() * 20) + 1;
+    const newCombatant = {
+      id: `combatant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      initiative,
+      isPlayer
+    };
+    const newList = [...combatants, newCombatant].sort((a, b) => b.initiative - a.initiative);
+    sendMessage(JSON.stringify({ type: 'initiative_update', combatants: newList, currentTurn: 0 }));
+    // Optimistic update
+    setCombatants(newList);
+    setCurrentTurn(0);
+  }, [isGM, combatants, sendMessage]);
 
   if (!isAuthenticated) {
     return (
@@ -357,6 +381,7 @@ function VTTApp() {
                 });
             }
           }} 
+          onAddToInitiative={handleAddToInitiative}
         />
       )}
 
@@ -367,6 +392,13 @@ function VTTApp() {
           {vfxRoll.isFail && <div className="text-2xl font-black text-red-500 uppercase tracking-[0.5em] animate-pulse">Critical Failure</div>}
         </div>
       )}
+
+      <InitiativeTracker 
+        combatants={combatants} 
+        currentTurnIndex={currentTurn} 
+        isGM={isGM} 
+        onUpdateInitiative={(newList, nextTurn) => sendMessage(JSON.stringify({ type: 'initiative_update', combatants: newList, currentTurn: nextTurn }))} 
+      />
 
       <div className="fixed inset-0 pointer-events-none z-40">
         {handouts.map(h => (
@@ -483,12 +515,13 @@ function VTTApp() {
             } catch (e) { alert("Network error."); }
           }} 
           activeEntities={activeEntities} onSelectEntity={setSelectedEntity} activeLocation={activeLocation} activeCampaign={activeCampaign}
-          onOpenDashboard={() => setIsDashboardOpen(true)} playerClass={playerClass} playerLevel={playerLevel} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
-          setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} onUpdateProfile={async () => { if (!token) return; const res = await fetch(`${API_BASE}/users/me`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ class_name: playerClass, level: playerLevel }) }); if (res.ok) { setIsEditingProfile(false); sendMessage(JSON.stringify({ type: "user_update", class_name: playerClass, level: playerLevel })); } }}
+          onOpenDashboard={() => setIsDashboardOpen(true)} playerClass={playerClass} playerLevel={playerLevel} playerInventory={playerInventory} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
+          setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} setPlayerInventory={setPlayerInventory} onUpdateProfile={async () => { if (!token) return; const res = await fetch(`${API_BASE}/users/me`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ class_name: playerClass, level: playerLevel, inventory: playerInventory }) }); if (res.ok) { setIsEditingProfile(false); sendMessage(JSON.stringify({ type: "user_update", class_name: playerClass, level: playerLevel, inventory: playerInventory })); } }}
           onSummarize={async () => { if (!token || !activeCampaign) return; setIsSummarizing(true); try { const res = await fetch(`${API_BASE}/campaigns/${activeCampaign.id}/summarize`, { headers: { 'Authorization': `Bearer ${token}` } }); setCampaignSummary((await res.json()).summary); } catch (e) { console.error(e); } finally { setIsSummarizing(false); } }} 
           isSummarizing={isSummarizing}
           onClearHistory={handleClearHistory}
           onMoveToScene={(userId, sceneId) => sendMessage(JSON.stringify({ type: 'move_to_scene', target_id: userId, scene_id: sceneId }))}
+          onAddToInitiative={handleAddToInitiative}
           onDismissEnemy={() => setGeneratedEnemy(null)}
 
           onDismissLore={() => setGeneratedLore(null)}

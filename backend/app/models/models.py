@@ -11,12 +11,14 @@ class User(Base):
     role = Column(String, default="player") # "gm" or "player"
     class_name = Column(String, nullable=True)
     level = Column(Integer, default=1)
+    inventory = Column(Text, nullable=True) # Simple text-based inventory for now
 
 class Campaign(Base):
     __tablename__ = "campaigns"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     room_id = Column(String, unique=True, index=True) # Unique join code
+    initiative_data = Column(JSON, nullable=True) # Store initiative list
     gm_id = Column(Integer, ForeignKey("users.id"))
     gm = relationship("User")
 

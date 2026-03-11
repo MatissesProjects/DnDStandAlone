@@ -6,13 +6,16 @@ from datetime import datetime
 class UserBase(BaseModel):
     discord_id: str
     username: str
-    role: str
+    role: str = "player"
     class_name: Optional[str] = None
-    level: int = 1
+    level: Optional[int] = 1
+    inventory: Optional[str] = None
 
 class UserUpdate(BaseModel):
     class_name: Optional[str] = None
     level: Optional[int] = None
+    inventory: Optional[str] = None
+
 
 class User(UserBase):
     id: int
@@ -27,11 +30,13 @@ class CampaignCreate(CampaignBase):
 
 class CampaignUpdate(BaseModel):
     name: Optional[str] = None
+    initiative_data: Optional[Dict[str, Any]] = None
 
 class Campaign(CampaignBase):
     id: int
     gm_id: int
     room_id: str
+    initiative_data: Optional[Dict[str, Any]] = None
     model_config = ConfigDict(from_attributes=True)
 
 # Location Schemas

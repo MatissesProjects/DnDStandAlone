@@ -12,7 +12,7 @@ interface Campaign {
   canvas_state?: any;
 }
 
-const API_BASE = "http://192.168.4.150:8000";
+const API_BASE = "https://wss.matissetec.dev";
 
 const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
   const { isGM, token, logout, user } = useAuth();

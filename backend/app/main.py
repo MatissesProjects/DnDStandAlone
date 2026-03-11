@@ -383,6 +383,11 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
                         await manager.update_user_metadata(target_id, room_id, {"scene_id": new_scene})
                     continue
 
+                if message_json.get("type") == "initiative_update" and role == "gm":
+                    # Broadcast to everyone
+                    await manager.broadcast(data, room_id, sender_id=client_id)
+                    continue
+
                 if message_json.get("type") == "request_roll" and role == "gm":
                     target_id = message_json.get("target_id")
                     if target_id:
