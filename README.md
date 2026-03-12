@@ -1,22 +1,43 @@
 # DnD StandAlone VTT
 
-A standalone web-based Virtual Tabletop (VTT) that unifies **Excalidraw** for mapping, **Discord** for communication/auth, and **Gemini AI** for dynamic world-building.
+A powerful, web-based Virtual Tabletop (VTT) that unifies **Excalidraw** for mapping, **Digital "Note Passing"** for immersion, and **Gemini AI** for dynamic world-building. Designed for both desktop and mobile play.
 
-## 🚀 Features
+## 🚀 Advanced Features
 
-- **Real-time Canvas:** Shared mapping experience powered by `@excalidraw/excalidraw`.
-- **Integrated Dice Roller:** Full support for standard and "Subtle" (GM-only) dice rolls.
-- **Discord Authentication:** Secure login using Discord OAuth2 to distinguish between GMs and Players.
-- **Room-based Sessions:** Create unique campaign rooms with join codes.
-- **AI Dungeon Master Assistant:** Generate unique enemies and atmospheric lore on-the-fly using Google Gemini AI.
-- **Persistent World State:** Database-backed tracking of campaigns, locations, and NPCs.
+### 🗺️ The Glass Layer (Interactivity)
+- **Ping System:** Click-to-ping with synchronized ripple VFX and username labels.
+- **Smart Measurement:** Alt/Shift + Drag to measure distances with location-specific grid scales.
+- **Fog of War:** GM-controlled shroud with "Flashlight" clearing (Ctrl+Drag) to reveal secrets.
+
+### 🎭 Split-Party Orchestration
+- **Parallel Realities:** Move specific players into different manifested locations (locales).
+- **Projection Command:** GMs can selectively project their map stream and audio to specific groups while "freezing" the view for others.
+- **Switchboard:** Real-time UI for managing which adventurer is in which part of the world.
+
+### 🔊 Dynamic Atmosphere
+- **Multi-Channel Audio:** Independent volume controls for "Atmosphere" and "Music".
+- **Local Uploads:** GMs can upload MP3/WAV files directly from their PC to the VTT.
+- **Location-Linked Sound:** Ambience automatically changes as players move between locales.
+
+### 🤖 AI Weaver (Gemini 2.5 Flash)
+- **Manifest Entity:** Generate balanced NPC/Enemy stats and backstories.
+- **Script Lore:** Augment GM drafts or generate new atmospheric sensory descriptions.
+- **Forge Loot:** Context-aware loot generation based on current location and session history.
+- **Fate Spinner:** A synchronized visual 3D-style spinner for dramatic random outcomes.
+
+### ⚔️ Combat & Tracking
+- **Automated Initiative:** Persistent tracker with turn-based highlighting.
+- **LitRPG Stats:** Track class, level, and a personal "Bag" (inventory) per account.
+- **Whisper Network:** Private messaging and blind inquiry rolls (visible only to GM and sender).
+
+---
 
 ## 🛠 Tech Stack
 
-- **Frontend:** React 19, Vite, TailwindCSS 4, Excalidraw.
+- **Frontend:** React 19, Vite, TailwindCSS 4, Framer Motion.
 - **Backend:** Python 3.13, FastAPI, SQLAlchemy, WebSockets.
-- **Database:** SQLite (default for development) or PostgreSQL.
-- **AI:** Google Gemini API (`gemini-2.5-flash`).
+- **Mapping:** Integrated `@excalidraw/excalidraw` via a custom Bridge Extension.
+- **AI:** Google Gemini API (`gemini-2.5-flash`) & Ollama fallback.
 
 ---
 
@@ -25,7 +46,6 @@ A standalone web-based Virtual Tabletop (VTT) that unifies **Excalidraw** for ma
 ### 1. Prerequisites
 - Node.js (v18+)
 - Python 3.10+
-- A Discord Application (from [Discord Developer Portal](https://discord.com/developers/applications))
 - A Gemini API Key (from [Google AI Studio](https://aistudio.google.com/))
 
 ### 2. Backend Setup
@@ -35,55 +55,23 @@ A standalone web-based Virtual Tabletop (VTT) that unifies **Excalidraw** for ma
    python -m venv venv
    .\venv\Scripts\Activate.ps1
    ```
-3. Install dependencies:
-   ```powershell
-   pip install -r requirements.txt
-   ```
-4. Configure environment variables:
-   Copy `.env.example` to `backend/.env` and fill in your credentials:
-   ```env
-   DISCORD_CLIENT_ID=your_id
-   DISCORD_CLIENT_SECRET=your_secret
-   GEMINI_API_KEY=your_key
-   ```
-5. Run the server:
-   ```powershell
-   python app/main.py
-   ```
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run schema updates: `python update_schema.py`
+5. Start server: `python run.py`
 
 ### 3. Frontend Setup
 1. Navigate to the `frontend/` directory.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
+2. Install dependencies: `npm install`
+3. Start dev server: `npm run dev`
+
+### 4. VTT Bridge Extension
+1. Open Chrome/Edge Extensions page (`chrome://extensions`).
+2. Enable "Developer mode".
+3. Click "Load unpacked" and select the `vtt-bridge/` folder.
+4. Open [Excalidraw](https://excalidraw.com) in your browser to activate the GM stream.
 
 ---
 
-## 🧪 Testing
-
-The project includes an automated test suite for the backend.
-
-**Run Backend Tests:**
-```powershell
-cd backend
-$env:PYTHONPATH="."
-python -m pytest tests/
-```
-
----
-
-## 🗺 Development Roadmap
-
-- [x] **Phase 1:** Core Canvas & Real-time WebSockets.
-- [x] **Phase 2:** Discord Auth & Role Separation.
-- [x] **Phase 3:** Room-based Sessions & Join Codes.
-- [x] **Phase 4:** AI Generation Pipeline (Gemini).
-- [x] **Phase 5:** Persistent Canvas State saving.
-- [ ] **Phase 6:** GM Dashboard for World Management (WIP).
-- [ ] **Phase 7:** Dice Roll 3D/VFX.
-
+## 🧪 Testing & Reliability
+- **Dynamic Backend Resolution:** Frontend automatically detects and falls back to local backends if production `wss` is unreachable.
+- **Exhaustive Reactivity:** All scene projections and handouts use timestamped WebSocket synchronization to ensure zero-lag updates.
