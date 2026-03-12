@@ -14,6 +14,7 @@ interface ChronicleSidebarProps {
   onConsumeHistory: (id: string) => void;
   activeUsers: UserPresence[];
   onWhisper: (targetId: string, msg: string) => void;
+  currentScene?: string;
 }
 
 const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
@@ -27,7 +28,8 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
   setIsSubtleMode,
   onConsumeHistory,
   activeUsers,
-  onWhisper
+  onWhisper,
+  currentScene = "main"
 }) => {
   const [whisperTarget, setWhisperTarget] = useState<string>('');
   const [whisperMsg, setWhisperMsg] = useState<string>('');
@@ -44,7 +46,10 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
     <aside className="w-[300px] max-w-[85vw] h-full flex-none border-r border-gray-800 p-4 flex flex-col bg-gray-950 absolute md:relative z-50 overflow-hidden shadow-2xl transition-all">
       <div className="flex justify-between items-center border-b border-gray-800 pb-4 shrink-0">
         <div>
-          <h2 className="text-lg font-black tracking-tighter text-gray-100 uppercase italic">Chronicle</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-black tracking-tighter text-gray-100 uppercase italic">Chronicle</h2>
+            <span className="px-1.5 py-0.5 bg-indigo-500/10 border border-indigo-500/30 rounded text-[7px] font-black text-indigo-400 uppercase tracking-widest">{currentScene}</span>
+          </div>
           <div className="flex items-center gap-2 mt-0.5">
             <div className={`h-2 w-2 rounded-full transition-all duration-500 ${isConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}></div>
             <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{isConnected ? 'Active' : 'Offline'}</span>

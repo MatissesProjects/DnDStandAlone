@@ -106,7 +106,11 @@ class ConnectionManager:
                     "level": meta.get("level", 1)
                 })
         
-        message = json.dumps({"type": "presence", "users": users})
+        message = json.dumps({
+            "type": "presence", 
+            "users": users,
+            "timestamp": asyncio.get_event_loop().time() # Ensure uniqueness for frontend processing
+        })
         await self.broadcast(message, room_id)
 
     async def broadcast(self, message: str, room_id: str, role_limit: str = None, sender_id: str = None, scene_limit: bool = True):

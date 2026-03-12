@@ -334,7 +334,7 @@ function VTTApp() {
         else if (data.type === "canvas_stream") { 
           const myUser = data.users?.find((u: any) => u.id === clientId) || activeUsers.find(u => u.id === clientId);
           const myScene = myUser?.scene_id || "main";
-          if (data.target_scene === myScene || isGM) {
+          if (data.scene_id === myScene || isGM) {
             setStreamImage(data.image); 
             if (data.hitZones) setHitZones(data.hitZones);
           }
@@ -493,7 +493,21 @@ function VTTApp() {
       <button onClick={() => setLeftSidebarOpen(!leftSidebarOpen)} className={`fixed bottom-4 md:bottom-8 left-4 md:left-8 z-[60] p-3 md:p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!leftSidebarOpen ? 'translate-x-0' : 'translate-x-[80vw] md:translate-x-[340px]'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{leftSidebarOpen ? <polyline points="15 18 9 12 15 6"></polyline> : <polyline points="9 18 15 12 9 6"></polyline>}</svg></button>
       <button onClick={() => setRightSidebarOpen(!rightSidebarOpen)} className={`fixed bottom-4 md:bottom-8 right-4 md:right-8 z-[60] p-3 md:p-4 glass-panel rounded-2xl text-gray-400 hover:text-indigo-400 transition-all shadow-xl border border-white/5 active:scale-95 ${!rightSidebarOpen ? 'translate-x-0' : '-translate-x-[80vw] md:-translate-x-[320px]'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{rightSidebarOpen ? <polyline points="9 18 15 12 9 6"></polyline> : <polyline points="15 18 9 12 15 6"></polyline>}</svg></button>
 
-      {leftSidebarOpen && <ChronicleSidebar isConnected={isConnected} onLogout={logout} onLeave={() => setActiveCampaign(null)} rollRequirement={rollRequirement} isGM={isGM} onRoll={rollDie} history={history} isSubtleMode={isSubtleMode} setIsSubtleMode={setIsSubtleMode} onConsumeHistory={handleConsumeHistory} activeUsers={activeUsers} onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))} />}
+      {leftSidebarOpen && <ChronicleSidebar 
+        isConnected={isConnected} 
+        onLogout={logout} 
+        onLeave={() => setActiveCampaign(null)} 
+        rollRequirement={rollRequirement} 
+        isGM={isGM} 
+        onRoll={rollDie} 
+        history={history} 
+        isSubtleMode={isSubtleMode} 
+        setIsSubtleMode={setIsSubtleMode} 
+        onConsumeHistory={handleConsumeHistory} 
+        activeUsers={activeUsers} 
+        currentScene={activeUsers.find(u => u.id === clientId)?.scene_id || "main"}
+        onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))} 
+      />}
 
       <AmbientPlayer url={activeLocation?.ambient_audio || null} />
 
