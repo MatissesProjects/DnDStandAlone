@@ -310,8 +310,15 @@ function VTTApp() {
         if (processedMessages.current.has(msgId)) return;
         processedMessages.current.add(msgId);
         if (data.type === "presence") setActiveUsers(data.users);
-        else if (data.type === "location_update") setActiveLocation(data.location);
-        else if (data.type === "entities_update") { if (activeLocation?.id === data.locationId) fetchEntities(data.locationId); }
+        else if (data.type === "location_update") {
+          const myUser = data.users?.find((u: any) => u.id === clientId) || activeUsers.find(u => u.id === clientId);
+          const myScene = myUser?.scene_id || "main";
+          if (data.global || data.scene_id === myScene || isGM) {
+            setActiveLocation(data.location);
+          }
+        }
+        else if (data.type === "entities_update") {
+ if (activeLocation?.id === data.locationId) fetchEntities(data.locationId); }
         else if (data.type === "history_updated") { fetchHistory(); }
         else if (data.type === "handouts_update") { fetchHandouts(); }
         else if (data.type === "spinner_trigger") {
