@@ -414,6 +414,10 @@ function VTTApp() {
     } catch (e) { console.error(e); }
   }, [token, login]);
 
+  const handleUpdateAudioVolume = useCallback((id: string, volume: number) => {
+    setAudioChannels(prev => prev.map(c => c.id === id ? { ...c, volume } : c));
+  }, []);
+
   if (isConfiguring) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans text-center">
@@ -516,7 +520,7 @@ function VTTApp() {
         onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))} 
       />}
 
-      <AmbientPlayer url={activeLocation?.ambient_audio || null} />
+      <AmbientPlayer channels={audioChannels} onUpdateVolume={handleUpdateAudioVolume} />
 
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
           {isGM ? (
