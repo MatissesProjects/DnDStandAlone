@@ -109,10 +109,17 @@ function VTTApp() {
 
   const excalidrawRoomUrl = useMemo(() => {
     if (!activeCampaign) return "";
+    // Excalidraw expects a 20-char room ID and a 22-char key
+    // We create a stable but long enough seed from our room_id
     const seed = activeCampaign.room_id.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const room = (seed + "00000000000000000000").substring(0, 20);
-    const key = (seed + "0000000000000000000000").substring(0, 22);
-    return `https://excalidraw.com/#room=${room},${key}`;
+    const longSeed = (seed + seed + seed + seed + "VTTMASTER").substring(0, 32);
+    
+    const room = longSeed.substring(0, 20);
+    const key = longSeed.substring(0, 22);
+    
+    const url = `https://excalidraw.com/#room=${room},${key}`;
+    console.log("[Excalidraw] Generated URL:", url);
+    return url;
   }, [activeCampaign?.room_id]);
 
   const fetchHistory = useCallback(() => {
