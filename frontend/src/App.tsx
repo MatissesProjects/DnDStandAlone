@@ -275,7 +275,7 @@ function VTTApp() {
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [isGM, sendMessage]);
+  }, [isGM, sendMessage, targetScene, customForge.length]); // targetScene is critical here
 
   useEffect(() => {
     if (!isGM || !activeCampaign) return;
