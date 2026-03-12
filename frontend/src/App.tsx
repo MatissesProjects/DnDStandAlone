@@ -367,7 +367,7 @@ function VTTApp() {
         }
       } catch (e) {}
     }
-  }, [lastMessage, activeLocation?.id, fetchEntities, fetchHistory]);
+  }, [lastMessage, activeLocation?.id, fetchEntities, fetchHistory, activeUsers, clientId, isGM]); // Crucial dependencies for scene-aware logic
 
   const handleAddToInitiative = useCallback((name: string, isPlayer: boolean) => {
     if (!isGM) return;
