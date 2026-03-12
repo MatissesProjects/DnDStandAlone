@@ -417,6 +417,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
                     target_id = message_json.get("target_id")
                     new_scene = message_json.get("scene_id")
                     if target_id and new_scene:
+                        # Allow moving both regular users and guests
                         await manager.update_user_metadata(target_id, room_id, {"scene_id": new_scene})
                     continue
 
