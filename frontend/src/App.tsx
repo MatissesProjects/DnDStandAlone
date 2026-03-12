@@ -93,6 +93,10 @@ function VTTApp() {
   const [spinnerData, setSpinnerState] = useState<{ options: string[], resultIndex: number } | null>(null);
   const [hitZones, setHitZones] = useState<any[]>([]);
   const [pings, setPings] = useState<any[]>([]);
+  const [audioChannels, setAudioChannels] = useState<{id: string, url: string | null, volume: number}[]>([
+    { id: 'Atmosphere', url: null, volume: 0.5 },
+    { id: 'Music', url: null, volume: 0.5 }
+  ]);
   const [combatants, setCombatants] = useState<any[]>([]);
   const [currentTurn, setCurrentTurn] = useState(0);
   const [customForge, setCustomForge] = useState<any[]>(() => {
@@ -320,7 +324,9 @@ function VTTApp() {
         else if (data.type === "location_update") {
           const myUser = data.users?.find((u: any) => u.id === clientId) || activeUsers.find(u => u.id === clientId);
           const myScene = myUser?.scene_id || "main";
-          if (data.global || data.scene_id === myScene || isGM) {
+          // If message has scene_id, it must match. If global, it always matches.
+          const targetSid = data.scene_id || data.target_scene;
+          if (data.global || !targetSid || targetSid === myScene || isGM) {
             setActiveLocation(data.location);
           }
         }
@@ -334,7 +340,8 @@ function VTTApp() {
         else if (data.type === "canvas_stream") { 
           const myUser = data.users?.find((u: any) => u.id === clientId) || activeUsers.find(u => u.id === clientId);
           const myScene = myUser?.scene_id || "main";
-          if (data.scene_id === myScene || isGM) {
+          const targetSid = data.scene_id || data.target_scene;
+          if (!targetSid || targetSid === myScene || isGM) {
             setStreamImage(data.image); 
             if (data.hitZones) setHitZones(data.hitZones);
           }
