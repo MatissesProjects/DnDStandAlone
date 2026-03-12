@@ -93,40 +93,44 @@ class ConnectionManager:
             return
 
         is_subtle = False
-        sender_scene = "main"
+        target_scene = None
+        
         try:
             msg_data = json.loads(message)
             is_subtle = msg_data.get("isSubtle") is True
-            # Some messages should always be room-wide
-            if msg_data.get("type") in ["location_update", "presence"]:
+            # Allow messages to target a specific scene explicitly
+            target_scene = msg_data.get("scene_id")
+            
+            # Presence and global orchestrated moves (like a full party TP) still go to everyone
+            if msg_data.get("type") in ["presence"] or msg_data.get("global") is True:
                 scene_limit = False
         except:
             pass
 
-        if sender_id and sender_id in self.user_metadata:
-            sender_scene = self.user_metadata[sender_id].get("scene_id", "main")
+        # If no explicit target scene, use the sender's scene as the limit
+        if scene_limit and not target_scene and sender_id and sender_id in self.user_metadata:
+            target_scene = self.user_metadata[sender_id].get("scene_id", "main")
 
-        target_user_ids = list(self.room_map[room_id]) # Use list to avoid set size change errors
+        target_user_ids = list(self.room_map[room_id])
         for user_id in target_user_ids:
             user_meta = self.user_metadata.get(user_id, {})
             user_role = user_meta.get("role")
             user_scene = user_meta.get("scene_id", "main")
 
-            # If subtle, only GMs or the original sender can see it
-            if is_subtle:
-                if user_role != "gm" and user_id != sender_id:
+            # GMs always receive everything to maintain "All-Seeing" status
+            if user_role == "gm":
+                pass 
+            else:
+                # If subtle, only original sender sees it
+                if is_subtle and user_id != sender_id:
                     continue
-            
-            # Scene Limitation: Players only see things from their own scene
-            # GMs see everything (scene_limit=True but GMs bypass it)
-            if scene_limit and user_role != "gm" and user_id != sender_id:
-                if user_scene != sender_scene:
-                    continue
-
-            # If there's a specific role limit
-            if role_limit and user_role != role_limit:
-                continue
                 
+                # Scene Limitation: If a target scene is set (or inferred), player must be in it
+                if scene_limit and target_scene and user_scene != target_scene:
+                    # Exception: ignore scene limit if this message is from the user themselves
+                    if user_id != sender_id:
+                        continue
+
             if user_id in self.active_connections:
                 try:
                     await self.active_connections[user_id].send_text(message)

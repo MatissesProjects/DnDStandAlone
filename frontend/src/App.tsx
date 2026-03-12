@@ -78,6 +78,7 @@ function VTTApp() {
   const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [showSpinner, setShowSpinner] = useState(false);
+  const [targetScene, setTargetScene] = useState<string>("main"); // For GM projection
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isSubtleMode, setIsSubtleMode] = useState(false);
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
