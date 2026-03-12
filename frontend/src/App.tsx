@@ -443,9 +443,11 @@ function VTTApp() {
       {isDashboardOpen && <WorldDashboard campaignId={activeCampaign.id} onClose={() => setIsDashboardOpen(false)} currentTargetScene={targetScene} onSetActive={(loc, sid) => { 
         if (sid === "global") {
             setActiveLocation(loc); 
+            setTargetScene("main"); // If manifesting global, target main
             sendMessage(JSON.stringify({ type: "location_update", location: loc, global: true })); 
         } else {
             if (sid === targetScene) setActiveLocation(loc);
+            else setTargetScene(sid); // Auto-switch target to where you just projected
             sendMessage(JSON.stringify({ type: "location_update", location: loc, scene_id: sid })); 
         }
       }} activeLocationId={activeLocation?.id} />}
@@ -652,6 +654,7 @@ function VTTApp() {
           onPromote={handlePromote}
           targetScene={targetScene}
           onSetTargetScene={setTargetScene}
+          locations={activeCampaign ? activeCampaign.locations || [] : []} // Fallback to empty
           onToggleFog={async () => {
             if (!isGM || !activeLocation || !token) return;
             const newState = !activeLocation.is_fog_active;

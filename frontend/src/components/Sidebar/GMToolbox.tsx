@@ -50,6 +50,7 @@ interface GMToolboxProps {
   onPromote?: (key: string) => void;
   targetScene: string;
   onSetTargetScene: (scene: string) => void;
+  locations: Location[];
   showSpinner: boolean;
   onToggleSpinner: (val: boolean) => void;
   customForge?: any[];
@@ -251,23 +252,24 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                       <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>
                     </div>
                     
-                    {/* Scene Switcher (Switchboard) */}
+                    {/* Location-based Switchboard */}
                     <div className="mb-3">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Active Scene</span>
-                        <span className="text-[8px] font-black text-indigo-500 uppercase px-1.5 py-0.5 bg-indigo-500/10 rounded border border-indigo-500/20">{u.scene_id || 'main'}</span>
+                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Active Reality</span>
+                        <span className="text-[8px] font-black text-indigo-500 uppercase px-1.5 py-0.5 bg-indigo-500/10 rounded border border-indigo-500/20 truncate max-w-[100px]">
+                          {locations.find(l => l.id.toString() === u.scene_id)?.name || u.scene_id || 'main'}
+                        </span>
                       </div>
-                      <div className="flex gap-1">
-                        {['main', 'alpha', 'beta'].map(sid => (
-                          <button 
-                            key={sid}
-                            onClick={() => onMoveToScene?.(u.id, sid)}
-                            className={`flex-1 text-[7px] font-black uppercase py-1 rounded transition-all border ${u.scene_id === sid || (!u.scene_id && sid === 'main') ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-950 border-gray-800 text-gray-600 hover:text-gray-400'}`}
-                          >
-                            {sid}
-                          </button>
+                      <select 
+                        value={u.scene_id || 'main'}
+                        onChange={(e) => onMoveToScene?.(u.id, e.target.value)}
+                        className="w-full bg-gray-950 border border-gray-800 rounded-lg px-2 py-1.5 text-[8px] font-black uppercase text-gray-400 focus:outline-none focus:border-indigo-500/50"
+                      >
+                        <option value="main">The Main Path (Global)</option>
+                        {locations.map(loc => (
+                          <option key={loc.id} value={loc.id.toString()}>{loc.name}</option>
                         ))}
-                      </div>
+                      </select>
                     </div>
 
                     <div className="flex gap-2">
@@ -364,20 +366,21 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <div className="bg-gray-900/80 p-4 rounded-2xl border border-indigo-500/20 shadow-xl space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Active Target</span>
-                  <div className="flex gap-1">
-                    {['main', 'alpha', 'beta'].map(sid => (
-                      <button 
-                        key={sid}
-                        onClick={() => onSetTargetScene(sid)}
-                        className={`px-2 py-1 text-[7px] font-black uppercase rounded border transition-all ${targetScene === sid ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-950 border-gray-800 text-gray-600 hover:text-gray-400'}`}
-                      >
-                        {sid}
-                      </button>
+                  <select 
+                    value={targetScene}
+                    onChange={(e) => onSetTargetScene(e.target.value)}
+                    className="bg-gray-950 border border-gray-800 rounded-lg px-2 py-1 text-[8px] font-black uppercase text-indigo-400 focus:outline-none focus:border-indigo-500/50 max-w-[120px]"
+                  >
+                    <option value="main">Main (Global)</option>
+                    {locations.map(loc => (
+                      <option key={loc.id} value={loc.id.toString()}>{loc.name}</option>
                     ))}
-                  </div>
+                  </select>
                 </div>
                 <div className="h-px bg-gray-800 w-full"></div>
-                <p className="text-[7px] text-gray-500 italic leading-relaxed uppercase tracking-tighter">Only players in the Active Target scene will receive live map and music updates. Others will remain on their current view.</p>
+                <p className="text-[7px] text-gray-500 italic leading-relaxed uppercase tracking-tighter text-center">
+                  Live map and music only project to the selected reality.
+                </p>
               </div>
             </div>
           </>
