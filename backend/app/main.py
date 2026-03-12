@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import shutil
+import uuid
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, Query, File, UploadFile
 from fastapi.staticfiles import StaticFiles
 from typing import Optional, List, Any, Dict
@@ -337,19 +338,23 @@ async def upload_audio(
         raise HTTPException(status_code=403, detail="Only GMs can upload audio")
     
     try:
-        file_extension = os.path.splitext(file.filename)[1]
+        filename = file.filename or "unnamed_audio.mp3"
+        file_extension = os.path.splitext(filename)[1]
         file_name = f"{uuid.uuid4().hex}{file_extension}"
         file_path = os.path.join("uploads", "audio", file_name)
         
-        # Ensure directory exists (redundant but safe)
+        # Ensure directory exists
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
+        logger.info(f"Audio uploaded successfully: {file_name}")
         return {"url": f"/uploads/audio/{file_name}"}
     except Exception as e:
-        logger.error(f"Upload Audio Error: {e}")
+        import traceback
+        error_detail = traceback.format_exc()
+        logger.error(f"Upload Audio Error: {e}\n{error_detail}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/campaigns/{campaign_id}/generate-enemy")
