@@ -17,7 +17,7 @@ const CONDITIONS = [
   "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious"
 ];
 
-const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, onUpdateStats, onUpdateEntity, onRoll }) => {
+const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, onUpdateStats, onUpdateEntity, onRoll, onAddToInitiative }) => {
   const activeConditions = entity.stats?.conditions || [];
   const [localNotes, setLocalNotes] = useState(entity.notes || "");
 

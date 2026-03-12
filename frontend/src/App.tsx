@@ -325,7 +325,7 @@ function VTTApp() {
           setSpinnerState({ options: data.options, resultIndex: data.resultIndex });
         }
         else if (data.type === "canvas_stream") { 
-          const myUser = activeUsers.find(u => u.id === clientId);
+          const myUser = data.users?.find((u: any) => u.id === clientId) || activeUsers.find(u => u.id === clientId);
           const myScene = myUser?.scene_id || "main";
           if (data.target_scene === myScene || isGM) {
             setStreamImage(data.image); 
