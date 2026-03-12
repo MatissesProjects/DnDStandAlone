@@ -408,7 +408,15 @@ function VTTApp() {
 
   return (
     <div className={`flex w-screen h-screen bg-gray-950 text-white font-sans overflow-hidden select-none transition-all duration-300 ${(vfxRoll?.isCrit || vfxRoll?.isFail) ? 'animate-big-shake' : vfxRoll ? 'animate-shake' : ''}`}>
-      {isDashboardOpen && <WorldDashboard campaignId={activeCampaign.id} onClose={() => setIsDashboardOpen(false)} onSetActive={(loc) => { setActiveLocation(loc); sendMessage(JSON.stringify({ type: "location_update", location: loc, senderId: clientId })); }} activeLocationId={activeLocation?.id} />}
+      {isDashboardOpen && <WorldDashboard campaignId={activeCampaign.id} onClose={() => setIsDashboardOpen(false)} currentTargetScene={targetScene} onSetActive={(loc, sid) => { 
+        if (sid === "global") {
+            setActiveLocation(loc); 
+            sendMessage(JSON.stringify({ type: "location_update", location: loc, global: true })); 
+        } else {
+            if (sid === targetScene) setActiveLocation(loc);
+            sendMessage(JSON.stringify({ type: "location_update", location: loc, scene_id: sid })); 
+        }
+      }} activeLocationId={activeLocation?.id} />}
       
       {spinnerData && (
         <FateSpinner 
