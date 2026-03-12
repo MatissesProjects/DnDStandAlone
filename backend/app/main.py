@@ -1,6 +1,9 @@
 import json
 import logging
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, Query
+import os
+import shutil
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, Query, File, UploadFile
+from fastapi.staticfiles import StaticFiles
 from typing import Optional, List, Any, Dict
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -24,6 +27,11 @@ except Exception as e:
     logger.error(f"Error connecting to database: {e}")
 
 app = FastAPI()
+
+# Mount the uploads directory to serve uploaded audio files
+if not os.path.exists("uploads"):
+    os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Explicit CORS Configuration
 origins = [
@@ -320,6 +328,30 @@ def delete_location(
     raise HTTPException(status_code=404, detail="Location not found")
 
 # AI Endpoints
+@app.post("/upload-audio")
+async def upload_audio(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can upload audio")
+    
+    try:
+        file_extension = os.path.splitext(file.filename)[1]
+        file_name = f"{uuid.uuid4().hex}{file_extension}"
+        file_path = os.path.join("uploads", "audio", file_name)
+        
+        # Ensure directory exists (redundant but safe)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        return {"url": f"/uploads/audio/{file_name}"}
+    except Exception as e:
+        logger.error(f"Upload Audio Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/campaigns/{campaign_id}/generate-enemy")
 async def generate_enemy(
     campaign_id: int,

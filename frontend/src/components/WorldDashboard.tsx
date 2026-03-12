@@ -31,6 +31,39 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
   const [selectedLocId, setSelectedLocId] = useState<number | null>(null);
 
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !token) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`${currentConfig.API_BASE}/upload-audio`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (editingLocation) {
+          setEditingLocation({ ...editingLocation, ambient_audio: data.url });
+        } else {
+          setNewLocAudio(data.url);
+        }
+      } else {
+        alert("Upload failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error uploading file");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // BRIDGE: Listen for capture results from the extension
   useEffect(() => {
@@ -225,7 +258,18 @@ const WorldDashboard: React.FC<WorldDashboardProps> = ({ campaignId, onClose, on
                       </div>
                     </div>
                     <input type="text" placeholder="Location Name" value={editingLocation ? editingLocation.name : newLocName} onChange={e => editingLocation ? setEditingLocation({...editingLocation, name: e.target.value}) : setNewLocName(e.target.value)} className="bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-indigo-500/50 shadow-inner" />
-                    <input type="text" placeholder="Ambient Audio URL (Direct link to .mp3/.wav)" value={editingLocation ? (editingLocation.ambient_audio || '') : newLocAudio} onChange={e => editingLocation ? setEditingLocation({...editingLocation, ambient_audio: e.target.value}) : setNewLocAudio(e.target.value)} className="bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-indigo-500/50 shadow-inner" />
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <input type="text" placeholder="Ambient Audio URL (Direct link to .mp3/.wav)" value={editingLocation ? (editingLocation.ambient_audio || '') : newLocAudio} onChange={e => editingLocation ? setEditingLocation({...editingLocation, ambient_audio: e.target.value}) : setNewLocAudio(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-indigo-500/50 shadow-inner" />
+                      </div>
+                      <div className="shrink-0 flex items-center">
+                        <label className={`cursor-pointer px-4 py-3 bg-gray-800 hover:bg-gray-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-gray-700 transition-all flex items-center gap-2 ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                          {isUploading ? 'Uploading...' : 'Browse PC'}
+                          <input type="file" className="hidden" accept="audio/*" onChange={handleAudioUpload} />
+                        </label>
+                      </div>
+                    </div>
                     <textarea placeholder="Atmospheric Description" value={editingLocation ? editingLocation.description : newLocDesc} onChange={e => editingLocation ? setEditingLocation({...editingLocation, description: e.target.value}) : setNewLocDesc(e.target.value)} className="bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-indigo-500/50 h-28 resize-none shadow-inner" />
                     <div className="flex gap-3"><button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-indigo-900/20 active:scale-95">{editingLocation ? 'Commit Changes' : 'Add to Manifest'}</button>{editingLocation && <button type="button" onClick={() => setEditingLocation(null)} className="px-8 bg-gray-800 hover:bg-gray-700 text-white font-black py-4 rounded-xl uppercase text-[10px] tracking-widest border border-gray-700 transition-all active:scale-95">Cancel</button>}</div>
                   </form>

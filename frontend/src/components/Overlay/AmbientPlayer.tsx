@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { currentConfig } from '../../config';
 
 interface AudioChannel {
   id: string;
@@ -17,6 +18,12 @@ const AmbientPlayer: React.FC<AmbientPlayerProps> = ({ channels, onUpdateVolume 
 
   const activeChannels = channels.filter(c => c.url);
 
+  const getFullUrl = (url: string | null) => {
+    if (!url) return "";
+    if (url.startsWith('http')) return url;
+    return `${currentConfig.API_BASE}${url}`;
+  };
+
   useEffect(() => {
     if (!hasInteracted) return;
 
@@ -24,8 +31,9 @@ const AmbientPlayer: React.FC<AmbientPlayerProps> = ({ channels, onUpdateVolume 
       const el = audioRefs.current[channel.id];
       if (el) {
         if (channel.url) {
-          if (el.src !== channel.url) {
-            el.src = channel.url;
+          const fullUrl = getFullUrl(channel.url);
+          if (el.src !== fullUrl) {
+            el.src = fullUrl;
             el.load();
           }
           el.volume = channel.volume;
