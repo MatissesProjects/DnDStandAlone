@@ -119,7 +119,8 @@ class ConnectionManager:
         try:
             msg_data = json.loads(message)
             is_subtle = msg_data.get("isSubtle") is True
-            target_scene = msg_data.get("scene_id")
+            # Check for BOTH target_scene (new) and scene_id (legacy/other)
+            target_scene = msg_data.get("target_scene") or msg_data.get("scene_id")
             
             # Store location updates in the scene state
             if msg_data.get("type") == "location_update":
