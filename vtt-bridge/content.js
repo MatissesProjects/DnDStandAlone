@@ -41,7 +41,6 @@ if (window.location.host.includes("excalidraw.com")) {
     return new Promise((resolve) => {
       const requestId = Math.random().toString(36).substring(7);
       
-      // Safety timeout: don't hang the stream if inject.js is slow
       const timeout = setTimeout(() => {
         window.removeEventListener("message", handler);
         resolve({ hitZones: [] });
@@ -64,16 +63,6 @@ if (window.location.host.includes("excalidraw.com")) {
     });
   }
 
-  // Listen for internal replies from inject.js and relay them to parent
-  window.addEventListener("message", (event) => {
-    if (event.data.type === "VTT_INTERNAL_SELECTED_REPLY") {
-        window.parent.postMessage({
-            type: "VTT_BRIDGE_SELECTED_RESULT",
-            elements: event.data.elements
-        }, "*");
-    }
-  });
-
   async function captureAndSend() {
     const canvases = Array.from(document.querySelectorAll("canvas"));
     let targetCanvas = canvases.find(c => c.classList.contains("static")) || 
@@ -81,8 +70,6 @@ if (window.location.host.includes("excalidraw.com")) {
     
     if (targetCanvas) {
       try {
-        // Higher quality 0.8 (up from 0.4) for better visibility
-        // Using image/jpeg as it is generally well-supported and efficient for this use case
         const dataUrl = targetCanvas.toDataURL("image/jpeg", 0.8);
         const metadata = await getMetadata();
 
@@ -101,6 +88,7 @@ if (window.location.host.includes("excalidraw.com")) {
   }
 
   window.addEventListener("message", (event) => {
+    // 1. Handle requests FROM the VTT Parent App
     if (event.data.type === "VTT_BRIDGE_MOVE") {
       window.postMessage({
         type: "VTT_INTERNAL_INJECTED_REQUEST",
@@ -126,12 +114,21 @@ if (window.location.host.includes("excalidraw.com")) {
             requestId
         }, "*");
     }
-  });
 
-  // Relay ALL VTT_BRIDGE results back to the VTT parent window
-  window.addEventListener("message", (event) => {
-      if (event.data && event.data.type && event.data.type.startsWith("VTT_BRIDGE_") && event.data.type.endsWith("_RESULT")) {
-          window.parent.postMessage(event.data, "*");
-      }
+    // 2. Handle internal replies FROM the Injected Script and relay to parent
+    if (event.data.type === "VTT_INTERNAL_SELECTED_REPLY") {
+        console.log("[VTT Bridge] Relaying selection result to parent app");
+        window.parent.postMessage({
+            type: "VTT_BRIDGE_SELECTED_RESULT",
+            elements: event.data.elements
+        }, "*");
+    }
+
+    // 3. Generic relay for messages already following the bridge protocol
+    if (event.data && event.data.type && event.data.type.startsWith("VTT_BRIDGE_") && event.data.type.endsWith("_RESULT")) {
+        if (event.data.type !== "VTT_BRIDGE_STREAM_RESULT") { // Stream result already sent manually above
+            window.parent.postMessage(event.data, "*");
+        }
+    }
   });
 }
