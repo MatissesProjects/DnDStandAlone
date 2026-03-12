@@ -324,10 +324,13 @@ function VTTApp() {
         else if (data.type === "location_update") {
           const myUser = data.users?.find((u: any) => u.id === clientId) || activeUsers.find(u => u.id === clientId);
           const myScene = myUser?.scene_id || "main";
-          // If message has scene_id, it must match. If global, it always matches.
           const targetSid = data.scene_id || data.target_scene;
           if (data.global || !targetSid || targetSid === myScene || isGM) {
             setActiveLocation(data.location);
+            // Sync Atmosphere channel automatically
+            setAudioChannels(prev => prev.map(c => 
+              c.id === 'Atmosphere' ? { ...c, url: data.location.ambient_audio || null } : c
+            ));
           }
         }
         else if (data.type === "entities_update") {
