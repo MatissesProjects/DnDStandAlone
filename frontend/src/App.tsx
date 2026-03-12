@@ -252,7 +252,8 @@ function VTTApp() {
           type: "canvas_stream", 
           image: event.data.image, 
           hitZones: event.data.hitZones,
-          timestamp: Date.now() 
+          timestamp: Date.now(),
+          scene_id: targetScene 
         }));
       }
       if (event.data.type === "VTT_BRIDGE_SELECTED_RESULT") {
@@ -595,6 +596,8 @@ function VTTApp() {
           onMoveToScene={(userId, sceneId) => sendMessage(JSON.stringify({ type: 'move_to_scene', target_id: userId, scene_id: sceneId }))}
           onAddToInitiative={handleAddToInitiative}
           onPromote={handlePromote}
+          targetScene={targetScene}
+          onSetTargetScene={setTargetScene}
           onToggleFog={async () => {
             if (!isGM || !activeLocation || !token) return;
             const newState = !activeLocation.is_fog_active;

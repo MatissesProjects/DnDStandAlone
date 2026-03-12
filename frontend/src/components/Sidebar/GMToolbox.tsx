@@ -48,6 +48,8 @@ interface GMToolboxProps {
   onAddToInitiative?: (name: string, isPlayer: boolean) => void;
   onToggleFog?: () => void;
   onPromote?: (key: string) => void;
+  targetScene: string;
+  onSetTargetScene: (scene: string) => void;
   showSpinner: boolean;
   onToggleSpinner: (val: boolean) => void;
   customForge?: any[];
@@ -355,6 +357,28 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                   )}
                 </div>
               )}
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-gray-800/50">
+              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Projection Command</h3>
+              <div className="bg-gray-900/80 p-4 rounded-2xl border border-indigo-500/20 shadow-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Active Target</span>
+                  <div className="flex gap-1">
+                    {['main', 'alpha', 'beta'].map(sid => (
+                      <button 
+                        key={sid}
+                        onClick={() => onSetTargetScene(sid)}
+                        className={`px-2 py-1 text-[7px] font-black uppercase rounded border transition-all ${targetScene === sid ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-950 border-gray-800 text-gray-600 hover:text-gray-400'}`}
+                      >
+                        {sid}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-px bg-gray-800 w-full"></div>
+                <p className="text-[7px] text-gray-500 italic leading-relaxed uppercase tracking-tighter">Only players in the Active Target scene will receive live map and music updates. Others will remain on their current view.</p>
+              </div>
             </div>
           </>
         ) : (
