@@ -62,13 +62,14 @@ class ConnectionManager:
             self.user_metadata[user_id].update(metadata)
             new_scene = self.user_metadata[user_id].get("scene_id")
             
-            # If they moved scenes, sync the new scene's location to them immediately
+            # 1. Inform everyone about the move first
+            await self.broadcast_user_list(room_id)
+            
+            # 2. Then sync the new location to the moved user
             if old_scene != new_scene:
                 scene_loc = self.scene_locations.get(room_id, {}).get(new_scene)
                 if scene_loc and user_id in self.active_connections:
                     await self.active_connections[user_id].send_text(json.dumps({"type": "location_update", "location": scene_loc}))
-            
-            await self.broadcast_user_list(room_id)
 
     def disconnect(self, user_id: str, room_id: str):
         if user_id in self.active_connections:

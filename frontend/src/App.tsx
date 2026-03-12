@@ -325,8 +325,12 @@ function VTTApp() {
           setSpinnerState({ options: data.options, resultIndex: data.resultIndex });
         }
         else if (data.type === "canvas_stream") { 
-          setStreamImage(data.image); 
-          if (data.hitZones) setHitZones(data.hitZones);
+          const myUser = activeUsers.find(u => u.id === clientId);
+          const myScene = myUser?.scene_id || "main";
+          if (data.target_scene === myScene || isGM) {
+            setStreamImage(data.image); 
+            if (data.hitZones) setHitZones(data.hitZones);
+          }
         }
         else if (data.type === "player_ping") {
           setPings(prev => {
