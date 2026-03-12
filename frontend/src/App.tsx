@@ -35,6 +35,7 @@ function VTTApp() {
       return saved ? JSON.parse(saved) : null;
     } catch (e) { return null; }
   });
+  const [locations, setLocations] = useState<Location[]>([]);
   const [activeLocation, setActiveLocation] = useState<Location | null>(() => {
     try {
       const saved = localStorage.getItem("vtt_active_location");
@@ -307,9 +308,28 @@ function VTTApp() {
     }
   }, [location.pathname, activeEntities, navigate]);
 
+  const fetchLocations = useCallback(async () => {
+    if (!activeCampaign || !token) return;
+    try {
+      const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/locations`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setLocations(data);
+        // Also auto-select the current one if not set
+        if (data.length > 0 && !activeLocation) {
+            setActiveLocation(data.find((l: any) => l.id === activeLocation?.id) || data[0]);
+        }
+      }
+    } catch (e) { console.error(e); }
+  }, [activeCampaign, token, activeLocation?.id]);
+
   useEffect(() => {
-    if (activeCampaign && token) { fetchHistory(); fetchHandouts(); fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/locations`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()).then(data => { if (Array.isArray(data) && data.length > 0) { const current = data.find((l: any) => l.id === activeLocation?.id) || data[0]; setActiveLocation(current); } }); }
-  }, [activeCampaign, token]);
+    if (activeCampaign && token) { 
+        fetchHistory(); 
+        fetchHandouts(); 
+        fetchLocations();
+    }
+  }, [activeCampaign, token]); // Remove fetchLocations from deps to avoid loop if using activeLocation
 
   useEffect(() => { if (activeLocation && token) fetchEntities(activeLocation.id); }, [activeLocation?.id, token, fetchEntities]);
 
