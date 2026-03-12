@@ -260,7 +260,7 @@ function VTTApp() {
           image: event.data.image, 
           hitZones: event.data.hitZones,
           timestamp: Date.now(),
-          target_scene: targetScene 
+          scene_id: targetScene // Consistently use scene_id
         }));
       }
       if (event.data.type === "VTT_BRIDGE_SELECTED_RESULT") {
