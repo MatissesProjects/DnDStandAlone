@@ -31,6 +31,45 @@
         });
       }
 
+      if (subType === "INSERT") {
+        const { elements } = payload;
+        const currentElements = api.getSceneElements();
+        const appState = api.getAppState();
+        
+        // Calculate center of current view
+        const centerX = -appState.scrollX + (window.innerWidth / 2) / (appState.zoom.value || 1);
+        const centerY = -appState.scrollY + (window.innerHeight / 2) / (appState.zoom.value || 1);
+
+        // Find the bounding box of new elements to center them
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        elements.forEach(el => {
+          minX = Math.min(minX, el.x);
+          minY = Math.min(minY, el.y);
+          maxX = Math.max(maxX, el.x + el.width);
+          maxY = Math.max(maxY, el.y + el.height);
+        });
+        const width = maxX - minX;
+        const height = maxY - minY;
+        const offsetX = centerX - (minX + width / 2);
+        const offsetY = centerY - (minY + height / 2);
+
+        const newElements = elements.map(el => ({
+          ...el,
+          id: `${el.id}_${Date.now()}`, // Simple ID suffix to avoid immediate collision
+          x: el.x + offsetX,
+          y: el.y + offsetY,
+          seed: Math.floor(Math.random() * 100000) // New seed for variety
+        }));
+
+        api.updateScene({
+          elements: [...currentElements, ...newElements],
+          appState: {
+            ...appState,
+            selectedElementIds: newElements.reduce((acc, el) => ({ ...acc, [el.id]: true }), {})
+          }
+        });
+      }
+
       if (subType === "GET_SELECTED") {
         const selectedElements = api.getSceneElements().filter(el => {
             const selection = api.getAppState().selectedElementIds;

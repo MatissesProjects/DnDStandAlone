@@ -422,6 +422,15 @@ function VTTApp() {
     }));
   }, [isGM, sendMessage]);
 
+  const handleInsertElements = useCallback((elements: any[]) => {
+    if (!isGM || !iframeRef.current?.contentWindow) return;
+    iframeRef.current.contentWindow.postMessage({
+      type: "VTT_INTERNAL_INJECTED_REQUEST",
+      subType: "INSERT",
+      payload: { elements }
+    }, "*");
+  }, [isGM]);
+
   const handleJoinInitiative = useCallback(() => {
     const initiative = Math.floor(Math.random() * 20) + 1;
     sendMessage(JSON.stringify({ 
@@ -792,6 +801,7 @@ function VTTApp() {
           }}
           onDeleteCustomToken={(id) => setCustomForge(prev => prev.filter(t => t.id !== id))}
           onRenameCustomToken={(id, name) => setCustomForge(prev => prev.map(t => t.id === id ? { ...t, name } : t))}
+          onInsertElements={handleInsertElements}
           />      )}
     </div>
   );

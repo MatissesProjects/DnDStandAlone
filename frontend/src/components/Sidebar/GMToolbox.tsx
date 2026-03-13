@@ -59,6 +59,7 @@ interface GMToolboxProps {
   onCaptureSelection?: () => void;
   onDeleteCustomToken?: (id: string) => void;
   onRenameCustomToken?: (id: string, name: string) => void;
+  onInsertElements?: (elements: any[]) => void;
 }
 
 const SHAPES = {
@@ -148,7 +149,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   activeEntities, onSelectEntity, 
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, playerInventory, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, setPlayerInventory, onUpdateProfile, onSummarize, isSummarizing,
-  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, onPromote, targetScene, onSetTargetScene, locations, showSpinner, onToggleSpinner, customForge, onCaptureSelection, onDeleteCustomToken, onRenameCustomToken
+  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, onPromote, targetScene, onSetTargetScene, locations, showSpinner, onToggleSpinner, customForge, onCaptureSelection, onDeleteCustomToken, onRenameCustomToken, onInsertElements
 }) => {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [whisperTarget, setWhisperTarget] = useState<string>('');
@@ -159,6 +160,12 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
       setCopyStatus(key);
       setTimeout(() => setCopyStatus(null), 2000);
     });
+  };
+
+  const insertShape = (key: keyof typeof SHAPES) => {
+    if (onInsertElements) {
+        onInsertElements(SHAPES[key].elements);
+    }
   };
 
   const copyRoomCode = () => {
@@ -198,8 +205,36 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => copyShape('TOKEN_NPC')} className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'TOKEN_NPC' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-red-500/50 hover:text-red-400'}`}> {copyStatus === 'TOKEN_NPC' ? 'Copied!' : 'NPC Token'} </button>
-                <button onClick={() => copyShape('TOKEN_PC')} className={`py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === 'TOKEN_PC' ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-blue-500/50 hover:text-blue-400'}`}> {copyStatus === 'TOKEN_PC' ? 'Copied!' : 'Player Token'} </button>
+                <div className="relative group">
+                    <button 
+                        onClick={() => insertShape('TOKEN_NPC')} 
+                        className={`w-full py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all bg-gray-900 border-gray-800 text-gray-400 hover:border-red-500/50 hover:text-red-400 active:scale-95`}
+                    >
+                        Summon NPC
+                    </button>
+                    <button 
+                        onClick={() => copyShape('TOKEN_NPC')}
+                        className="absolute -top-1 -right-1 bg-gray-800 hover:bg-indigo-600 p-1 rounded-md border border-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Copy to Clipboard"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+                <div className="relative group">
+                    <button 
+                        onClick={() => insertShape('TOKEN_PC')} 
+                        className={`w-full py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all bg-gray-900 border-gray-800 text-gray-400 hover:border-blue-500/50 hover:text-blue-400 active:scale-95`}
+                    >
+                        Summon PC
+                    </button>
+                    <button 
+                        onClick={() => copyShape('TOKEN_PC')}
+                        className="absolute -top-1 -right-1 bg-gray-800 hover:bg-indigo-600 p-1 rounded-md border border-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Copy to Clipboard"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
               </div>
 
               {customForge && customForge.length > 0 && (
@@ -209,15 +244,22 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                     {customForge.map(token => (
                       <div key={token.id} className="flex gap-1 group/token items-center">
                         <button 
+                          onClick={() => onInsertElements?.(token.data.elements)}
+                          className={`flex-1 text-left px-3 py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all truncate bg-gray-900/40 border-gray-800 text-gray-400 hover:border-indigo-500/50 hover:text-indigo-300 active:scale-95`}
+                        >
+                          Summon {token.name}
+                        </button>
+                        <button 
                           onClick={() => {
                             navigator.clipboard.writeText(JSON.stringify(token.data)).then(() => {
                               setCopyStatus(token.id);
                               setTimeout(() => setCopyStatus(null), 2000);
                             });
                           }}
-                          className={`flex-1 text-left px-3 py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all truncate ${copyStatus === token.id ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-900/40 border-gray-800 text-gray-400 hover:border-indigo-500/50 hover:text-indigo-300'}`}
+                          className={`p-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all ${copyStatus === token.id ? 'bg-green-600 border-green-400 text-white' : 'bg-gray-950 border-gray-800 text-gray-600 hover:text-white'}`}
+                          title="Copy JSON"
                         >
-                          {copyStatus === token.id ? 'Ready to Paste!' : token.name}
+                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         </button>
                         <button 
                           onClick={() => {
