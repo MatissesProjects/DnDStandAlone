@@ -446,12 +446,28 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
     print(f"[WS] Connection attempt: {client_id} (Role: {role}, Room: {room_id}, Scene: {scene_id}) from {websocket.client.host}")
     await manager.connect(websocket, client_id, room_id, role, username, scene_id=scene_id)
     print(f"[WS] Connection established: {client_id}")
+    
+    # Heartbeat task to keep connection alive
+    async def heartbeat():
+        try:
+            while True:
+                await asyncio.sleep(30)
+                await websocket.send_text(json.dumps({"type": "ping", "timestamp": Date.now()}))
+        except:
+            pass
+
+    import asyncio
+    heartbeat_task = asyncio.create_task(heartbeat())
+
     try:
         while True:
             data = await websocket.receive_text()
             try:
                 message_json = json.loads(data)
                 
+                if message_json.get("type") == "pong":
+                    continue
+
                 # Update user metadata in real-time
                 if message_json.get("type") == "user_update":
                     await manager.update_user_metadata(client_id, room_id, {
@@ -488,6 +504,8 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
                     
                     await manager.broadcast(json.dumps(message_json), room_id, sender_id=client_id)
                     continue
+
+                if message_json.get("type") == "move_to_scene" and role == "gm":
                     target_id = message_json.get("target_id")
                     new_scene = message_json.get("scene_id")
                     if target_id and new_scene:
@@ -527,6 +545,8 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
     except WebSocketDisconnect:
         print(f"[WS] Connection lost abnormally or closed: {client_id}")
         manager.disconnect(client_id, room_id)
+    finally:
+        heartbeat_task.cancel()
 
 if __name__ == "__main__":
     import uvicorn
