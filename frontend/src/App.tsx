@@ -452,6 +452,26 @@ function VTTApp() {
     }));
   }, [clientId, user, sendMessage]);
 
+  const handleClaimLoot = useCallback(async (id: number, content: string) => {
+    if (isGM || !token) return;
+    const newInventory = playerInventory ? `${playerInventory}, ${content}` : content;
+    setPlayerInventory(newInventory);
+    try {
+      const res = await fetch(`${currentConfig.API_BASE}/users/me`, { 
+        method: 'PATCH', 
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ inventory: newInventory }) 
+      });
+      if (res.ok) {
+        await fetch(`${currentConfig.API_BASE}/handouts/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+        sendMessage(JSON.stringify({ type: "handouts_update" }));
+        sendMessage(JSON.stringify({ type: "user_update", inventory: newInventory }));
+        fetchHandouts();
+        alert(`Looted: ${content}`);
+      }
+    } catch (e) { console.error(e); }
+  }, [isGM, token, playerInventory, sendMessage, fetchHandouts]);
+
   const handlePromote = useCallback(async (key: string) => {
     if (!token) return;
     try {

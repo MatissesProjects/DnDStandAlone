@@ -6,9 +6,10 @@ interface HandoutItemProps {
   isGM: boolean;
   onDelete: (id: number) => void;
   onMove: (id: number, x: number, y: number) => void;
+  onClaim?: (id: number, content: string) => void;
 }
 
-const HandoutItem: React.FC<HandoutItemProps> = ({ handout, isGM, onDelete, onMove }) => {
+const HandoutItem: React.FC<HandoutItemProps> = ({ handout, isGM, onDelete, onMove, onClaim }) => {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: handout.x, y: handout.y });
@@ -87,7 +88,18 @@ const HandoutItem: React.FC<HandoutItemProps> = ({ handout, isGM, onDelete, onMo
       {handout.type === 'image' ? (
         <img src={handout.content} alt={handout.title} className="w-full rounded-lg border border-white/5" />
       ) : (
-        <p className="text-xs text-gray-200 leading-relaxed italic opacity-90">{handout.content}</p>
+        <div className="space-y-3">
+            <p className="text-xs text-gray-200 leading-relaxed italic opacity-90">{handout.content}</p>
+            {!isGM && onClaim && (
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onClaim(handout.id, handout.content); }}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-2 rounded-xl uppercase text-[8px] tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    Claim Loot
+                </button>
+            )}
+        </div>
       )}
     </div>
   );
