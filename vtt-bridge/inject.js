@@ -47,18 +47,13 @@
     if (findAPI()) {
       clearInterval(pollInterval);
     }
-  }, 500);
+  }, 1000);
 
   const handleMessage = (event) => {
-    console.log(`[VTT Injected] Incoming message: ${event.data.type}`);
-    if (!api) {
-        console.warn("[VTT Injected] API not ready, ignoring message.");
-        return;
-    }
+    if (!api) return;
     
     if (event.data.type === "VTT_INTERNAL_INJECTED_REQUEST") {
       const { subType, payload, requestId } = event.data;
-      console.log(`[VTT Injected] Internal Request: ${subType}`, payload);
       
       if (subType === "MOVE") {
         api.updateScene({

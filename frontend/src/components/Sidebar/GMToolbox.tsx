@@ -200,12 +200,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
             <div className="space-y-4 pt-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Quick Forge</h3>
-                <button 
-                  onClick={onCaptureSelection}
-                  className="text-[8px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-full font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
-                >
-                  Capture Selection
-                </button>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="relative group">

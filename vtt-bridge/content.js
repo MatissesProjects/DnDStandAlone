@@ -89,12 +89,9 @@ if (window.location.host.includes("excalidraw.com")) {
 
   window.addEventListener("message", (event) => {
     const isFromParent = event.source === window.parent;
-    const isFromSameWindow = event.source === window;
 
     // 1. Handle requests FROM the VTT Parent App
     if (isFromParent) {
-        console.log(`[VTT Bridge] Received from Parent: ${event.data.type}`);
-        
         if (event.data.type === "VTT_INTERNAL_INJECTED_REQUEST") {
             window.postMessage(event.data, "*");
             return;
@@ -111,7 +108,6 @@ if (window.location.host.includes("excalidraw.com")) {
 
         if (event.data.type === "VTT_BRIDGE_STREAM_REQUEST") {
             if (!isStreamingActive) {
-                console.log("[VTT Bridge] Activating Stream Loop");
                 isStreamingActive = true;
                 setInterval(captureAndSend, 1000); 
             }
