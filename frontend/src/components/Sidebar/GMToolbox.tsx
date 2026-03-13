@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import type { UserPresence, MoveProposal, EnemyData, Location, Entity } from '../../types/vtt';
-
 interface GMToolboxProps {
   isGM: boolean;
   user: any;
@@ -12,9 +11,12 @@ interface GMToolboxProps {
   onToggleRecording: () => void;
   activeUsers: UserPresence[];
   onRequestRoll: (targetId: string, die: string, label: string) => void;
+  onWhisper?: (targetId: string, msg: string) => void;
   onGenerateEnemy: () => void;
   onGenerateLore: () => void;
   onGenerateLoot?: () => void;
+// ... rest of props
+
   isGenerating: boolean;
   generatedEnemy: EnemyData | null;
   generatedLore: string | null;
@@ -140,7 +142,7 @@ const SHAPES = {
 
 const GMToolbox: React.FC<GMToolboxProps> = ({
   isGM, user, isAuthenticated, pendingProposals, onApproveProposal, onRejectProposal,
-  isRecording, onToggleRecording, activeUsers, onRequestRoll, onGenerateEnemy, onGenerateLore, onGenerateLoot,
+  isRecording, onToggleRecording, activeUsers, onRequestRoll, onWhisper, onGenerateEnemy, onGenerateLore, onGenerateLoot,
   isGenerating, generatedEnemy, generatedLore, generatedLoot, onManifestEntity, onManifestLore, onManifestLoot,
   onDismissEnemy, onDismissLore, onDismissLoot, onUpdateGeneratedEnemy, onUpdateGeneratedLore,
   activeEntities, onSelectEntity, 
@@ -149,6 +151,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, onPromote, targetScene, onSetTargetScene, locations, showSpinner, onToggleSpinner, customForge, onCaptureSelection, onDeleteCustomToken, onRenameCustomToken
 }) => {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [whisperTarget, setWhisperTarget] = useState<string>('');
 
   const copyShape = (key: keyof typeof SHAPES) => {
     const json = JSON.stringify(SHAPES[key]);
@@ -326,6 +329,30 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                         onChange={(e) => onUpdateGeneratedLore?.(e.target.value)} 
                         className="w-full bg-gray-950 border border-indigo-500/20 rounded-xl p-3 text-xs text-gray-200 leading-relaxed italic focus:outline-none focus:border-indigo-500/50 resize-none h-32" 
                       />
+                      <div className="flex gap-1">
+                        <select 
+                          value={whisperTarget} 
+                          onChange={e => setWhisperTarget(e.target.value)}
+                          className="flex-1 bg-gray-950 border border-gray-800 rounded-lg px-2 py-1 text-[8px] font-black uppercase text-gray-400 focus:outline-none focus:border-indigo-500/50"
+                        >
+                          <option value="">Whisper Target...</option>
+                          {activeUsers.filter(u => u.id !== clientId).map(u => (
+                            <option key={u.id} value={u.id}>{u.username}</option>
+                          ))}
+                        </select>
+                        <button 
+                          onClick={() => {
+                            if (whisperTarget && generatedLore && onWhisper) {
+                              onWhisper(whisperTarget, generatedLore);
+                              setWhisperTarget('');
+                            }
+                          }}
+                          disabled={!whisperTarget || !generatedLore}
+                          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 px-3 py-1 rounded-lg transition-all text-[8px] font-black uppercase"
+                        >
+                          Send
+                        </button>
+                      </div>
                     </div>
                   )}
                   {generatedLoot && (

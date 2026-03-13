@@ -563,6 +563,10 @@ function VTTApp() {
         isSubtleMode={isSubtleMode} 
         setIsSubtleMode={setIsSubtleMode} 
         onConsumeHistory={handleConsumeHistory} 
+        onDraftResponse={(c) => {
+            setGeneratedLore(c);
+            setRightSidebarOpen(true);
+        }}
         activeUsers={activeUsers} 
         currentScene={activeUsers.find(u => u.id === clientId)?.scene_id || "main"}
         onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))} 
@@ -638,6 +642,7 @@ function VTTApp() {
           isGM={isGM} user={user} isAuthenticated={isAuthenticated} pendingProposals={[]} onApproveProposal={()=>{}} onRejectProposal={()=>{}}
           isRecording={false} onToggleRecording={()=>{}}
           activeUsers={activeUsers} onRequestRoll={(targetId, die, lbl) => sendMessage(JSON.stringify({ type: "request_roll", target_id: targetId, die, label: lbl }))}
+          onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))}
           onGenerateEnemy={async () => { 
             if (!token || !activeCampaign) return; 
             

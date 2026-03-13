@@ -12,6 +12,7 @@ interface ChronicleSidebarProps {
   isSubtleMode: boolean;
   setIsSubtleMode: (val: boolean) => void;
   onConsumeHistory: (id: string) => void;
+  onDraftResponse?: (content: string) => void;
   activeUsers: UserPresence[];
   onWhisper: (targetId: string, msg: string) => void;
   currentScene?: string;
@@ -27,6 +28,7 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
   isSubtleMode,
   setIsSubtleMode,
   onConsumeHistory,
+  onDraftResponse,
   activeUsers,
   onWhisper,
   currentScene = "main"
@@ -74,34 +76,49 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
               <p className="text-[9px] text-gray-700 font-black uppercase tracking-widest">Awaiting Fate</p>
             </div>
           ) : (
-            history.map(item => (
-              <div key={item.id} className={`p-2.5 rounded-xl border transition-all relative group ${item.type === 'story' ? 'bg-gray-900/60 border-indigo-900/20' : (item.isSubtle ? 'bg-purple-950/20 border-purple-500/40 shadow-[inset_0_0_15px_rgba(168,85,247,0.05)]' : 'bg-gray-900/30 border-gray-800/50')} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
-                <div className="flex justify-between items-center mb-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`text-[8px] font-black uppercase tracking-widest ${item.type === 'story' ? 'text-indigo-500' : (item.isSubtle ? 'text-purple-400' : 'text-blue-600')}`}>
-                      {item.isSubtle ? (item.content.includes('Whisper') ? 'WHISPER' : 'HIDDEN ROLL') : item.type.toUpperCase()}
-                    </span>
-                    {item.isSubtle && (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    )}
+            history.map(item => {
+              const isWhisper = item.content.includes('Whisper');
+              return (
+                <div key={item.id} className={`p-2.5 rounded-xl border transition-all relative group ${item.type === 'story' ? 'bg-gray-900/60 border-indigo-900/20' : (item.isSubtle ? 'bg-purple-950/20 border-purple-500/40 shadow-[inset_0_0_15px_rgba(168,85,247,0.05)]' : 'bg-gray-900/30 border-gray-800/50')} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
+                  <div className="flex justify-between items-center mb-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[8px] font-black uppercase tracking-widest ${item.type === 'story' ? 'text-indigo-500' : (item.isSubtle ? 'text-purple-400' : 'text-blue-600')}`}>
+                        {item.isSubtle ? (isWhisper ? 'WHISPER' : 'HIDDEN ROLL') : item.type.toUpperCase()}
+                      </span>
+                      {item.isSubtle && (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[7px] font-mono text-gray-700 font-bold">{item.timestamp}</span>
+                      
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {isGM && isWhisper && onDraftResponse && (
+                            <button 
+                                onClick={() => onDraftResponse(item.content)}
+                                className="p-0.5 hover:bg-white/5 rounded text-indigo-400 hover:text-indigo-300"
+                                title="AI Draft Response"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            </button>
+                        )}
+                        <button 
+                            onClick={() => onConsumeHistory(item.id)}
+                            className="p-0.5 hover:bg-white/5 rounded text-gray-600 hover:text-green-500"
+                            title="Consume"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[7px] font-mono text-gray-700 font-bold">{item.timestamp}</span>
-                    <button 
-                      onClick={() => onConsumeHistory(item.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-white/5 rounded text-gray-600 hover:text-green-500"
-                      title="Consume"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </button>
-                  </div>
+                  <p className={`text-gray-200 leading-snug ${item.type === 'roll' ? 'text-sm font-black' : 'text-[11px] italic leading-relaxed'}`}>
+                    {item.content}
+                  </p>
+                  <div className="text-[7px] text-gray-600 mt-1 font-black uppercase tracking-tighter truncate opacity-60 italic">{item.user}</div>
                 </div>
-                <p className={`text-gray-200 leading-snug ${item.type === 'roll' ? 'text-sm font-black' : 'text-[11px] italic leading-relaxed'}`}>
-                  {item.content}
-                </p>
-                <div className="text-[7px] text-gray-600 mt-1 font-black uppercase tracking-tighter truncate opacity-60 italic">{item.user}</div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
