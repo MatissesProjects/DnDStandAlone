@@ -190,7 +190,17 @@ async def summarize_campaign(
     current_user: models.User = Depends(auth.get_current_user)
 ):
     history = crud.get_history(db, campaign_id, limit=limit)
-    summary = await ai_service.summarize_session(history)
+    locations = crud.get_locations(db, campaign_id)
+    
+    # Get all entities across all locations in this campaign
+    entities = []
+    for loc in locations:
+        entities.extend(crud.get_entities(db, loc.id))
+    
+    # Get all players who have participated (roughly, anyone who isn't the GM)
+    players = db.query(models.User).filter(models.User.role == "player").all()
+    
+    summary = await ai_service.summarize_session(history, locations, entities, players)
     return {"summary": summary}
 
 # Handout Endpoints

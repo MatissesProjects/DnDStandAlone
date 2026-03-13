@@ -88,6 +88,27 @@ function VTTApp() {
   }, [vfxTrigger]);
   const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
+
+  const handleArchiveSummary = async () => {
+    if (!campaignSummary || !activeCampaign || !token) return;
+    try {
+      const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/history`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            event_type: 'lore_update', 
+            content: `SESSION RECAP: ${campaignSummary}`, 
+            campaign_id: activeCampaign.id,
+            is_private: false
+        })
+      });
+      if (res.ok) {
+        setCampaignSummary(null);
+        fetchHistory();
+        sendMessage(JSON.stringify({ type: "history_updated" }));
+      }
+    } catch (e) { console.error(e); }
+  };
   const [showSpinner, setShowSpinner] = useState(false);
   const [targetScene, setTargetScene] = useState<string>("main"); // For GM projection
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -503,6 +524,47 @@ function VTTApp() {
           resultIndex={spinnerData.resultIndex} 
           onFinished={() => setSpinnerState(null)} 
         />
+      )}
+
+      {campaignSummary && (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-500">
+          <div className="bg-gray-900 border border-indigo-500/30 w-full max-w-2xl rounded-[3rem] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden relative">
+            <div className="p-10 border-b border-gray-800 bg-indigo-900/10 flex justify-between items-center">
+                <div>
+                    <h2 className="text-3xl font-black tracking-tighter uppercase italic text-gray-100">The Bard's Recap</h2>
+                    <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.3em] mt-1">Chronicle of the Infinite</p>
+                </div>
+                <button onClick={() => setCampaignSummary(null)} className="p-3 hover:bg-white/5 rounded-full transition-colors text-gray-500 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div className="p-10 overflow-y-auto custom-scrollbar flex-1 bg-gray-950/50">
+                <div className="prose prose-invert max-w-none">
+                    {campaignSummary.split('\n').map((para, i) => (
+                        <p key={i} className="text-gray-300 leading-relaxed italic text-lg mb-6 last:mb-0 first-letter:text-4xl first-letter:font-black first-letter:text-indigo-500 first-letter:mr-1 first-letter:float-left">
+                            {para}
+                        </p>
+                    ))}
+                </div>
+            </div>
+            <div className="p-10 bg-gray-900/80 border-t border-gray-800 flex gap-4">
+                {isGM && (
+                    <button 
+                        onClick={handleArchiveSummary}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl uppercase text-xs tracking-widest shadow-xl shadow-indigo-900/20 transition-all active:scale-95"
+                    >
+                        Archive to Chronicle
+                    </button>
+                )}
+                <button 
+                    onClick={() => setCampaignSummary(null)}
+                    className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-black py-4 rounded-2xl uppercase text-xs tracking-widest transition-all active:scale-95 border border-gray-700"
+                >
+                    Dismiss Recap
+                </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {selectedEntity && (

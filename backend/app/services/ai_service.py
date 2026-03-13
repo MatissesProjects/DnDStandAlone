@@ -151,21 +151,35 @@ class GeminiService:
             return response['message']['content'].strip()
         except Exception as e: return "You find nothing but dust and echoes."
 
-    async def summarize_session(self, history: List[models.HistoryLog]) -> str:
+    async def summarize_session(self, history: List[models.HistoryLog], locations: List[models.Location], entities: List[models.Entity], players: List[models.User]) -> str:
         if not history:
             return "No chronicle entries found to summarize."
             
         logs = "\n".join([f"[{log.event_type}] {log.content}" for log in reversed(history)])
+        
+        loc_str = "\n".join([f"- {l.name}: {l.description}" for l in locations])
+        ent_str = "\n".join([f"- {e.name}: {e.backstory}" for e in entities])
+        plr_str = "\n".join([f"- {p.username} ({p.class_name}, Lvl {p.level})" for p in players])
+
         prompt = f"""
         You are a bard recounting the epic tales of a D&D session. 
-        Based on the following chronicle logs (narration and events), provide a concise, 
-        immersive summary of what happened for a player who missed the session.
+        Based on the following context, provide a concise, immersive summary of the current state of the world and recent events.
         
-        Focus on key narrative points, major victories, and mysterious omens.
-        Keep it under 5 paragraphs and maintain a high-fantasy tone.
+        ACTIVE LOCATIONS:
+        {loc_str}
         
-        Chronicle Logs:
+        MANIFESTED ENTITIES (NPCs/Enemies):
+        {ent_str}
+        
+        THE ADVENTURERS:
+        {plr_str}
+
+        CHRONICLE LOGS (Recent Events):
         {logs}
+
+        Focus on key narrative points, major victories, and mysterious omens.
+        Integrate the locations and NPCs naturally into the retelling.
+        Keep it under 5 paragraphs and maintain a high-fantasy tone.
         """
         
         if self.client:
