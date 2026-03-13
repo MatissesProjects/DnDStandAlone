@@ -546,14 +546,20 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
                     <p className="text-xs font-black truncate text-gray-100 uppercase">{ent.name}</p>
-                    <div className="flex items-center gap-2"><span className="text-[10px] font-black text-red-500">{ent.stats?.hp || 0} HP</span></div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-black text-blue-400">AC {ent.stats?.ac || '?'}</span>
+                        <span className="text-[9px] font-black text-red-500">{ent.stats?.hp || 0} HP</span>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {(ent.stats?.conditions || []).map((c: string) => (
-                      <span key={c} className="text-[7px] bg-red-900/40 text-red-400 px-1.5 py-0.5 rounded-full border border-red-500/20 font-black uppercase tracking-tighter">{c}</span>
-                    ))}
+                    {/* Compact Ability Scores */}
+                    <div className="flex gap-1.5 opacity-60">
+                        {['str', 'dex', 'con'].map(s => (
+                            <span key={s} className="text-[7px] font-bold text-gray-400 uppercase">{s.substring(0,1)}:{ent.stats?.[s] || 10}</span>
+                        ))}
+                    </div>
                     {(!ent.stats?.conditions || ent.stats.conditions.length === 0) && (
-                      <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate italic">Manifested NPC</p>
+                      <p className="text-[8px] text-gray-500 font-bold uppercase tracking-tighter truncate italic ml-auto">NPC Active</p>
                     )}
                   </div>
                 </div>

@@ -20,10 +20,17 @@ const CONDITIONS = [
 const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, onUpdateStats, onUpdateEntity, onRoll, onAddToInitiative }) => {
   const activeConditions = entity.stats?.conditions || [];
   const [localNotes, setLocalNotes] = useState(entity.notes || "");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(entity.name);
+  const [editedBackstory, setEditedBackstory] = useState(entity.backstory);
+  const [editedStats, setEditedStats] = useState(entity.stats || {});
 
   useEffect(() => {
     setLocalNotes(entity.notes || "");
-  }, [entity.notes]);
+    setEditedName(entity.name);
+    setEditedBackstory(entity.backstory);
+    setEditedStats(entity.stats || {});
+  }, [entity]);
 
   const toggleCondition = (condition: string) => {
     if (!isGM) return;
@@ -40,12 +47,45 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
     }
   };
 
+  const handleSaveEntity = () => {
+    if (!isGM || !onUpdateEntity) return;
+    onUpdateEntity(entity.id, { 
+        name: editedName, 
+        backstory: editedBackstory,
+        stats: editedStats 
+    });
+    setIsEditing(false);
+  };
+
+  const addAction = () => {
+    const actionName = window.prompt("Action Name:");
+    if (actionName) {
+        const currentActions = editedStats.actions || [];
+        setEditedStats({ ...editedStats, actions: [...currentActions, actionName] });
+    }
+  };
+
+  const removeAction = (idx: number) => {
+    const currentActions = [...(editedStats.actions || [])];
+    currentActions.splice(idx, 1);
+    setEditedStats({ ...editedStats, actions: currentActions });
+  };
+
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="bg-gray-900 border border-indigo-500/30 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="relative h-32 bg-indigo-900/20 flex flex-none items-end p-8 border-b border-gray-800">
-          <div className="absolute top-6 right-8">
+          <div className="absolute top-6 right-8 flex gap-2">
+            {isGM && (
+                <button 
+                    onClick={() => setIsEditing(!isEditing)} 
+                    className={`transition-colors p-2 rounded-full ${isEditing ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                    title={isEditing ? "View Mode" : "Edit Mode"}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+            )}
             <button 
               onClick={onClose} 
               className="text-gray-500 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full"
@@ -55,8 +95,17 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
           </div>
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-2xl font-black shadow-xl border border-indigo-400/20">{entity.name.substring(0, 2).toUpperCase()}</div>
-            <div>
-              <h3 className="text-2xl font-black tracking-tighter uppercase text-gray-100">{entity.name}</h3>
+            <div className="flex-1 min-w-0">
+              {isEditing ? (
+                <input 
+                    type="text" 
+                    value={editedName} 
+                    onChange={e => setEditedName(e.target.value)}
+                    className="bg-gray-950 border border-indigo-500/30 rounded-lg px-3 py-1 text-xl font-black uppercase text-white w-full focus:outline-none focus:border-indigo-500"
+                />
+              ) : (
+                <h3 className="text-2xl font-black tracking-tighter uppercase text-gray-100 truncate">{entity.name}</h3>
+              )}
               <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Manifested Presence</p>
             </div>
           </div>
@@ -64,114 +113,196 @@ const NPCDetailCard: React.FC<NPCDetailCardProps> = ({ entity, isGM, onClose, on
 
         {/* Content */}
         <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
-          {/* Conditions Section */}
-          <div className="space-y-3">
-            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Status Conditions</h4>
-            <div className="flex flex-wrap gap-1.5">
-              {CONDITIONS.map(condition => (
-                <button
-                  key={condition}
-                  onClick={() => toggleCondition(condition)}
-                  disabled={!isGM}
-                  className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all border ${
-                    activeConditions.includes(condition)
-                      ? 'bg-red-600 border-red-400 text-white shadow-lg shadow-red-900/20'
-                      : 'bg-gray-950 border-gray-800 text-gray-600 hover:border-gray-600'
-                  }`}
+          {isEditing ? (
+            <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Stat Grid Editing */}
+                <div className="grid grid-cols-3 gap-2">
+                    {['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'].map(s => (
+                        <div key={s} className="bg-gray-950 p-2 rounded-xl border border-gray-800 text-center">
+                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-tighter mb-0.5">{s}</p>
+                            <input 
+                                type="number" 
+                                value={editedStats[s.toLowerCase()] || 10} 
+                                onChange={e => setEditedStats({ ...editedStats, [s.toLowerCase()]: parseInt(e.target.value) || 0 })}
+                                className="w-full bg-transparent text-center text-xs font-black text-white focus:outline-none" 
+                            />
+                        </div>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-950 p-3 rounded-2xl border border-gray-800">
+                        <p className="text-[8px] font-black text-red-500 uppercase mb-1">HP</p>
+                        <input 
+                            type="number" 
+                            value={editedStats.hp || 0} 
+                            onChange={e => setEditedStats({ ...editedStats, hp: parseInt(e.target.value) || 0 })}
+                            className="w-full bg-transparent text-xl font-black text-white focus:outline-none" 
+                        />
+                    </div>
+                    <div className="bg-gray-950 p-3 rounded-2xl border border-gray-800">
+                        <p className="text-[8px] font-black text-blue-400 uppercase mb-1">AC</p>
+                        <input 
+                            type="number" 
+                            value={editedStats.ac || 0} 
+                            onChange={e => setEditedStats({ ...editedStats, ac: parseInt(e.target.value) || 0 })}
+                            className="w-full bg-transparent text-xl font-black text-white focus:outline-none" 
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center border-b border-gray-800 pb-2">
+                        <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Actions</h4>
+                        <button onClick={addAction} className="text-[8px] bg-indigo-600 hover:bg-indigo-500 px-2 py-1 rounded-full font-black uppercase text-white">+ Add</button>
+                    </div>
+                    <div className="space-y-2">
+                        {(editedStats.actions || []).map((act: string, idx: number) => (
+                            <div key={idx} className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={act} 
+                                    onChange={e => {
+                                        const newActs = [...editedStats.actions];
+                                        newActs[idx] = e.target.value;
+                                        setEditedStats({ ...editedStats, actions: newActs });
+                                    }}
+                                    className="flex-1 bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none"
+                                />
+                                <button onClick={() => removeAction(idx)} className="text-red-500 hover:text-red-400 p-2 bg-gray-950 border border-gray-800 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Narrative Backstory</h4>
+                    <textarea 
+                        value={editedBackstory} 
+                        onChange={e => setEditedBackstory(e.target.value)}
+                        className="w-full bg-gray-950 border border-gray-800 rounded-2xl p-4 text-xs text-gray-300 focus:outline-none focus:border-indigo-500/50 min-h-[100px] shadow-inner leading-relaxed"
+                    />
+                </div>
+
+                <button 
+                    onClick={handleSaveEntity}
+                    className="w-full bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-2xl uppercase text-xs tracking-widest shadow-xl transition-all active:scale-95 border border-green-400/20"
                 >
-                  {condition}
+                    Save Changes
                 </button>
-              ))}
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Conditions Section */}
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Status Conditions</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {CONDITIONS.map(condition => (
+                    <button
+                      key={condition}
+                      onClick={() => toggleCondition(condition)}
+                      disabled={!isGM}
+                      className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all border ${
+                        activeConditions.includes(condition)
+                          ? 'bg-red-600 border-red-400 text-white shadow-lg shadow-red-900/20'
+                          : 'bg-gray-950 border-gray-800 text-gray-600 hover:border-gray-600'
+                      }`}
+                    >
+                      {condition}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <div className="grid grid-cols-3 gap-2">
-            {Object.entries(entity.stats || {}).filter(([k]) => k.length === 3).map(([key, val]) => (
-              <button key={key} onClick={() => onRoll(entity.name, key.toUpperCase(), Math.floor(((val as number) - 10) / 2))} className="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center shadow-inner hover:border-indigo-500/50 hover:bg-indigo-900/10 transition-all active:scale-95 group">
-                <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1 group-hover:text-indigo-400">{key}</p>
-                <p className="text-lg font-black text-white leading-none">{val as number}</p>
-                <p className="text-[8px] text-gray-500 font-bold mt-1">({Math.floor(((val as number) - 10) / 2) >= 0 ? '+' : ''}{Math.floor(((val as number) - 10) / 2)})</p>
-              </button>
-            ))}
-          </div>
-
-          {entity.stats?.actions && entity.stats.actions.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Combat Maneuvers</h4>
-              <div className="grid grid-cols-1 gap-2">
-                {entity.stats.actions.map((action: string, i: number) => (
-                  <button key={i} onClick={() => onRoll(entity.name, action, 0)} className="w-full text-left bg-gray-950 p-3 rounded-xl border border-gray-800 hover:border-blue-500/50 hover:bg-blue-900/10 transition-all flex justify-between items-center group">
-                    <span className="text-xs font-bold text-gray-300 group-hover:text-blue-400">{action}</span>
-                    <span className="text-[10px] bg-gray-900 px-2 py-0.5 rounded border border-gray-800 font-black">ROLL</span>
+              <div className="grid grid-cols-3 gap-2">
+                {Object.entries(entity.stats || {}).filter(([k]) => ['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(k)).map(([key, val]) => (
+                  <button key={key} onClick={() => onRoll(entity.name, key.toUpperCase(), Math.floor(((val as number) - 10) / 2))} className="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center shadow-inner hover:border-indigo-500/50 hover:bg-indigo-900/10 transition-all active:scale-95 group">
+                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1 group-hover:text-indigo-400">{key}</p>
+                    <p className="text-lg font-black text-white leading-none">{val as number}</p>
+                    <p className="text-[8px] text-gray-500 font-bold mt-1">({Math.floor(((val as number) - 10) / 2) >= 0 ? '+' : ''}{Math.floor(((val as number) - 10) / 2)})</p>
                   </button>
                 ))}
               </div>
-            </div>
-          )}
 
-          {/* Narrative / Backstory Section */}
-          <div className="space-y-2">
-            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Narrative Essence</h4>
-            <p className="text-sm text-gray-300 leading-relaxed italic opacity-90">"{entity.backstory}"</p>
-          </div>
-
-          {/* GM Notes Section */}
-          {(isGM || entity.notes) && (
-            <div className="space-y-3">
-              <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest border-b border-indigo-900/30 pb-2 flex justify-between items-center">
-                <span>Chronicler's Notes</span>
-                {isGM && <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest">Only you can see this</span>}
-              </h4>
-              {isGM ? (
-                <textarea
-                  value={localNotes}
-                  onChange={e => setLocalNotes(e.target.value)}
-                  onBlur={handleNotesBlur}
-                  placeholder="Secret tactical notes, hidden motives, or loot details..."
-                  className="w-full bg-gray-950 border border-gray-800 rounded-2xl p-4 text-xs text-gray-300 focus:outline-none focus:border-indigo-500/50 min-h-[100px] shadow-inner leading-relaxed transition-all"
-                />
-              ) : (
-                <p className="text-xs text-indigo-200 leading-relaxed italic border-l-2 border-indigo-900/50 pl-4">{entity.notes}</p>
-              )}
-            </div>
-          )}
-
-          {/* HP and AC Footers */}
-          <div className="flex gap-3 pt-2">
-            <div className="flex-[2] bg-gray-950 p-4 rounded-3xl border border-gray-800 flex items-center justify-between shadow-inner">
-              <div className="space-y-1">
-                <p className="text-[8px] font-black text-gray-600 uppercase">HP</p>
-                <p className="text-2xl font-black text-red-500 leading-none">{entity.stats?.hp || 0}</p>
-              </div>
-              {isGM && (
-                <div className="flex gap-2">
-                  <button onClick={() => onUpdateStats(entity.id, { hp: (entity.stats?.hp || 0) - 1 })} className="w-10 h-10 bg-gray-900 hover:bg-gray-800 border border-gray-800 rounded-xl flex items-center justify-center font-black transition-all active:scale-90">-</button>
-                  <button onClick={() => onUpdateStats(entity.id, { hp: (entity.stats?.hp || 0) + 1 })} className="w-10 h-10 bg-gray-900 hover:bg-gray-800 border border-gray-800 rounded-xl flex items-center justify-center font-black transition-all active:scale-90">+</button>
+              {entity.stats?.actions && entity.stats.actions.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Combat Maneuvers</h4>
+                  <div className="grid grid-cols-1 gap-2">
+                    {entity.stats.actions.map((action: string, i: number) => (
+                      <button key={i} onClick={() => onRoll(entity.name, action, 0)} className="w-full text-left bg-gray-950 p-3 rounded-xl border border-gray-800 hover:border-blue-500/50 hover:bg-blue-900/10 transition-all flex justify-between items-center group">
+                        <span className="text-xs font-bold text-gray-300 group-hover:text-blue-400">{action}</span>
+                        <span className="text-[10px] bg-gray-900 px-2 py-0.5 rounded border border-gray-800 font-black">ROLL</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
-            </div>
-            <div className="flex-1 bg-gray-950 p-4 rounded-3xl border border-gray-800 text-center shadow-inner">
-              <p className="text-[8px] font-black text-gray-600 uppercase mb-1">AC</p>
-              <p className="text-2xl font-black text-blue-400 leading-none">{entity.stats?.ac || '??'}</p>
-            </div>
-          </div>
 
-          <div className="pt-4 flex flex-col items-center gap-3">
-            {isGM && onAddToInitiative && (
-              <button 
-                onClick={(e) => { e.stopPropagation(); onAddToInitiative(entity.name, false); }}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-2xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 border border-indigo-400/20"
-              >
-                Summon to Initiative
-              </button>
-            )}
-            <button 
-              onClick={(e) => { e.stopPropagation(); onClose(); }}
-              className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-gray-700 shadow-lg active:scale-95"
-            >
-              Dismiss Presence
-            </button>
-          </div>
+              {/* Narrative / Backstory Section */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">Narrative Essence</h4>
+                <p className="text-sm text-gray-300 leading-relaxed italic opacity-90 truncate-3-lines">"{entity.backstory}"</p>
+              </div>
+
+              {/* GM Notes Section */}
+              {(isGM || entity.notes) && (
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest border-b border-indigo-900/30 pb-2 flex justify-between items-center">
+                    <span>Chronicler's Notes</span>
+                    {isGM && <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest">Only you can see this</span>}
+                  </h4>
+                  {isGM ? (
+                    <textarea
+                      value={localNotes}
+                      onChange={e => setLocalNotes(e.target.value)}
+                      onBlur={handleNotesBlur}
+                      placeholder="Secret tactical notes, hidden motives, or loot details..."
+                      className="w-full bg-gray-950 border border-gray-800 rounded-2xl p-4 text-xs text-gray-300 focus:outline-none focus:border-indigo-500/50 min-h-[100px] shadow-inner leading-relaxed transition-all"
+                    />
+                  ) : (
+                    <p className="text-xs text-indigo-200 leading-relaxed italic border-l-2 border-indigo-900/50 pl-4">{entity.notes}</p>
+                  )}
+                </div>
+              )}
+
+              {/* HP and AC Footers */}
+              <div className="flex gap-3 pt-2">
+                <div className="flex-[2] bg-gray-950 p-4 rounded-3xl border border-gray-800 flex items-center justify-between shadow-inner">
+                  <div className="space-y-1">
+                    <p className="text-[8px] font-black text-gray-600 uppercase">HP</p>
+                    <p className="text-2xl font-black text-red-500 leading-none">{entity.stats?.hp || 0}</p>
+                  </div>
+                  {isGM && (
+                    <div className="flex gap-2">
+                      <button onClick={() => onUpdateStats(entity.id, { hp: (entity.stats?.hp || 0) - 1 })} className="w-10 h-10 bg-gray-900 hover:bg-gray-800 border border-gray-800 rounded-xl flex items-center justify-center font-black transition-all active:scale-90">-</button>
+                      <button onClick={() => onUpdateStats(entity.id, { hp: (entity.stats?.hp || 0) + 1 })} className="w-10 h-10 bg-gray-900 hover:bg-gray-800 border border-gray-800 rounded-xl flex items-center justify-center font-black transition-all active:scale-90">+</button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 bg-gray-950 p-4 rounded-3xl border border-gray-800 text-center shadow-inner">
+                  <p className="text-[8px] font-black text-gray-600 uppercase mb-1">AC</p>
+                  <p className="text-2xl font-black text-blue-400 leading-none">{entity.stats?.ac || '??'}</p>
+                </div>
+              </div>
+
+              <div className="pt-4 flex flex-col items-center gap-3">
+                {isGM && onAddToInitiative && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onAddToInitiative(entity.name, false); }}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-2xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 border border-indigo-400/20"
+                  >
+                    Summon to Initiative
+                  </button>
+                )}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onClose(); }}
+                  className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-gray-700 shadow-lg active:scale-95"
+                >
+                  Dismiss Presence
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
