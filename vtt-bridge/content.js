@@ -89,38 +89,44 @@ if (window.location.host.includes("excalidraw.com")) {
 
   window.addEventListener("message", (event) => {
     // 1. Handle requests FROM the VTT Parent App
-    if (event.data.type === "VTT_INTERNAL_INJECTED_REQUEST") {
-      window.postMessage(event.data, "*");
-    }
+    if (event.source === window.parent) {
+        if (event.data.type === "VTT_INTERNAL_INJECTED_REQUEST") {
+            window.postMessage(event.data, "*");
+            return;
+        }
 
-    if (event.data.type === "VTT_BRIDGE_MOVE") {
-      window.postMessage({
-        type: "VTT_INTERNAL_INJECTED_REQUEST",
-        subType: "MOVE",
-        payload: { x: event.data.x, y: event.data.y, zoom: event.data.zoom }
-      }, "*");
-    }
+        if (event.data.type === "VTT_BRIDGE_MOVE") {
+            window.postMessage({
+                type: "VTT_INTERNAL_INJECTED_REQUEST",
+                subType: "MOVE",
+                payload: { x: event.data.x, y: event.data.y, zoom: event.data.zoom }
+            }, "*");
+            return;
+        }
 
-    if (event.data.type === "VTT_BRIDGE_STREAM_REQUEST") {
-      if (!isStreamingActive) {
-        console.log("[VTT Bridge] Activating Stream Loop");
-        isStreamingActive = true;
-        setInterval(captureAndSend, 1000); 
-      }
-      captureAndSend();
-    }
+        if (event.data.type === "VTT_BRIDGE_STREAM_REQUEST") {
+            if (!isStreamingActive) {
+                console.log("[VTT Bridge] Activating Stream Loop");
+                isStreamingActive = true;
+                setInterval(captureAndSend, 1000); 
+            }
+            captureAndSend();
+            return;
+        }
 
-    if (event.data.type === "VTT_BRIDGE_GET_SELECTED") {
-        const requestId = Math.random().toString(36).substring(7);
-        window.postMessage({
-            type: "VTT_INTERNAL_INJECTED_REQUEST",
-            subType: "GET_SELECTED",
-            requestId
-        }, "*");
+        if (event.data.type === "VTT_BRIDGE_GET_SELECTED") {
+            const requestId = Math.random().toString(36).substring(7);
+            window.postMessage({
+                type: "VTT_INTERNAL_INJECTED_REQUEST",
+                subType: "GET_SELECTED",
+                requestId
+            }, "*");
+            return;
+        }
     }
 
     // 2. Handle internal replies FROM the Injected Script and relay to parent
-    if (event.data.type === "VTT_INTERNAL_SELECTED_REPLY") {
+    if (event.source === window && event.data.type === "VTT_INTERNAL_SELECTED_REPLY") {
         console.log("[VTT Bridge] Relaying selection result to parent app");
         window.parent.postMessage({
             type: "VTT_BRIDGE_SELECTED_RESULT",
