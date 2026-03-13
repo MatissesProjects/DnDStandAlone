@@ -23,6 +23,9 @@ class ConnectionManager:
         # initiative_lists[room_id] = {"combatants": [], "currentTurn": 0}
         self.initiative_lists: Dict[str, Dict[str, Any]] = {}
 
+        # room_luck[room_id] = int (sentiment modifier)
+        self.room_luck: Dict[str, int] = {}
+
     async def connect(self, websocket: WebSocket, user_id: str, room_id: str, role: str, username: str, class_name: str = None, level: int = 1, scene_id: str = "main"):
         await websocket.accept()
         
@@ -47,6 +50,7 @@ class ConnectionManager:
             self.room_map[room_id] = set()
             self.scene_locations[room_id] = {}
             self.initiative_lists[room_id] = {"combatants": [], "currentTurn": 0}
+            self.room_luck[room_id] = 0
         self.room_map[room_id].add(user_id)
         
         # Sync current state to new user
@@ -62,11 +66,39 @@ class ConnectionManager:
                 "currentTurn": init_list["currentTurn"]
             }))
 
+        # Sync luck
+        await websocket.send_text(json.dumps({
+            "type": "luck_update",
+            "modifier": self.room_luck.get(room_id, 0)
+        }))
+
         # Inform others
         try:
             await self.broadcast_user_list(room_id)
         except Exception as e:
             logger.error(f"Error during post-connect broadcast: {e}")
+
+    async def handle_vfx_action(self, room_id: str, action: Dict[str, Any]):
+        if room_id not in self.room_luck:
+            self.room_luck[room_id] = 0
+        
+        vfx_type = action.get("vfxType")
+        if vfx_type == "cheer":
+            self.room_luck[room_id] += 1
+        elif vfx_type == "boo":
+            self.room_luck[room_id] -= 1
+        
+        # Limit the luck modifier to a reasonable range
+        self.room_luck[room_id] = max(-10, min(10, self.room_luck[room_id]))
+
+        # Broadcast the vfx trigger first
+        await self.broadcast(json.dumps(action), room_id)
+        
+        # Then broadcast the updated luck
+        await self.broadcast(json.dumps({
+            "type": "luck_update",
+            "modifier": self.room_luck[room_id]
+        }), room_id)
 
     async def handle_initiative_action(self, room_id: str, action: Dict[str, Any]):
         if room_id not in self.initiative_lists:

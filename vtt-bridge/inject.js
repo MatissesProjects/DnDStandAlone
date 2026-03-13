@@ -71,12 +71,14 @@
       }
 
       if (subType === "GET_SELECTED") {
-        const selectedElements = api.getSceneElements().filter(el => {
-            const selection = api.getAppState().selectedElementIds;
-            return selection[el.id];
-        });
+        const appState = api.getAppState();
+        const selectedIds = appState.selectedElementIds || {};
         
-        console.log(`[VTT Injected] Elements selected: ${selectedElements.length}`);
+        const selectedElements = api.getSceneElements()
+            .filter(el => selectedIds[el.id] && !el.isDeleted)
+            .map(el => ({ ...el })); // Shallow clone to be safe
+        
+        console.log(`[VTT Injected] Elements selected for capture: ${selectedElements.length}`);
         
         if (selectedElements.length > 0) {
             window.postMessage({
@@ -85,7 +87,13 @@
                 elements: selectedElements
             }, "*");
         } else {
-            console.warn("[VTT Injected] Capture requested but no elements are selected in Excalidraw.");
+            console.warn("[VTT Injected] Capture requested but no valid elements are selected.");
+            // Send empty reply so the chain doesn't hang
+            window.postMessage({
+                type: "VTT_INTERNAL_SELECTED_REPLY",
+                requestId: requestId,
+                elements: []
+            }, "*");
         }
       }
 

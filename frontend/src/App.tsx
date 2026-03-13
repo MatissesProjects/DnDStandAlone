@@ -77,6 +77,7 @@ function VTTApp() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [vfxRoll, setVfxRoll] = useState<{ id: string, result: number, isCrit: boolean, isFail: boolean } | null>(null);
   const [vfxTrigger, setVfxTrigger] = useState<{ type: 'cheer' | 'boo', timestamp: number } | null>(null);
+  const [luckModifier, setLuckModifier] = useState(0);
 
   useEffect(() => {
     if (vfxTrigger) {
@@ -402,6 +403,9 @@ function VTTApp() {
         else if (data.type === "vfx_trigger") {
             setVfxTrigger({ type: data.vfxType, timestamp: Date.now() });
         }
+        else if (data.type === "luck_update") {
+            setLuckModifier(data.modifier);
+        }
         else if (data.type === 'story' || (data.result && data.die)) {
           if (data.result && data.die && !data.isSubtle) { const isD20 = data.die.includes('d20'); setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && isD20, isFail: data.result === 1 && isD20 }); setTimeout(() => setVfxRoll(null), 800); }
           setHistory(prev => [{ id: data.id, type: 'roll' as const, content: `${data.die}: ${data.result}`, user: data.user, timestamp: data.timestamp, isSubtle: data.isSubtle }, ...prev].slice(0, 100));
@@ -588,6 +592,7 @@ function VTTApp() {
             setRightSidebarOpen(true);
         }}
         onVfx={(type) => sendMessage(JSON.stringify({ type: 'vfx_trigger', vfxType: type, global: true }))}
+        luckModifier={luckModifier}
         activeUsers={activeUsers} 
         currentScene={activeUsers.find(u => u.id === clientId)?.scene_id || "main"}
         onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))} 

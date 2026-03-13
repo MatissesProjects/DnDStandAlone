@@ -458,7 +458,26 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
                         await manager.handle_initiative_action(room_id, message_json)
                     continue
 
-                if message_json.get("type") == "move_to_scene" and role == "gm":
+                if message_json.get("type") == "vfx_trigger":
+                    await manager.handle_vfx_action(room_id, message_json)
+                    continue
+
+                if message_json.get("type") == "roll":
+                    # Apply luck if it exists and this is a player roll
+                    if role == "player" and room_id in manager.room_luck:
+                        luck = manager.room_luck[room_id]
+                        if luck != 0:
+                            message_json["result"] += luck
+                            message_json["content"] = f"{message_json.get('die')}: {message_json['result']} (Luck: {'+' if luck > 0 else ''}{luck})"
+                            # Reset luck after it's been consumed
+                            manager.room_luck[room_id] = 0
+                            await manager.broadcast(json.dumps({
+                                "type": "luck_update",
+                                "modifier": 0
+                            }), room_id)
+                    
+                    await manager.broadcast(json.dumps(message_json), room_id, sender_id=client_id)
+                    continue
                     target_id = message_json.get("target_id")
                     new_scene = message_json.get("scene_id")
                     if target_id and new_scene:

@@ -11,9 +11,10 @@ interface ChronicleSidebarProps {
   history: HistoryItem[];
   isSubtleMode: boolean;
   setIsSubtleMode: (val: boolean) => void;
-  onConsumeHistory: (id: string) => void;
+  onConsumeHistory: (logId: string) => void;
   onDraftResponse?: (content: string) => void;
   onVfx?: (type: 'cheer' | 'boo') => void;
+  luckModifier?: number;
   activeUsers: UserPresence[];
   onWhisper: (targetId: string, msg: string) => void;
   currentScene?: string;
@@ -31,6 +32,7 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
   onConsumeHistory,
   onDraftResponse,
   onVfx,
+  luckModifier = 0,
   activeUsers,
   onWhisper,
   currentScene = "main"
@@ -72,6 +74,30 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
       )}
 
       <div className="flex-1 flex flex-col min-h-0 py-3 overflow-hidden">
+        {/* Luck Meter */}
+        <div className="mb-4 bg-gray-900/40 border border-gray-800 p-3 rounded-2xl">
+            <div className="flex justify-between items-center mb-2">
+                <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Audience Luck</span>
+                <span className={`text-[10px] font-black ${luckModifier > 0 ? 'text-green-400' : luckModifier < 0 ? 'text-red-400' : 'text-gray-600'}`}>
+                    {luckModifier > 0 ? '+' : ''}{luckModifier}
+                </span>
+            </div>
+            <div className="h-1.5 w-full bg-gray-950 rounded-full overflow-hidden border border-white/5 relative">
+                <div 
+                    className={`h-full transition-all duration-500 ${luckModifier > 0 ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : luckModifier < 0 ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]' : 'bg-gray-800'}`}
+                    style={{ 
+                        width: `${Math.max(5, Math.abs(luckModifier) * 10)}%`,
+                        marginLeft: luckModifier >= 0 ? '50%' : `${50 - Math.max(5, Math.abs(luckModifier) * 10)}%`,
+                        borderRadius: '99px'
+                    }}
+                />
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/10"></div>
+            </div>
+            <p className="text-[7px] text-gray-600 uppercase font-bold mt-2 text-center tracking-tighter italic">
+                {luckModifier > 0 ? 'Fate favors the bold' : luckModifier < 0 ? 'Doom approaches...' : 'The audience watches in silence'}
+            </p>
+        </div>
+
         {/* Audience Interaction Buttons */}
         <div className="flex gap-2 mb-3 shrink-0 px-1">
           <button 
