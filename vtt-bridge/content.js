@@ -89,6 +89,10 @@ if (window.location.host.includes("excalidraw.com")) {
 
   window.addEventListener("message", (event) => {
     // 1. Handle requests FROM the VTT Parent App
+    if (event.data.type === "VTT_INTERNAL_INJECTED_REQUEST") {
+      window.postMessage(event.data, "*");
+    }
+
     if (event.data.type === "VTT_BRIDGE_MOVE") {
       window.postMessage({
         type: "VTT_INTERNAL_INJECTED_REQUEST",
