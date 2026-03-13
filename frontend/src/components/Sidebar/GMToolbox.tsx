@@ -60,6 +60,7 @@ interface GMToolboxProps {
   onDeleteCustomToken?: (id: string) => void;
   onRenameCustomToken?: (id: string, name: string) => void;
   onInsertElements?: (elements: any[]) => void;
+  clientId: string;
 }
 
 const SHAPES = {

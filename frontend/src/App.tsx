@@ -802,6 +802,7 @@ function VTTApp() {
           onDeleteCustomToken={(id) => setCustomForge(prev => prev.filter(t => t.id !== id))}
           onRenameCustomToken={(id, name) => setCustomForge(prev => prev.map(t => t.id === id ? { ...t, name } : t))}
           onInsertElements={handleInsertElements}
+          clientId={clientId}
           />      )}
     </div>
   );
