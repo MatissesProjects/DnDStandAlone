@@ -6,9 +6,40 @@
   function findAPI() {
     if (window.excalidrawAPI) {
       api = window.excalidrawAPI;
-      console.log("[VTT Injected] API Hooked successfully.");
+      console.log("[VTT Injected] API Hooked via global variable.");
       return true;
     }
+
+    // Fallback: Search React Fiber tree for the API
+    try {
+        const canvas = document.querySelector("canvas.static") || document.querySelector("canvas");
+        if (canvas) {
+            const fiberKey = Object.keys(canvas).find(k => k.startsWith("__reactFiber") || k.startsWith("__reactInternalInstance"));
+            if (fiberKey) {
+                let curr = canvas[fiberKey];
+                while (curr) {
+                    // Check if this component has the excalidrawAPI in its props or state
+                    if (curr.memoizedProps && curr.memoizedProps.excalidrawAPI) {
+                        api = curr.memoizedProps.excalidrawAPI;
+                        window.excalidrawAPI = api;
+                        console.log("[VTT Injected] API Found and hooked via React Fiber props!");
+                        return true;
+                    }
+                    // Check if it's a ref that looks like the API
+                    if (curr.ref && curr.ref.current && typeof curr.ref.current.updateScene === 'function') {
+                        api = curr.ref.current;
+                        window.excalidrawAPI = api;
+                        console.log("[VTT Injected] API Found and hooked via React Ref!");
+                        return true;
+                    }
+                    curr = curr.return;
+                }
+            }
+        }
+    } catch (e) {
+        console.error("[VTT Injected] Error searching for API in Fiber tree:", e);
+    }
+
     return false;
   }
 
