@@ -71,30 +71,23 @@
       }
 
       if (subType === "GET_SELECTED") {
-        const appState = api.getAppState();
-        const selectedIds = appState.selectedElementIds || {};
-        
-        const selectedElements = api.getSceneElements()
-            .filter(el => selectedIds[el.id] && !el.isDeleted)
-            .map(el => ({ ...el })); // Shallow clone to be safe
-        
-        console.log(`[VTT Injected] Elements selected for capture: ${selectedElements.length}`);
-        
-        if (selectedElements.length > 0) {
+        // Small delay to ensure any recent clicks/changes are registered in state
+        setTimeout(() => {
+            const appState = api.getAppState();
+            const selectedIds = appState.selectedElementIds || {};
+            
+            const selectedElements = api.getSceneElements()
+                .filter(el => selectedIds[el.id] && !el.isDeleted)
+                .map(el => JSON.parse(JSON.stringify(el))); // Deep clone via stringify to strip any non-serializable circular refs
+            
+            console.log(`[VTT Injected] Elements selected for capture: ${selectedElements.length}`);
+            
             window.postMessage({
                 type: "VTT_INTERNAL_SELECTED_REPLY",
                 requestId: requestId,
                 elements: selectedElements
             }, "*");
-        } else {
-            console.warn("[VTT Injected] Capture requested but no valid elements are selected.");
-            // Send empty reply so the chain doesn't hang
-            window.postMessage({
-                type: "VTT_INTERNAL_SELECTED_REPLY",
-                requestId: requestId,
-                elements: []
-            }, "*");
-        }
+        }, 50);
       }
 
       if (subType === "METADATA") {

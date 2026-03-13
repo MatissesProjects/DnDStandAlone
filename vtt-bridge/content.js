@@ -128,6 +128,15 @@ if (window.location.host.includes("excalidraw.com")) {
     // 2. Handle internal replies FROM the Injected Script and relay to parent
     if (event.source === window && event.data.type === "VTT_INTERNAL_SELECTED_REPLY") {
         console.log("[VTT Bridge] Relaying selection result to parent app");
+        const debugLabel = document.getElementById("vtt-debug-label");
+        if (debugLabel) {
+            debugLabel.style.background = "green";
+            debugLabel.innerText = `VTT Bridge: CAPTURED ${event.data.elements?.length || 0}`;
+            setTimeout(() => {
+                debugLabel.style.background = "red";
+                debugLabel.innerText = "VTT Bridge: ACTIVE";
+            }, 2000);
+        }
         window.parent.postMessage({
             type: "VTT_BRIDGE_SELECTED_RESULT",
             elements: event.data.elements

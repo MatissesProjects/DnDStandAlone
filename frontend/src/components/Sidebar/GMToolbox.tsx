@@ -167,6 +167,9 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
     if (onInsertElements) {
         onInsertElements(SHAPES[key].elements);
     }
+    // Also copy to clipboard for convenience
+    const json = JSON.stringify(SHAPES[key]);
+    navigator.clipboard.writeText(json);
   };
 
   const copyRoomCode = () => {
@@ -245,7 +248,11 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                     {customForge.map(token => (
                       <div key={token.id} className="flex gap-1 group/token items-center">
                         <button 
-                          onClick={() => onInsertElements?.(token.data.elements)}
+                          onClick={() => {
+                            if (onInsertElements) onInsertElements(token.data.elements);
+                            // Also copy to clipboard
+                            navigator.clipboard.writeText(JSON.stringify(token.data));
+                          }}
                           className={`flex-1 text-left px-3 py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all truncate bg-gray-900/40 border-gray-800 text-gray-400 hover:border-indigo-500/50 hover:text-indigo-300 active:scale-95`}
                         >
                           Summon {token.name}
