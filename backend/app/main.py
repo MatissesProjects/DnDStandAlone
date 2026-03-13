@@ -450,6 +450,14 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
                     })
                     continue
 
+                if message_json.get("type") in ["join_initiative", "remove_initiative", "next_turn", "clear_initiative"]:
+                    # Security: only GM can remove/next/clear, but anyone can join
+                    if message_json.get("type") == "join_initiative":
+                        await manager.handle_initiative_action(room_id, message_json)
+                    elif role == "gm":
+                        await manager.handle_initiative_action(room_id, message_json)
+                    continue
+
                 if message_json.get("type") == "move_to_scene" and role == "gm":
                     target_id = message_json.get("target_id")
                     new_scene = message_json.get("scene_id")

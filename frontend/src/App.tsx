@@ -402,18 +402,25 @@ function VTTApp() {
   const handleAddToInitiative = useCallback((name: string, isPlayer: boolean) => {
     if (!isGM) return;
     const initiative = Math.floor(Math.random() * 20) + 1;
-    const newCombatant = {
-      id: `combatant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name,
-      initiative,
-      isPlayer
-    };
-    const newList = [...combatants, newCombatant].sort((a, b) => b.initiative - a.initiative);
-    sendMessage(JSON.stringify({ type: 'initiative_update', combatants: newList, currentTurn: 0 }));
-    // Optimistic update
-    setCombatants(newList);
-    setCurrentTurn(0);
-  }, [isGM, combatants, sendMessage]);
+    sendMessage(JSON.stringify({ 
+      type: 'join_initiative', 
+      id: `npc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      name, 
+      initiative, 
+      isPlayer 
+    }));
+  }, [isGM, sendMessage]);
+
+  const handleJoinInitiative = useCallback(() => {
+    const initiative = Math.floor(Math.random() * 20) + 1;
+    sendMessage(JSON.stringify({ 
+      type: 'join_initiative', 
+      id: clientId,
+      name: user?.username || 'Guest', 
+      initiative, 
+      isPlayer: true 
+    }));
+  }, [clientId, user, sendMessage]);
 
   const handlePromote = useCallback(async (key: string) => {
     if (!token) return;
@@ -524,7 +531,14 @@ function VTTApp() {
         combatants={combatants} 
         currentTurnIndex={currentTurn} 
         isGM={isGM} 
-        onUpdateInitiative={(newList, nextTurn) => sendMessage(JSON.stringify({ type: 'initiative_update', combatants: newList, currentTurn: nextTurn }))} 
+        isPlayerInInitiative={combatants.some(c => c.id === clientId)}
+        onAction={(action) => {
+          if (action.type === 'join') {
+            handleJoinInitiative();
+          } else {
+            sendMessage(JSON.stringify(action));
+          }
+        }} 
       />
 
       <div className="fixed inset-0 pointer-events-none z-40">
