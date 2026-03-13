@@ -88,8 +88,13 @@ if (window.location.host.includes("excalidraw.com")) {
   }
 
   window.addEventListener("message", (event) => {
+    const isFromParent = event.source === window.parent;
+    const isFromSameWindow = event.source === window;
+
     // 1. Handle requests FROM the VTT Parent App
-    if (event.source === window.parent) {
+    if (isFromParent) {
+        console.log(`[VTT Bridge] Received from Parent: ${event.data.type}`);
+        
         if (event.data.type === "VTT_INTERNAL_INJECTED_REQUEST") {
             window.postMessage(event.data, "*");
             return;
@@ -115,6 +120,7 @@ if (window.location.host.includes("excalidraw.com")) {
         }
 
         if (event.data.type === "VTT_BRIDGE_GET_SELECTED") {
+            console.log("[VTT Bridge] Triggering GET_SELECTED in injected script");
             const requestId = Math.random().toString(36).substring(7);
             window.postMessage({
                 type: "VTT_INTERNAL_INJECTED_REQUEST",
@@ -126,8 +132,8 @@ if (window.location.host.includes("excalidraw.com")) {
     }
 
     // 2. Handle internal replies FROM the Injected Script and relay to parent
-    if (event.source === window && event.data.type === "VTT_INTERNAL_SELECTED_REPLY") {
-        console.log("[VTT Bridge] Relaying selection result to parent app");
+    if (event.data.type === "VTT_INTERNAL_SELECTED_REPLY") {
+        console.log(`[VTT Bridge] Internal reply received. Elements: ${event.data.elements?.length || 0}`);
         const debugLabel = document.getElementById("vtt-debug-label");
         if (debugLabel) {
             debugLabel.style.background = "green";

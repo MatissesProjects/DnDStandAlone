@@ -19,7 +19,11 @@
   }, 500);
 
   const handleMessage = (event) => {
-    if (!api) return;
+    console.log(`[VTT Injected] Incoming message: ${event.data.type}`);
+    if (!api) {
+        console.warn("[VTT Injected] API not ready, ignoring message.");
+        return;
+    }
     
     if (event.data.type === "VTT_INTERNAL_INJECTED_REQUEST") {
       const { subType, payload, requestId } = event.data;
