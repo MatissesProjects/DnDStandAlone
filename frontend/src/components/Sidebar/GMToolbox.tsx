@@ -56,7 +56,6 @@ interface GMToolboxProps {
   showSpinner: boolean;
   onToggleSpinner: (val: boolean) => void;
   customForge?: any[];
-  onCaptureSelection?: () => void;
   onDeleteCustomToken?: (id: string) => void;
   onRenameCustomToken?: (id: string, name: string) => void;
   onInsertElements?: (elements: any[]) => void;

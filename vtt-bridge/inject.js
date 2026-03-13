@@ -105,26 +105,6 @@
         });
       }
 
-      if (subType === "GET_SELECTED") {
-        // Small delay to ensure any recent clicks/changes are registered in state
-        setTimeout(() => {
-            const appState = api.getAppState();
-            const selectedIds = appState.selectedElementIds || {};
-            
-            const selectedElements = api.getSceneElements()
-                .filter(el => selectedIds[el.id] && !el.isDeleted)
-                .map(el => JSON.parse(JSON.stringify(el))); // Deep clone via stringify to strip any non-serializable circular refs
-            
-            console.log(`[VTT Injected] Elements selected for capture: ${selectedElements.length}`);
-            
-            window.postMessage({
-                type: "VTT_INTERNAL_SELECTED_REPLY",
-                requestId: requestId,
-                elements: selectedElements
-            }, "*");
-        }, 50);
-      }
-
       if (subType === "METADATA") {
         const elements = api.getSceneElements();
         const appState = api.getAppState();

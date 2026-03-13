@@ -277,25 +277,6 @@ function VTTApp() {
           scene_id: targetScene // Consistently use scene_id
         }));
       }
-      if (event.data.type === "VTT_BRIDGE_SELECTED_RESULT") {
-        console.log("[Forge] Received selection capture from bridge. Elements:", event.data.elements?.length);
-        if (!event.data.elements || event.data.elements.length === 0) {
-            alert("No elements were selected to capture!");
-            return;
-        }
-        
-        setCustomForge(prev => {
-            const newPart = {
-                id: `custom_${Date.now()}`,
-                name: `Custom Token ${prev.length + 1}`,
-                data: {
-                    type: "excalidraw/clipboard",
-                    elements: event.data.elements
-                }
-            };
-            return [...prev, newPart];
-        });
-      }
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
@@ -802,11 +783,6 @@ function VTTApp() {
             } catch (e) { alert("Network error manifested."); }
           }}
           customForge={customForge}
-          onCaptureSelection={() => {
-            if (iframeRef.current?.contentWindow) {
-              iframeRef.current.contentWindow.postMessage({ type: "VTT_BRIDGE_GET_SELECTED" }, "*");
-            }
-          }}
           onDeleteCustomToken={(id) => setCustomForge(prev => prev.filter(t => t.id !== id))}
           onRenameCustomToken={(id, name) => setCustomForge(prev => prev.map(t => t.id === id ? { ...t, name } : t))}
           onInsertElements={handleInsertElements}

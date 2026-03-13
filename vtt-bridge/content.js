@@ -118,35 +118,6 @@ if (window.location.host.includes("excalidraw.com")) {
             captureAndSend();
             return;
         }
-
-        if (event.data.type === "VTT_BRIDGE_GET_SELECTED") {
-            console.log("[VTT Bridge] Triggering GET_SELECTED in injected script");
-            const requestId = Math.random().toString(36).substring(7);
-            window.postMessage({
-                type: "VTT_INTERNAL_INJECTED_REQUEST",
-                subType: "GET_SELECTED",
-                requestId
-            }, "*");
-            return;
-        }
-    }
-
-    // 2. Handle internal replies FROM the Injected Script and relay to parent
-    if (event.data.type === "VTT_INTERNAL_SELECTED_REPLY") {
-        console.log(`[VTT Bridge] Internal reply received. Elements: ${event.data.elements?.length || 0}`);
-        const debugLabel = document.getElementById("vtt-debug-label");
-        if (debugLabel) {
-            debugLabel.style.background = "green";
-            debugLabel.innerText = `VTT Bridge: CAPTURED ${event.data.elements?.length || 0}`;
-            setTimeout(() => {
-                debugLabel.style.background = "red";
-                debugLabel.innerText = "VTT Bridge: ACTIVE";
-            }, 2000);
-        }
-        window.parent.postMessage({
-            type: "VTT_BRIDGE_SELECTED_RESULT",
-            elements: event.data.elements
-        }, "*");
     }
 
     // 3. Generic relay for messages already following the bridge protocol
