@@ -76,6 +76,14 @@ function VTTApp() {
   const [playerInventory, setPlayerInventory] = useState(user?.inventory || "");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [vfxRoll, setVfxRoll] = useState<{ id: string, result: number, isCrit: boolean, isFail: boolean } | null>(null);
+  const [vfxTrigger, setVfxTrigger] = useState<{ type: 'cheer' | 'boo', timestamp: number } | null>(null);
+
+  useEffect(() => {
+    if (vfxTrigger) {
+      const timer = setTimeout(() => setVfxTrigger(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [vfxTrigger]);
   const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [showSpinner, setShowSpinner] = useState(false);
@@ -391,6 +399,9 @@ function VTTApp() {
             isSubtle: true // Whispers are always private
           }, ...prev].slice(0, 100));
         }
+        else if (data.type === "vfx_trigger") {
+            setVfxTrigger({ type: data.vfxType, timestamp: Date.now() });
+        }
         else if (data.type === 'story' || (data.result && data.die)) {
           if (data.result && data.die && !data.isSubtle) { const isD20 = data.die.includes('d20'); setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && isD20, isFail: data.result === 1 && isD20 }); setTimeout(() => setVfxRoll(null), 800); }
           setHistory(prev => [{ id: data.id, type: 'roll' as const, content: `${data.die}: ${data.result}`, user: data.user, timestamp: data.timestamp, isSubtle: data.isSubtle }, ...prev].slice(0, 100));
@@ -567,12 +578,26 @@ function VTTApp() {
             setGeneratedLore(c);
             setRightSidebarOpen(true);
         }}
+        onVfx={(type) => sendMessage(JSON.stringify({ type: 'vfx_trigger', vfxType: type, global: true }))}
         activeUsers={activeUsers} 
         currentScene={activeUsers.find(u => u.id === clientId)?.scene_id || "main"}
         onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))} 
       />}
 
       <AmbientPlayer channels={audioChannels} onUpdateVolume={handleUpdateAudioVolume} />
+
+      {vfxTrigger && (
+        <div className="fixed inset-0 pointer-events-none z-[200] flex items-center justify-center overflow-hidden">
+          <div 
+            key={vfxTrigger.timestamp}
+            className={`w-40 h-40 rounded-full border-8 animate-ripple absolute ${vfxTrigger.type === 'cheer' ? 'border-green-500/50 bg-green-500/10' : 'border-red-500/50 bg-red-500/10'}`}
+          />
+          <div className="relative flex flex-col items-center animate-in fade-in zoom-in duration-300">
+            <span className="text-8xl mb-4 drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">{vfxTrigger.type === 'cheer' ? '✨' : '💀'}</span>
+            <span className={`text-6xl font-black uppercase tracking-[0.3em] italic drop-shadow-2xl ${vfxTrigger.type === 'cheer' ? 'text-green-400' : 'text-red-500'}`}>{vfxTrigger.type === 'cheer' ? 'HUZZAH!' : 'DOOM!'}</span>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 h-full min-w-0 bg-[#121212] z-10 overflow-hidden relative">
           {isGM ? (

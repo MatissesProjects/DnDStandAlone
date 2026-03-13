@@ -13,6 +13,7 @@ interface ChronicleSidebarProps {
   setIsSubtleMode: (val: boolean) => void;
   onConsumeHistory: (id: string) => void;
   onDraftResponse?: (content: string) => void;
+  onVfx?: (type: 'cheer' | 'boo') => void;
   activeUsers: UserPresence[];
   onWhisper: (targetId: string, msg: string) => void;
   currentScene?: string;
@@ -29,6 +30,7 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
   setIsSubtleMode,
   onConsumeHistory,
   onDraftResponse,
+  onVfx,
   activeUsers,
   onWhisper,
   currentScene = "main"
@@ -70,6 +72,22 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
       )}
 
       <div className="flex-1 flex flex-col min-h-0 py-3 overflow-hidden">
+        {/* Audience Interaction Buttons */}
+        <div className="flex gap-2 mb-3 shrink-0 px-1">
+          <button 
+            onClick={() => onVfx?.('cheer')}
+            className="flex-1 bg-green-900/20 hover:bg-green-600/30 border border-green-500/30 text-green-400 font-black py-2 rounded-xl text-[9px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1.5"
+          >
+            <span className="text-xs">👏</span> Cheer
+          </button>
+          <button 
+            onClick={() => onVfx?.('boo')}
+            className="flex-1 bg-red-900/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 font-black py-2 rounded-xl text-[9px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1.5"
+          >
+            <span className="text-xs">👎</span> Boo
+          </button>
+        </div>
+
         <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
           {history.length === 0 ? (
             <div className="h-full flex items-center justify-center border border-dashed border-gray-900 rounded-2xl text-center p-4 opacity-30">
