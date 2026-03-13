@@ -20,6 +20,7 @@ def add_column(table, column, type):
 add_column("users", "inventory", "TEXT")
 add_column("users", "avatar_url", "TEXT")
 add_column("users", "bio", "TEXT")
+add_column("users", "stats", "JSON")
 
 # Track G: Ambient Audio
 add_column("locations", "ambient_audio", "TEXT")

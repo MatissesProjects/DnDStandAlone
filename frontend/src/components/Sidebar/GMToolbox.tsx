@@ -41,6 +41,8 @@ interface GMToolboxProps {
   setIsEditingProfile: (val: boolean) => void;
   setPlayerClass: (val: string) => void;
   setPlayerLevel: (val: number) => void;
+  playerStats?: Record<string, number>;
+  setPlayerStats?: (stats: Record<string, number>) => void;
   setPlayerInventory?: (val: string) => void;
   onUpdateProfile: () => void;
   onSummarize: () => void;
@@ -462,22 +464,58 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               </div>
               {isEditingProfile ? (
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                  <input type="text" placeholder="Class" value={playerClass} onChange={e => setPlayerClass(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50" />
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black text-gray-500 uppercase">Level</span>
-                    <input type="number" min="1" max="20" value={playerLevel} onChange={e => setPlayerLevel(Number(e.target.value))} className="flex-1 bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50" />
-                  </div>
-                  <textarea placeholder="Inventory (Gold, Items, etc.)" value={playerInventory} onChange={e => setPlayerInventory?.(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50 resize-none h-20" />
                   <div className="flex gap-2">
-                    <button onClick={onUpdateProfile} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Save</button>
+                    <input type="text" placeholder="Class" value={playerClass} onChange={e => setPlayerClass(e.target.value)} className="flex-1 bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50" />
+                    <div className="flex items-center gap-2">
+                        <span className="text-[8px] font-black text-gray-500 uppercase">LVL</span>
+                        <input type="number" min="1" max="20" value={playerLevel} onChange={e => setPlayerLevel(Number(e.target.value))} className="w-12 bg-gray-950 border border-gray-800 rounded-xl px-2 py-2 text-xs focus:outline-none focus:border-indigo-500/50" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-gray-950 p-2 rounded-xl border border-gray-800">
+                        <p className="text-[8px] font-black text-red-500 uppercase tracking-tighter mb-1">Health (HP)</p>
+                        <input type="number" value={playerStats?.hp || 0} onChange={e => setPlayerStats?.({...playerStats, hp: parseInt(e.target.value)||0})} className="w-full bg-transparent text-xs font-black text-white focus:outline-none" />
+                    </div>
+                    <div className="bg-gray-950 p-2 rounded-xl border border-gray-800">
+                        <p className="text-[8px] font-black text-blue-400 uppercase tracking-tighter mb-1">Armor (AC)</p>
+                        <input type="number" value={playerStats?.ac || 0} onChange={e => setPlayerStats?.({...playerStats, ac: parseInt(e.target.value)||0})} className="w-full bg-transparent text-xs font-black text-white focus:outline-none" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'].map(s => (
+                        <div key={s} className="bg-gray-950 p-2 rounded-xl border border-gray-800 text-center">
+                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-tighter mb-0.5">{s}</p>
+                            <input type="number" value={playerStats?.[s.toLowerCase()] || 10} onChange={e => setPlayerStats?.({...playerStats, [s.toLowerCase()]: parseInt(e.target.value)||0})} className="w-full bg-transparent text-center text-xs font-black text-white focus:outline-none" />
+                        </div>
+                    ))}
+                  </div>
+
+                  <textarea placeholder="Inventory & Equipment" value={playerInventory} onChange={e => setPlayerInventory?.(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50 resize-none h-20" />
+                  
+                  <div className="flex gap-2">
+                    <button onClick={onUpdateProfile} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Save Manifest</button>
                     <button onClick={() => setIsEditingProfile(false)} className="flex-1 bg-gray-800 hover:bg-gray-700 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-gray-700">Cancel</button>
                   </div>
                 </div>
               ) : (
                 <div onClick={() => setIsEditingProfile(true)} className="cursor-pointer group">
                   <h3 className="font-black text-gray-100 uppercase tracking-tighter mb-1 text-xl group-hover:text-indigo-400 transition-colors">{user?.username}</h3>
-                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mb-4">{playerClass || 'Class Unknown'} • Level {playerLevel}</p>
-                  {playerInventory && <p className="text-[9px] text-gray-500 italic line-clamp-2 px-4">Bag: {playerInventory}</p>}
+                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mb-2">{playerClass || 'Class Unknown'} • Level {playerLevel}</p>
+                  
+                  <div className="flex justify-center gap-4 mb-4">
+                    <div className="text-center">
+                        <p className="text-[7px] font-black text-red-500 uppercase">HP</p>
+                        <p className="text-sm font-black text-white">{playerStats?.hp || '?'}</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-[7px] font-black text-blue-400 uppercase">AC</p>
+                        <p className="text-sm font-black text-white">{playerStats?.ac || '?'}</p>
+                    </div>
+                  </div>
+
+                  {playerInventory && <p className="text-[9px] text-gray-500 italic line-clamp-2 px-4 border-t border-gray-800/50 pt-2">Bag: {playerInventory}</p>}
                 </div>
               )}
               <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent w-full my-8 shadow-inner"></div>

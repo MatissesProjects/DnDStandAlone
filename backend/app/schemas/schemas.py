@@ -11,6 +11,7 @@ class UserBase(BaseModel):
     bio: Optional[str] = None
     class_name: Optional[str] = None
     level: Optional[int] = 1
+    stats: Optional[Dict[str, Any]] = None
     inventory: Optional[str] = None
 
 class UserUpdate(BaseModel):
@@ -18,6 +19,7 @@ class UserUpdate(BaseModel):
     bio: Optional[str] = None
     class_name: Optional[str] = None
     level: Optional[int] = None
+    stats: Optional[Dict[str, Any]] = None
     inventory: Optional[str] = None
 
 

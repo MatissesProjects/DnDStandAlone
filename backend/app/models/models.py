@@ -13,6 +13,7 @@ class User(Base):
     bio = Column(Text, nullable=True)
     class_name = Column(String, nullable=True)
     level = Column(Integer, default=1)
+    stats = Column(JSON, nullable=True) # Structured stats (HP, AC, Str, Dex, etc.)
     inventory = Column(Text, nullable=True) # Simple text-based inventory for now
 
 class Campaign(Base):

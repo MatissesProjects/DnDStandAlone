@@ -73,6 +73,7 @@ function VTTApp() {
   const processedMessages = useRef<Set<string>>(new Set());
   const [playerClass, setPlayerClass] = useState(user?.class_name || "");
   const [playerLevel, setPlayerLevel] = useState(user?.level || 1);
+  const [playerStats, setPlayerStats] = useState<Record<string, number>>(user?.stats || { hp: 10, ac: 10, str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
   const [playerInventory, setPlayerInventory] = useState(user?.inventory || "");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [vfxRoll, setVfxRoll] = useState<{ id: string, result: number, isCrit: boolean, isFail: boolean } | null>(null);
@@ -715,8 +716,22 @@ function VTTApp() {
             } catch (e) { alert("Network error."); }
           }} 
           activeEntities={activeEntities} onSelectEntity={setSelectedEntity} activeLocation={activeLocation} activeCampaign={activeCampaign}
-          onOpenDashboard={() => setIsDashboardOpen(true)} playerClass={playerClass} playerLevel={playerLevel} playerInventory={playerInventory} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
-          setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} setPlayerInventory={setPlayerInventory} onUpdateProfile={async () => { if (!token) return; const res = await fetch(`${currentConfig.API_BASE}/users/me`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ class_name: playerClass, level: playerLevel, inventory: playerInventory }) }); if (res.ok) { setIsEditingProfile(false); sendMessage(JSON.stringify({ type: "user_update", class_name: playerClass, level: playerLevel, inventory: playerInventory })); } }}
+          onOpenDashboard={() => setIsDashboardOpen(true)} playerClass={playerClass} playerLevel={playerLevel} playerInventory={playerInventory} 
+          playerStats={playerStats} setPlayerStats={setPlayerStats}
+          isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
+          setPlayerClass={setPlayerClass} setPlayerLevel={setPlayerLevel} setPlayerInventory={setPlayerInventory} 
+          onUpdateProfile={async () => { 
+            if (!token) return; 
+            const res = await fetch(`${currentConfig.API_BASE}/users/me`, { 
+                method: 'PATCH', 
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ class_name: playerClass, level: playerLevel, inventory: playerInventory, stats: playerStats }) 
+            }); 
+            if (res.ok) { 
+                setIsEditingProfile(false); 
+                sendMessage(JSON.stringify({ type: "user_update", class_name: playerClass, level: playerLevel, inventory: playerInventory, stats: playerStats })); 
+            } 
+          }}
           onSummarize={async () => { if (!token || !activeCampaign) return; setIsSummarizing(true); try { const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/summarize`, { headers: { 'Authorization': `Bearer ${token}` } }); setCampaignSummary((await res.json()).summary); } catch (e) { console.error(e); } finally { setIsSummarizing(false); } }} 
           isSummarizing={isSummarizing}
           onClearHistory={handleClearHistory}
