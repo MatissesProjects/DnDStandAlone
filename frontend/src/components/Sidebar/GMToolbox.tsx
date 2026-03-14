@@ -150,9 +150,9 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   isGenerating, generatedEnemy, generatedLore, generatedLoot, onManifestEntity, onManifestLore, onManifestLoot,
   onDismissEnemy, onDismissLore, onDismissLoot, onUpdateGeneratedEnemy, onUpdateGeneratedLore,
   activeEntities, onSelectEntity, 
-  activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, playerInventory, isEditingProfile,
+  activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, playerInventory, playerStats, setPlayerStats, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, setPlayerInventory, onUpdateProfile, onSummarize, isSummarizing,
-  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, onPromote, targetScene, onSetTargetScene, locations, showSpinner, onToggleSpinner, customForge, onCaptureSelection, onDeleteCustomToken, onRenameCustomToken, onInsertElements
+  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, onPromote, targetScene, onSetTargetScene, locations, showSpinner, onToggleSpinner, customForge, onDeleteCustomToken, onRenameCustomToken, onInsertElements, clientId, onPlaySound
 }) => {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [whisperTarget, setWhisperTarget] = useState<string>('');
