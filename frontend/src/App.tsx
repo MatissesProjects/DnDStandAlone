@@ -389,6 +389,7 @@ function VTTApp() {
           }
         }
         else if (data.type === "player_ping") {
+          console.log("[Ping] Received ping:", data);
           setPings(prev => {
             if (prev.some(p => p.id === data.id)) return prev;
             return [...prev, { ...data, timestamp: data.timestamp || Date.now() }];

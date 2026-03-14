@@ -39,11 +39,14 @@
 - [x] Build the GM Switchboard UI.
 - [x] Implement Dynamic Audio Sequencing.
 
-## Track H: Combat & Visual Hacks
+## Track G: Adventurer Stats & Visual Hacks
 - [x] Automated Initiative Tracker.
 - [x] LitRPG-Style Inventory & Stat Tracking.
 - [x] Fog of War workaround.
+- [x] GM Soundboard for one-shot effects.
 
 ## Track I: Expanded AI Utility
 - [x] Automated Session Recaps.
 - [x] Context-Aware Loot Generation.
+- [x] AI-Assisted Blind Inquiries (Whispers).
+
