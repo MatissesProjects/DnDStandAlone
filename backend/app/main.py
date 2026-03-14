@@ -449,10 +449,11 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
     
     # Heartbeat task to keep connection alive
     async def heartbeat():
+        import time
         try:
             while True:
                 await asyncio.sleep(30)
-                await websocket.send_text(json.dumps({"type": "ping", "timestamp": Date.now()}))
+                await websocket.send_text(json.dumps({"type": "ping", "timestamp": int(time.time() * 1000)}))
         except:
             pass
 

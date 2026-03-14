@@ -56,7 +56,7 @@ function VTTApp() {
   }, [user?.discord_id]);
 
   const { isConnected, lastMessage, sendMessage } = useWebSocket(
-    activeCampaign ? `${currentConfig.WS_BASE}/ws/${activeCampaign.room_id}/${clientId}?role=${isGM ? 'gm' : 'player'}&username=${user?.username || 'Guest'}` : ''
+    activeCampaign ? `${currentConfig.WS_BASE}/ws/${encodeURIComponent(activeCampaign.room_id)}/${encodeURIComponent(clientId)}?role=${isGM ? 'gm' : 'player'}&username=${encodeURIComponent(user?.username || 'Guest')}` : ''
   );
 
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -355,6 +355,10 @@ function VTTApp() {
         const msgId = data.id || `${data.type}-${data.timestamp}-${data.unique_key || ''}`;
         if (processedMessages.current.has(msgId)) return;
         processedMessages.current.add(msgId);
+        if (data.type === "ping") {
+            sendMessage(JSON.stringify({ type: "pong", timestamp: Date.now() }));
+            return;
+        }
         if (data.type === "presence") setActiveUsers(data.users);
         else if (data.type === "location_update") {
           const myUser = data.users?.find((u: any) => u.id === clientId) || activeUsers.find(u => u.id === clientId);

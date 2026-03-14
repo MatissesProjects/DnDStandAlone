@@ -41,6 +41,7 @@ export const useWebSocket = (url: string) => {
 
     socket.onerror = (error) => {
       console.error('[WebSocket] Error:', error);
+      socket.close(); // Explicitly close to trigger onclose and reconnection
     };
   }, [url]);
 

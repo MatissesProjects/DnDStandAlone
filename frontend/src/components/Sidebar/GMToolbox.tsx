@@ -204,12 +204,12 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Voice of the World</h3>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                    { label: '⚔️ Sword', url: '/sounds/sword.mp3' },
-                    { label: '✨ Magic', url: '/sounds/magic.mp3' },
-                    { label: '💀 Doom', url: '/sounds/doom.mp3' },
-                    { label: '📢 Shout', url: '/sounds/shout.mp3' },
-                    { label: '🧛 Laugh', url: '/sounds/laugh.mp3' },
-                    { label: '🔔 Bell', url: '/sounds/bell.mp3' }
+                    { label: '⚔️ Sword', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-3.mp3' },
+                    { label: '✨ Magic', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-9.mp3' },
+                    { label: '💀 Doom', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-10.mp3' },
+                    { label: '📢 Shout', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-2.mp3' },
+                    { label: '🧛 Laugh', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-1.mp3' },
+                    { label: '🔔 Bell', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-4.mp3' }
                 ].map(sfx => (
                     <button 
                         key={sfx.label}
