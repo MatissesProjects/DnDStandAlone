@@ -407,7 +407,12 @@ function VTTApp() {
           }, ...prev].slice(0, 100));
         }
         else if (data.type === "vfx_trigger") {
-            setVfxTrigger({ type: data.vfxType, timestamp: Date.now() });
+            if (data.vfxType === 'sound' && data.soundUrl && data.senderId !== clientId) {
+                const audio = new Audio(data.soundUrl);
+                audio.play().catch(e => console.warn("Auto-play blocked", e));
+            } else {
+                setVfxTrigger({ type: data.vfxType, timestamp: Date.now() });
+            }
         }
         else if (data.type === "luck_update") {
             setLuckModifier(data.modifier);
@@ -884,6 +889,13 @@ function VTTApp() {
           onRenameCustomToken={(id, name) => setCustomForge(prev => prev.map(t => t.id === id ? { ...t, name } : t))}
           onInsertElements={handleInsertElements}
           clientId={clientId}
+          onPlaySound={(url) => {
+            // Play locally
+            const audio = new Audio(url);
+            audio.play().catch(e => console.warn("Local play failed", e));
+            // Broadcast to everyone
+            sendMessage(JSON.stringify({ type: 'vfx_trigger', vfxType: 'sound', soundUrl: url, global: true }));
+          }}
           />      )}
     </div>
   );

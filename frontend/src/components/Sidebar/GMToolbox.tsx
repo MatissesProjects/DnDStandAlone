@@ -62,6 +62,7 @@ interface GMToolboxProps {
   onRenameCustomToken?: (id: string, name: string) => void;
   onInsertElements?: (elements: any[]) => void;
   clientId: string;
+  onPlaySound?: (url: string) => void;
 }
 
 const SHAPES = {
@@ -199,10 +200,29 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               </div>
             </div>
 
-            <div className="space-y-4 pt-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Quick Forge</h3>
+            <div className="space-y-4 pt-4 border-t border-gray-800/50">
+              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Voice of the World</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                    { label: '⚔️ Sword', url: '/sounds/sword.mp3' },
+                    { label: '✨ Magic', url: '/sounds/magic.mp3' },
+                    { label: '💀 Doom', url: '/sounds/doom.mp3' },
+                    { label: '📢 Shout', url: '/sounds/shout.mp3' },
+                    { label: '🧛 Laugh', url: '/sounds/laugh.mp3' },
+                    { label: '🔔 Bell', url: '/sounds/bell.mp3' }
+                ].map(sfx => (
+                    <button 
+                        key={sfx.label}
+                        onClick={() => onPlaySound?.(sfx.url)}
+                        className="bg-gray-900/60 hover:bg-indigo-900/20 border border-gray-800 hover:border-indigo-500/30 text-[9px] font-black uppercase py-2 rounded-lg transition-all active:scale-95 text-gray-400 hover:text-indigo-300"
+                    >
+                        {sfx.label}
+                    </button>
+                ))}
               </div>
+            </div>
+
+            <div className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-2">
                 <div className="relative group">
                     <button 
