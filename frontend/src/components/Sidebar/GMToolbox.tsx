@@ -197,10 +197,18 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   activeEntities, onSelectEntity, 
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, playerInventory, playerStats, setPlayerStats, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, setPlayerInventory, onUpdateProfile, onSummarize, isSummarizing,
-  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, onPromote, targetScene, onSetTargetScene, locations, showSpinner, onToggleSpinner, customForge, onDeleteCustomToken, onRenameCustomToken, onInsertElements, clientId, onPlaySound
+  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, onPromote, targetScene, onSetTargetScene, locations, showSpinner, onToggleSpinner, customForge, onDeleteCustomToken, onRenameCustomToken, onInsertElements, clientId, onPlaySound, onUpdateChannelAudio
 }) => {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [whisperTarget, setWhisperTarget] = useState<string>('');
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Alerts']));
+
+  const toggleCategory = (category: string) => {
+    const next = new Set(expandedCategories);
+    if (next.has(category)) next.delete(category);
+    else next.add(category);
+    setExpandedCategories(next);
+  };
 
   const copyShape = (key: keyof typeof SHAPES) => {
     const json = JSON.stringify(SHAPES[key]);
@@ -278,18 +286,33 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                 {/* One-Shot SFX Categories */}
                 {Object.entries(SOUND_EFFECTS).map(([category, effects]) => (
                   <div key={category} className="space-y-2">
-                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest ml-1">{category}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {effects.map(sfx => (
-                        <button 
-                          key={sfx.label}
-                          onClick={() => onPlaySound?.(sfx.url)}
-                          className="bg-gray-900/60 hover:bg-indigo-900/20 border border-gray-800 hover:border-indigo-500/30 text-[9px] font-black uppercase py-2 rounded-lg transition-all active:scale-95 text-gray-400 hover:text-indigo-300 truncate px-2"
+                    <button 
+                        onClick={() => toggleCategory(category)}
+                        className="flex items-center justify-between w-full group/cat"
+                    >
+                        <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest ml-1 group-hover/cat:text-gray-400 transition-colors">{category}</p>
+                        <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            width="10" height="10" viewBox="0 0 24 24" fill="none" 
+                            stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                            className={`text-gray-700 group-hover/cat:text-gray-400 transition-all ${expandedCategories.has(category) ? 'rotate-180' : ''}`}
                         >
-                          {sfx.label}
-                        </button>
-                      ))}
-                    </div>
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                    {expandedCategories.has(category) && (
+                        <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                            {effects.map(sfx => (
+                                <button 
+                                    key={sfx.label}
+                                    onClick={() => onPlaySound?.(sfx.url)}
+                                    className="bg-gray-900/60 hover:bg-indigo-900/20 border border-gray-800 hover:border-indigo-500/30 text-[9px] font-black uppercase py-2 rounded-lg transition-all active:scale-95 text-gray-400 hover:text-indigo-300 truncate px-2"
+                                >
+                                    {sfx.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                   </div>
                 ))}
               </div>
