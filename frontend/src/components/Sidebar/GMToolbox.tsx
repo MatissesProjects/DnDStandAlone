@@ -201,7 +201,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   activeEntities, onSelectEntity, 
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, playerInventory, playerStats, setPlayerStats, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, setPlayerInventory, onUpdateProfile, onSummarize, isSummarizing,
-  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, onPromote, targetScene, onSetTargetScene, locations, showSpinner, onToggleSpinner, customForge, onDeleteCustomToken, onRenameCustomToken, onInsertElements, clientId, onPlaySound, onUpdateChannelAudio, aiPriority, onTogglePriority, activePoll, onStartPoll, onEndPoll
+  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, targetScene, onSetTargetScene, locations, showSpinner, onToggleSpinner, customForge, onDeleteCustomToken, onRenameCustomToken, onInsertElements, clientId, onPlaySound, onUpdateChannelAudio, aiPriority, onTogglePriority, activePoll, onStartPoll, onEndPoll
 }) => {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [whisperTarget, setWhisperTarget] = useState<string>('');
@@ -718,27 +718,49 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                   <textarea placeholder="Inventory & Equipment" value={playerInventory} onChange={e => setPlayerInventory?.(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500/50 resize-none h-20" />
                   
                   <div className="flex gap-2">
-                    <button onClick={onUpdateProfile} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Save Manifest</button>
+                    <button onClick={onUpdateProfile} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 border border-indigo-400/20">Save Sheet</button>
                     <button onClick={() => setIsEditingProfile(false)} className="flex-1 bg-gray-800 hover:bg-gray-700 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-gray-700">Cancel</button>
                   </div>
                 </div>
               ) : (
                 <div onClick={() => setIsEditingProfile(true)} className="cursor-pointer group">
                   <h3 className="font-black text-gray-100 uppercase tracking-tighter mb-1 text-xl group-hover:text-indigo-400 transition-colors">{user?.username}</h3>
-                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mb-2">{playerClass || 'Class Unknown'} • Level {playerLevel}</p>
+                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mb-4">{playerClass || 'Class Unknown'} • Level {playerLevel}</p>
                   
-                  <div className="flex justify-center gap-4 mb-4">
-                    <div className="text-center">
-                        <p className="text-[7px] font-black text-red-500 uppercase">HP</p>
-                        <p className="text-sm font-black text-white">{playerStats?.hp || '?'}</p>
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="bg-gray-950/50 p-3 rounded-2xl border border-gray-800/50 shadow-inner">
+                        <p className="text-[7px] font-black text-red-500 uppercase tracking-widest mb-1">Health</p>
+                        <p className="text-xl font-black text-white leading-none">{playerStats?.hp || 0}</p>
                     </div>
-                    <div className="text-center">
-                        <p className="text-[7px] font-black text-blue-400 uppercase">AC</p>
-                        <p className="text-sm font-black text-white">{playerStats?.ac || '?'}</p>
+                    <div className="bg-gray-950/50 p-3 rounded-2xl border border-gray-800/50 shadow-inner">
+                        <p className="text-[7px] font-black text-blue-400 uppercase tracking-widest mb-1">Defense</p>
+                        <p className="text-xl font-black text-white leading-none">{playerStats?.ac || 0}</p>
                     </div>
                   </div>
 
-                  {playerInventory && <p className="text-[9px] text-gray-500 italic line-clamp-2 px-4 border-t border-gray-800/50 pt-2">Bag: {playerInventory}</p>}
+                  <div className="grid grid-cols-3 gap-2 mb-6">
+                    {['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'].map(s => {
+                        const val = playerStats?.[s.toLowerCase()] || 10;
+                        const mod = Math.floor((val - 10) / 2);
+                        return (
+                            <div key={s} className="bg-gray-950/30 p-2 rounded-xl border border-gray-800/30 text-center relative group/stat overflow-hidden">
+                                <p className="text-[7px] font-black text-gray-600 uppercase tracking-tighter mb-0.5">{s}</p>
+                                <p className="text-sm font-black text-white leading-none">{val}</p>
+                                <p className={`text-[8px] font-black mt-1 ${mod >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                    {mod >= 0 ? '+' : ''}{mod}
+                                </p>
+                                <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
+                            </div>
+                        );
+                    })}
+                  </div>
+
+                  {playerInventory && (
+                    <div className="text-left bg-gray-950/20 p-3 rounded-xl border border-white/5 shadow-inner">
+                        <p className="text-[7px] font-black text-gray-600 uppercase tracking-widest mb-1">Inventory</p>
+                        <p className="text-[10px] text-gray-400 italic line-clamp-2 leading-relaxed">{playerInventory}</p>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent w-full my-8 shadow-inner"></div>

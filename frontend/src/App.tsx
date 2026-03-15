@@ -252,6 +252,22 @@ function VTTApp() {
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const content = `${label ? `${die} (${label})` : die}: ${result}${isSubtleMode ? ' (Subtle)' : ''}`;
     
+    // Clear requirement if it matches
+    if (rollRequirement && rollRequirement.die === die && rollRequirement.label === label) {
+        setRollRequirement(null);
+    }
+
+    // Special case: joining initiative
+    if (label === 'Initiative') {
+        sendMessage(JSON.stringify({ 
+            type: 'join_initiative', 
+            id: clientId,
+            name: user?.username || 'Guest', 
+            initiative: result, 
+            isPlayer: true 
+        }));
+    }
+
     if (activeCampaign && token) {
       fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/history`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'dice_roll', content: `${user?.username || 'Guest'} rolled ${content}`, campaign_id: activeCampaign.id, is_private: isSubtleMode }) })
       .then(r => r.json()).then(saved => {
@@ -437,6 +453,11 @@ function VTTApp() {
         else if (data.type === "music_update") {
             const channelId = data.channelId || 'Music';
             setAudioChannels(prev => prev.map(c => c.id === channelId ? { ...c, url: data.url } : c));
+        }
+        else if (data.type === "request_roll") {
+          if (data.target_id === clientId || data.target_id === "all") {
+            setRollRequirement({ die: data.die, label: data.label });
+          }
         }
         else if (data.type === "poll_update") {
           setActivePoll(data.poll);
