@@ -149,7 +149,10 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str,
 
                 if message_json.get("type") == "request_roll" and role == "gm":
                     target_id = message_json.get("target_id")
-                    if target_id: await manager.send_personal_message(data, target_id)
+                    if target_id == "all":
+                        await manager.broadcast(data, room_id, sender_id=client_id)
+                    elif target_id:
+                        await manager.send_personal_message(data, target_id)
                     continue
 
                 if message_json.get("type") == "whisper":

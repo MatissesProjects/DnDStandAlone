@@ -455,10 +455,12 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                       </select>
                     </div>
 
-                    <div className="flex gap-2">
-                      <button onClick={() => onAddToInitiative?.(u.username, true)} className="flex-1 text-[9px] bg-indigo-600/40 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all border border-indigo-500/30"> Initiative </button>
-                      <button onClick={() => onRequestRoll(u.id, 'd20', 'Perception')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all"> Perception </button>
-                      <button onClick={() => onRequestRoll(u.id, 'd20', 'Stealth')} className="flex-1 text-[9px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all"> Stealth </button>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => onRequestRoll(u.id, 'd20', 'Initiative', rollMode)} className="flex-1 text-[7px] bg-indigo-600/40 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all border border-indigo-500/30"> Req Init </button>
+                      <button onClick={() => onRequestRoll(u.id, 'd20', 'Luck Check', rollMode)} className="flex-1 text-[7px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all"> Req Luck </button>
+                      <button onClick={() => onRequestRoll(u.id, 'd20', 'Perception', rollMode)} className="flex-1 text-[7px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all"> Perc </button>
+                      <button onClick={() => onRequestRoll(u.id, 'd20', 'Stealth', rollMode)} className="flex-1 text-[7px] bg-gray-800 hover:bg-indigo-600 py-1.5 rounded-lg font-black uppercase transition-all"> Stlh </button>
+                      <button onClick={() => onAddToInitiative?.(u.username, true)} className="text-[7px] bg-gray-900 border border-gray-800 px-2 py-1.5 rounded-lg font-black text-gray-500 hover:text-white transition-all" title="Direct Add to Initiative"> + </button>
                     </div>
                   </div>
                 ))}
