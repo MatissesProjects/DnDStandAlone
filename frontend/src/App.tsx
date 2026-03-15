@@ -992,21 +992,39 @@ function VTTApp() {
             audio.crossOrigin = "anonymous";
             audio.load();
             audio.play().catch(e => console.warn("Local play failed", e));
-            sendMessage(JSON.stringify({ type: 'vfx_trigger', vfxType: 'sound', soundUrl: finalUrl, senderId: clientId, global: true }));
+            sendMessage(JSON.stringify({ 
+                type: 'vfx_trigger', 
+                vfxType: 'sound', 
+                soundUrl: finalUrl, 
+                senderId: clientId, 
+                scene_id: targetScene,
+                global: targetScene === "main" || targetScene === "global"
+            }));
           }}
           onUpdateMusic={(url) => {
             const finalUrl = url?.startsWith('http') 
               ? `${currentConfig.API_BASE}/proxy-audio?url=${encodeURIComponent(url)}` 
               : url;
             setAudioChannels(prev => prev.map(c => c.id === 'Music' ? { ...c, url: finalUrl } : c));
-            sendMessage(JSON.stringify({ type: 'music_update', url: finalUrl, global: true }));
+            sendMessage(JSON.stringify({ 
+                type: 'music_update', 
+                url: finalUrl, 
+                scene_id: targetScene,
+                global: targetScene === "main" || targetScene === "global"
+            }));
           }}
           onUpdateChannelAudio={(id, url) => {
             const finalUrl = url?.startsWith('http') 
               ? `${currentConfig.API_BASE}/proxy-audio?url=${encodeURIComponent(url)}` 
               : url;
             setAudioChannels(prev => prev.map(c => c.id === id ? { ...c, url: finalUrl } : c));
-            sendMessage(JSON.stringify({ type: 'music_update', channelId: id, url: finalUrl, global: true }));
+            sendMessage(JSON.stringify({ 
+                type: 'music_update', 
+                channelId: id, 
+                url: finalUrl, 
+                scene_id: targetScene,
+                global: targetScene === "main" || targetScene === "global"
+            }));
           }}
           aiPriority={aiPriority}
           onTogglePriority={() => setAiPriority(prev => prev === 'local' ? 'gemini' : 'local')}
