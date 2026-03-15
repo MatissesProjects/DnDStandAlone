@@ -11,15 +11,31 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
   const { isGM, token, logout, user } = useAuth();
   const [roomCode, setRoomCode] = useState('');
   const [campaignName, setCampaignName] = useState('');
-  const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
+  const [myCampaigns, setMyCampaigns] = useState<any[]>([]);
+  const [activeSessions, setActiveSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isGM && token) {
-      fetchMyCampaigns();
+    if (token) {
+      if (isGM) fetchMyCampaigns();
+      fetchActiveSessions();
     }
   }, [isGM, token]);
+
+  const fetchActiveSessions = async () => {
+    try {
+      const res = await fetch(`${currentConfig.API_BASE}/campaigns/active`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveSessions(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch active sessions", e);
+    }
+  };
 
   const fetchMyCampaigns = async () => {
     try {
@@ -109,7 +125,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans relative">
+    <div className="flex items-center justify-center min-h-screen bg-gray-950 text-white font-sans relative p-4">
       <div className="absolute top-8 right-8 z-20">
         <button 
           onClick={logout}
@@ -119,7 +135,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
         </button>
       </div>
 
-      <div className="max-w-2xl w-full p-10 bg-gray-900 rounded-[3rem] border border-gray-800 shadow-2xl relative overflow-hidden flex flex-col gap-10">
+      <div className="max-w-4xl w-full p-10 bg-gray-900 rounded-[3rem] border border-gray-800 shadow-2xl relative overflow-hidden flex flex-col gap-10">
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-600/10 rounded-full blur-3xl"></div>
         
         <div className="text-center">
@@ -133,6 +149,31 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
           </div>
         )}
 
+        {/* Unified Layout: Active Sessions always visible if they exist */}
+        {activeSessions.length > 0 && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
+                <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] text-center">Active Realms</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {activeSessions.map(session => (
+                        <button 
+                            key={session.id}
+                            onClick={() => onJoin(session.id, session.room_id, session)}
+                            className="flex flex-col text-left bg-gray-950/50 hover:bg-blue-900/10 border border-gray-800 hover:border-blue-500/30 p-5 rounded-3xl transition-all group active:scale-[0.98] relative overflow-hidden"
+                        >
+                            <div className="flex justify-between items-start w-full relative z-10">
+                                <p className="text-sm font-black text-gray-200 uppercase group-hover:text-white transition-colors truncate pr-4">{session.name}</p>
+                                <div className="flex items-center gap-1 shrink-0">
+                                    <span className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                                </div>
+                            </div>
+                            <p className="text-[10px] font-mono text-blue-400 font-bold mt-1 tracking-widest uppercase opacity-80 relative z-10">{session.room_id}</p>
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-full -mr-8 -mt-8 group-hover:scale-150 transition-transform duration-700"></div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {isGM ? (
             <>
@@ -140,9 +181,9 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
               <div className="space-y-4">
                 <h2 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                   <span className="h-1 w-1 bg-indigo-500 rounded-full"></span>
-                  Resume Chronicle
+                  Your Chronicles
                 </h2>
-                <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                   {myCampaigns.map(camp => (
                     <div key={camp.id} className="group relative">
                       <button 
@@ -194,10 +235,10 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
               </div>
             </>
           ) : (
-            <div className="col-span-2 space-y-8 max-w-sm mx-auto w-full py-10 animate-in fade-in zoom-in-95 duration-500">
+            <div className="col-span-2 space-y-8 max-w-sm mx-auto w-full animate-in fade-in zoom-in-95 duration-500">
               <div className="space-y-6">
                 <div className="text-center space-y-2">
-                  <h2 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em]">Enter the Fray</h2>
+                  <h2 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em]">Join by Code</h2>
                   <p className="text-[9px] text-indigo-400/60 font-bold uppercase tracking-widest italic">Seek the Master's Code</p>
                 </div>
                 <div className="space-y-4">

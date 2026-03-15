@@ -134,8 +134,13 @@ def create_campaign(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
+    # Elevate user to GM if they are creating a campaign
     if current_user.role != "gm":
-        raise HTTPException(status_code=403, detail="Only GMs can create campaigns")
+        current_user.role = "gm"
+        db.commit()
+        db.refresh(current_user)
+        logger.info(f"User {current_user.username} elevated to GM for new campaign")
+        
     try:
         return crud.create_campaign(db=db, campaign=campaign, gm_id=current_user.id)
     except Exception as e:
@@ -164,6 +169,12 @@ def update_location_canvas(
     if current_user.role != "gm":
         raise HTTPException(status_code=403, detail="Only GMs can save canvas state")
     return crud.update_location(db=db, location_id=location_id, location_update=update)
+
+@app.get("/campaigns/active", response_model=List[schemas.Campaign])
+def get_active_campaigns(db: Session = Depends(get_db)):
+    """Retrieve active campaigns for users to join."""
+    campaigns = db.query(models.Campaign).order_by(models.Campaign.id.desc()).limit(10).all()
+    return campaigns
 
 @app.get("/campaigns/join/{room_id}", response_model=schemas.Campaign)
 def join_campaign(room_id: str, db: Session = Depends(get_db)):
