@@ -51,7 +51,6 @@ interface GMToolboxProps {
   onMoveToScene?: (userId: string, sceneId: string) => void;
   onAddToInitiative?: (name: string, isPlayer: boolean) => void;
   onToggleFog?: () => void;
-  onPromote?: (key: string) => void;
   targetScene: string;
   onSetTargetScene: (scene: string) => void;
   locations: Location[];
@@ -744,18 +743,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               )}
               <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent w-full my-8 shadow-inner"></div>
               
-              {!isGM && onPromote && (
-                <button 
-                  onClick={() => {
-                    const key = window.prompt("Enter GM Elevation Key:");
-                    if (key) onPromote(key);
-                  }}
-                  className="w-full bg-gray-950 hover:bg-indigo-900/20 border border-gray-800 hover:border-indigo-500/30 text-gray-600 hover:text-indigo-400 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 mb-4 shadow-xl"
-                >
-                  Elevate to Master
-                </button>
-              )}
-
               <p className="text-[10px] text-gray-500 font-bold leading-relaxed italic px-4 uppercase tracking-widest opacity-60">Suggestions are sent to the Master for arbitration.</p>
             </div>
           </div>

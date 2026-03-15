@@ -512,28 +512,6 @@ function VTTApp() {
     } catch (e) { console.error(e); }
   }, [isGM, token, playerInventory, sendMessage, fetchHandouts]);
 
-  const handlePromote = useCallback(async (key: string) => {
-    if (!token) return;
-    try {
-      const res = await fetch(`${currentConfig.API_BASE}/auth/promote`, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ key })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        login(data.token, data.user);
-        alert("Elevation successful. You are now a Master.");
-      } else {
-        const err = await res.json();
-        alert("Elevation failed: " + (err.detail || "Invalid Key"));
-      }
-    } catch (e) { console.error(e); }
-  }, [token, login]);
-
   const handleUpdateAudioVolume = useCallback((id: string, volume: number) => {
     setAudioChannels(prev => prev.map(c => c.id === id ? { ...c, volume } : c));
   }, []);
@@ -918,7 +896,6 @@ function VTTApp() {
           onClearHistory={handleClearHistory}
           onMoveToScene={(userId, sceneId) => sendMessage(JSON.stringify({ type: 'move_to_scene', target_id: userId, scene_id: sceneId }))}
           onAddToInitiative={handleAddToInitiative}
-          onPromote={handlePromote}
           targetScene={targetScene}
           onSetTargetScene={setTargetScene}
           locations={locations}
