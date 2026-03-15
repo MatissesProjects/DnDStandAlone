@@ -208,10 +208,12 @@ class ConnectionManager:
 
         is_subtle = False
         target_scene = None
+        is_global = False
         
         try:
             msg_data = json.loads(message)
             is_subtle = msg_data.get("isSubtle") is True
+            is_global = msg_data.get("global") is True
             # Check for BOTH target_scene (new) and scene_id (legacy/other)
             target_scene = msg_data.get("target_scene") or msg_data.get("scene_id")
             
@@ -222,7 +224,7 @@ class ConnectionManager:
                     self.scene_locations[room_id] = {}
                 self.scene_locations[room_id][loc_scene] = msg_data.get("location")
 
-            if msg_data.get("type") in ["presence"] or msg_data.get("global") is True:
+            if msg_data.get("type") in ["presence"] or is_global:
                 scene_limit = False
         except:
             pass
@@ -242,7 +244,7 @@ class ConnectionManager:
                 if is_subtle and user_id != sender_id:
                     continue
                 
-                if scene_limit and target_scene and user_scene != target_scene:
+                if not is_global and scene_limit and target_scene and user_scene != target_scene:
                     if user_id != sender_id:
                         continue
 

@@ -301,7 +301,7 @@ function VTTApp() {
           hitZones: event.data.hitZones,
           timestamp: Date.now(),
           scene_id: targetScene,
-          global: targetScene === "main"
+          global: targetScene === "main" || targetScene === "global"
         }));
       }
     };
@@ -388,9 +388,16 @@ function VTTApp() {
           const myUser = data.users?.find((u: any) => u.id === clientId) || activeUsers.find(u => u.id === clientId);
           const myScene = myUser?.scene_id || "main";
           const targetSid = data.scene_id || data.target_scene;
-          if (!targetSid || targetSid === myScene || isGM) {
+          
+          console.log(`[Stream] Received. Global: ${data.global}, Target: ${targetSid}, MyScene: ${myScene}, IsGM: ${isGM}`);
+
+          // If data.global is set, or if targetSid is missing, or if scenes match, accept it.
+          if (data.global || !targetSid || targetSid === "main" || targetSid === myScene || isGM) {
+            if (!streamImage) console.log("[Stream] Setting first image.");
             setStreamImage(data.image); 
             if (data.hitZones) setHitZones(data.hitZones);
+          } else {
+            console.warn(`[Stream] Rejected due to scene mismatch. Target: ${targetSid}, Mine: ${myScene}`);
           }
         }
         else if (data.type === "player_ping") {

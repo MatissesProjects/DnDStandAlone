@@ -65,12 +65,15 @@ if (window.location.host.includes("excalidraw.com")) {
 
   async function captureAndSend() {
     const canvases = Array.from(document.querySelectorAll("canvas"));
+    // Priority: .static -> .excalidraw-canvas -> largest canvas
     let targetCanvas = canvases.find(c => c.classList.contains("static")) || 
-                       canvases.find(c => c.width > 100);
+                       canvases.find(c => c.classList.contains("excalidraw-canvas")) ||
+                       canvases.sort((a,b) => (b.width * b.height) - (a.width * a.height))[0];
     
     if (targetCanvas) {
       try {
-        const dataUrl = targetCanvas.toDataURL("image/jpeg", 0.8);
+        // Optimize: Use webp if possible, and lower quality to stay under buffer limits
+        const dataUrl = targetCanvas.toDataURL("image/webp", 0.4);
         const metadata = await getMetadata();
 
         window.parent.postMessage({
