@@ -92,20 +92,20 @@ const SOUND_EFFECTS = {
     { label: '📢 Shout', url: 'https://www.soundjay.com/buttons/sounds/button-11.mp3' },
   ],
   Alerts: [
-    { label: '🌟 Success', url: 'https://www.soundjay.com/buttons/sounds/button-09.mp3' },
-    { label: '💰 Loot', url: 'https://www.soundjay.com/buttons/sounds/button-37.mp3' },
-    { label: '🚪 Secret', url: 'https://www.soundjay.com/buttons/sounds/button-16.mp3' },
-    { label: '⚠️ Alert', url: 'https://www.soundjay.com/buttons/sounds/button-20.mp3' },
+    { label: '🌟 Success', url: 'https://www.soundjay.com/buttons/sounds/button-9.mp3' },
+    { label: '💰 Loot', url: 'https://www.soundjay.com/buttons/sounds/button-3.mp3' },
+    { label: '🚪 Secret', url: 'https://www.soundjay.com/buttons/sounds/button-6.mp3' },
+    { label: '⚠️ Alert', url: 'https://www.soundjay.com/buttons/sounds/button-10.mp3' },
   ]
 };
 
 const BACKGROUND_TRACKS = {
   Atmosphere: [
     { label: 'Silence', url: null },
-    { label: 'Dark Dungeon', url: 'https://www.soundjay.com/ambient/sounds/dungeon-ambience-1.mp3' },
-    { label: 'Night Forest', url: 'https://www.soundjay.com/ambient/sounds/forest-night-1.mp3' },
-    { label: 'Rainy Mood', url: 'https://www.soundjay.com/ambient/sounds/rain-01.mp3' },
-    { label: 'Busy Tavern', url: 'https://www.soundjay.com/ambient/sounds/bar-restaurant-1.mp3' },
+    { label: 'Dark Dungeon', url: 'https://www.soundjay.com/ambient/sounds/wind-howling-01.mp3' },
+    { label: 'Night Forest', url: 'https://www.soundjay.com/nature/sounds/forest-01.mp3' },
+    { label: 'Rainy Mood', url: 'https://www.soundjay.com/nature/sounds/rain-01.mp3' },
+    { label: 'Busy Tavern', url: 'https://www.soundjay.com/ambient/sounds/restaurant-ambience-01.mp3' },
   ],
   Music: [
     { label: 'Silence', url: null },

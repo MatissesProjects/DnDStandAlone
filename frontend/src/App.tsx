@@ -389,7 +389,7 @@ function VTTApp() {
           const myScene = myUser?.scene_id || "main";
           const targetSid = data.scene_id || data.target_scene;
           
-          console.log(`[Stream] Received. Global: ${data.global}, Target: ${targetSid}, MyScene: ${myScene}, IsGM: ${isGM}`);
+          // console.log(`[Stream] Received. Global: ${data.global}, Target: ${targetSid}, MyScene: ${myScene}, IsGM: ${isGM}`);
 
           // If data.global is set, or if targetSid is missing, or if scenes match, accept it.
           if (data.global || !targetSid || targetSid === "main" || targetSid === myScene || isGM) {
@@ -984,19 +984,29 @@ function VTTApp() {
           onInsertElements={handleInsertElements}
           clientId={clientId}
           onPlaySound={(url) => {
-            const audio = new Audio(url);
+            const isExternal = url.startsWith('http');
+            const finalUrl = isExternal 
+              ? `${currentConfig.API_BASE}/proxy-audio?url=${encodeURIComponent(url)}` 
+              : url;
+            const audio = new Audio(finalUrl);
             audio.crossOrigin = "anonymous";
             audio.load();
             audio.play().catch(e => console.warn("Local play failed", e));
-            sendMessage(JSON.stringify({ type: 'vfx_trigger', vfxType: 'sound', soundUrl: url, senderId: clientId, global: true }));
+            sendMessage(JSON.stringify({ type: 'vfx_trigger', vfxType: 'sound', soundUrl: finalUrl, senderId: clientId, global: true }));
           }}
           onUpdateMusic={(url) => {
-            setAudioChannels(prev => prev.map(c => c.id === 'Music' ? { ...c, url } : c));
-            sendMessage(JSON.stringify({ type: 'music_update', url, global: true }));
+            const finalUrl = url?.startsWith('http') 
+              ? `${currentConfig.API_BASE}/proxy-audio?url=${encodeURIComponent(url)}` 
+              : url;
+            setAudioChannels(prev => prev.map(c => c.id === 'Music' ? { ...c, url: finalUrl } : c));
+            sendMessage(JSON.stringify({ type: 'music_update', url: finalUrl, global: true }));
           }}
           onUpdateChannelAudio={(id, url) => {
-            setAudioChannels(prev => prev.map(c => c.id === id ? { ...c, url } : c));
-            sendMessage(JSON.stringify({ type: 'music_update', channelId: id, url, global: true }));
+            const finalUrl = url?.startsWith('http') 
+              ? `${currentConfig.API_BASE}/proxy-audio?url=${encodeURIComponent(url)}` 
+              : url;
+            setAudioChannels(prev => prev.map(c => c.id === id ? { ...c, url: finalUrl } : c));
+            sendMessage(JSON.stringify({ type: 'music_update', channelId: id, url: finalUrl, global: true }));
           }}
           aiPriority={aiPriority}
           onTogglePriority={() => setAiPriority(prev => prev === 'local' ? 'gemini' : 'local')}
