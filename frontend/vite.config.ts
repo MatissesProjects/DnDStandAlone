@@ -15,5 +15,10 @@ export default defineConfig({
     allowedHosts: [
       'dnd.matissetec.dev'
     ]
-  }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+  },
 })
