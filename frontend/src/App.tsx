@@ -216,9 +216,22 @@ function VTTApp() {
     
     let result = Math.floor(Math.random() * sides) + 1;
     let detail = "";
+    let bonus = 0;
+
+    // Calculate sheet bonuses if it's a d20 check
+    if (isD20 && label) {
+        const getMod = (val: number = 10) => Math.floor((val - 10) / 2);
+        if (label === 'Initiative' || label === 'Stealth') {
+            bonus = getMod(playerStats?.dex);
+        } else if (label === 'Perception') {
+            bonus = getMod(playerStats?.wis);
+        } else if (label === 'Luck Check') {
+            bonus = luckModifier;
+        }
+    }
 
     // Handle advantage/disadvantage if requested
-    if (isD20 && rollRequirement && rollRequirement.die === 'd20' && rollRequirement.label === label) {
+    if (isD20 && rollRequirement && rollRequirement.die === 'd20') {
         if (rollRequirement.mode === 'advantage' || rollRequirement.mode === 'disadvantage') {
             const r2 = Math.floor(Math.random() * sides) + 1;
             const original = result;
@@ -232,11 +245,14 @@ function VTTApp() {
         }
     }
 
+    const finalResult = result + bonus;
+    if (bonus !== 0) detail += ` (${bonus >= 0 ? '+' : ''}${bonus} mod)`;
+
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const content = `${label ? `${die} (${label})` : die}: ${result}${detail}${isSubtleMode ? ' (Subtle)' : ''}`;
+    const content = `${label ? `${die} (${label})` : die}: ${finalResult}${detail}${isSubtleMode ? ' (Subtle)' : ''}`;
     
-    // Clear requirement if it matches
-    if (rollRequirement && rollRequirement.die === die && rollRequirement.label === label) {
+    // Always clear requirement when a d20 is rolled if one exists
+    if (rollRequirement) {
         setRollRequirement(null);
     }
 
@@ -246,7 +262,7 @@ function VTTApp() {
             type: 'join_initiative', 
             id: clientId,
             name: user?.username || 'Guest', 
-            initiative: result, 
+            initiative: finalResult, 
             isPlayer: true 
         }));
     }
