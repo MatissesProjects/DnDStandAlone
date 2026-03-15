@@ -110,6 +110,7 @@ function VTTApp() {
     } catch (e) { console.error(e); }
   };
   const [showSpinner, setShowSpinner] = useState(false);
+  const [aiPriority, setAiPriority] = useState<'local' | 'gemini'>('gemini');
   const [targetScene, setTargetScene] = useState<string>("main"); // For GM projection
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isSubtleMode, setIsSubtleMode] = useState(false);
@@ -913,6 +914,8 @@ function VTTApp() {
             setAudioChannels(prev => prev.map(c => c.id === id ? { ...c, url } : c));
             sendMessage(JSON.stringify({ type: 'music_update', channelId: id, url, global: true }));
           }}
+          aiPriority={aiPriority}
+          onTogglePriority={() => setAiPriority(prev => prev === 'local' ? 'gemini' : 'local')}
           />      )}
     </div>
   );
