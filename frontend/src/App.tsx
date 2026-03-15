@@ -772,7 +772,7 @@ function VTTApp() {
         <GMToolbox 
           isGM={isGM} user={user} isAuthenticated={isAuthenticated} pendingProposals={[]} onApproveProposal={()=>{}} onRejectProposal={()=>{}}
           isRecording={false} onToggleRecording={()=>{}}
-          activeUsers={activeUsers} onRequestRoll={(targetId, die, lbl, mode) => sendMessage(JSON.stringify({ type: "request_roll", target_id: targetId, die, label: lbl, mode }))}
+          activeUsers={activeUsers} onRequestRoll={(targetId, die, lbl, mode) => sendMessage(JSON.stringify({ type: "request_roll", target_id: targetId, die, label: lbl, mode, global: true }))}
           onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))}
           onGenerateEnemy={async () => { 
             if (!token || !activeCampaign) return; 
