@@ -90,6 +90,7 @@ function VTTApp() {
   const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [activePoll, setActivePoll] = useState<Poll | null>(null);
+  const [pollDismissed, setPollDismissed] = useState(false);
 
   const handleArchiveSummary = async () => {
     if (!campaignSummary || !activeCampaign || !token) return;
@@ -299,7 +300,8 @@ function VTTApp() {
           image: event.data.image, 
           hitZones: event.data.hitZones,
           timestamp: Date.now(),
-          scene_id: targetScene // Consistently use scene_id
+          scene_id: targetScene,
+          global: targetScene === "main"
         }));
       }
     };
@@ -431,6 +433,7 @@ function VTTApp() {
         }
         else if (data.type === "poll_update") {
           setActivePoll(data.poll);
+          if (data.poll) setPollDismissed(false); // Reset dismissal for new poll
         }
         else if (data.type === "poll_vote") {
           // Received by GM (or all if we want real-time update)
@@ -537,14 +540,14 @@ function VTTApp() {
       isActive: true
     };
     setActivePoll(newPoll);
-    sendMessage(JSON.stringify({ type: 'poll_update', poll: newPoll }));
+    sendMessage(JSON.stringify({ type: 'poll_update', poll: newPoll, global: true }));
   }, [sendMessage]);
 
   const handleEndPoll = useCallback(() => {
     if (!activePoll) return;
     const finalPoll = { ...activePoll, isActive: false };
     setActivePoll(null);
-    sendMessage(JSON.stringify({ type: 'poll_update', poll: null }));
+    sendMessage(JSON.stringify({ type: 'poll_update', poll: null, global: true }));
     
     // Announce winner
     const voteCounts: Record<number, number> = {};
@@ -563,14 +566,14 @@ function VTTApp() {
 
     if (winnerIdx !== -1) {
       const msg = `THE WORLD HAS SPOKEN: ${activePoll.options[winnerIdx].toUpperCase()} manifests!`;
-      sendMessage(JSON.stringify({ type: 'story', content: msg, user: "Chronicle", timestamp: new Date().toLocaleTimeString(), isSubtle: false }));
+      sendMessage(JSON.stringify({ type: 'story', content: msg, user: "Chronicle", timestamp: new Date().toLocaleTimeString(), isSubtle: false, global: true }));
       sendMessage(JSON.stringify({ type: 'vfx_trigger', vfxType: 'cheer', global: true }));
     }
   }, [activePoll, sendMessage]);
 
   const handleVote = useCallback((idx: number) => {
     if (!activePoll) return;
-    sendMessage(JSON.stringify({ type: 'poll_vote', pollId: activePoll.id, clientId, optionIndex: idx }));
+    sendMessage(JSON.stringify({ type: 'poll_vote', pollId: activePoll.id, clientId, optionIndex: idx, global: true }));
     // Optimistic local update
     setActivePoll(prev => {
       if (!prev) return null;
@@ -626,11 +629,12 @@ function VTTApp() {
         />
       )}
 
-      {activePoll && !isGM && (
+      {activePoll && !isGM && !pollDismissed && (
         <PollCard 
           poll={activePoll} 
           onVote={handleVote} 
           myVote={activePoll.votes[clientId]} 
+          onDismiss={() => setPollDismissed(true)}
         />
       )}
 
