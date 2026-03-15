@@ -422,6 +422,10 @@ function VTTApp() {
         else if (data.type === "luck_update") {
             setLuckModifier(data.modifier);
         }
+        else if (data.type === "music_update") {
+            const channelId = data.channelId || 'Music';
+            setAudioChannels(prev => prev.map(c => c.id === channelId ? { ...c, url: data.url } : c));
+        }
         else if (data.type === 'story' || (data.result && data.die)) {
           if (data.result && data.die && !data.isSubtle) { const isD20 = data.die.includes('d20'); setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && isD20, isFail: data.result === 1 && isD20 }); setTimeout(() => setVfxRoll(null), 800); }
           setHistory(prev => [{ id: data.id, type: 'roll' as const, content: `${data.die}: ${data.result}`, user: data.user, timestamp: data.timestamp, isSubtle: data.isSubtle }, ...prev].slice(0, 100));
@@ -895,11 +899,19 @@ function VTTApp() {
           onInsertElements={handleInsertElements}
           clientId={clientId}
           onPlaySound={(url) => {
-            // Play locally
             const audio = new Audio(url);
+            audio.crossOrigin = "anonymous";
+            audio.load();
             audio.play().catch(e => console.warn("Local play failed", e));
-            // Broadcast to everyone
-            sendMessage(JSON.stringify({ type: 'vfx_trigger', vfxType: 'sound', soundUrl: url, global: true }));
+            sendMessage(JSON.stringify({ type: 'vfx_trigger', vfxType: 'sound', soundUrl: url, senderId: clientId, global: true }));
+          }}
+          onUpdateMusic={(url) => {
+            setAudioChannels(prev => prev.map(c => c.id === 'Music' ? { ...c, url } : c));
+            sendMessage(JSON.stringify({ type: 'music_update', url, global: true }));
+          }}
+          onUpdateChannelAudio={(id, url) => {
+            setAudioChannels(prev => prev.map(c => c.id === id ? { ...c, url } : c));
+            sendMessage(JSON.stringify({ type: 'music_update', channelId: id, url, global: true }));
           }}
           />      )}
     </div>

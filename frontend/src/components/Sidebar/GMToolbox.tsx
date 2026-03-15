@@ -63,7 +63,52 @@ interface GMToolboxProps {
   onInsertElements?: (elements: any[]) => void;
   clientId: string;
   onPlaySound?: (url: string) => void;
+  onUpdateMusic?: (url: string | null) => void;
+  onUpdateChannelAudio?: (channelId: string, url: string | null) => void;
 }
+
+const SOUND_EFFECTS = {
+  Combat: [
+    { label: '⚔️ Sword', url: 'https://www.soundjay.com/buttons/sounds/button-3.mp3' },
+    { label: '🛡️ Shield', url: 'https://www.soundjay.com/buttons/sounds/button-4.mp3' },
+    { label: '🏹 Arrow', url: 'https://www.soundjay.com/buttons/sounds/button-5.mp3' },
+    { label: '💥 Hit', url: 'https://www.soundjay.com/buttons/sounds/button-10.mp3' },
+  ],
+  Magic: [
+    { label: '✨ Spell', url: 'https://www.soundjay.com/buttons/sounds/button-9.mp3' },
+    { label: '🔥 Fire', url: 'https://www.soundjay.com/buttons/sounds/button-2.mp3' },
+    { label: '🌌 Void', url: 'https://www.soundjay.com/buttons/sounds/button-6.mp3' },
+    { label: '⚡ Shock', url: 'https://www.soundjay.com/buttons/sounds/button-11.mp3' },
+  ],
+  Atmosphere: [
+    { label: '💀 Doom', url: 'https://www.soundjay.com/buttons/sounds/button-10.mp3' },
+    { label: '🔔 Bell', url: 'https://www.soundjay.com/buttons/sounds/button-1.mp3' },
+    { label: '🧛 Laugh', url: 'https://www.soundjay.com/buttons/sounds/button-7.mp3' },
+    { label: '📢 Shout', url: 'https://www.soundjay.com/buttons/sounds/button-11.mp3' },
+  ],
+  Alerts: [
+    { label: '🌟 Success', url: 'https://www.soundjay.com/buttons/sounds/button-09.mp3' },
+    { label: '💰 Loot', url: 'https://www.soundjay.com/buttons/sounds/button-37.mp3' },
+    { label: '🚪 Secret', url: 'https://www.soundjay.com/buttons/sounds/button-16.mp3' },
+    { label: '⚠️ Alert', url: 'https://www.soundjay.com/buttons/sounds/button-20.mp3' },
+  ]
+};
+
+const BACKGROUND_TRACKS = {
+  Atmosphere: [
+    { label: 'Silence', url: null },
+    { label: 'Dark Dungeon', url: 'https://www.soundjay.com/ambient/sounds/dungeon-ambience-1.mp3' },
+    { label: 'Night Forest', url: 'https://www.soundjay.com/ambient/sounds/forest-night-1.mp3' },
+    { label: 'Rainy Mood', url: 'https://www.soundjay.com/ambient/sounds/rain-01.mp3' },
+    { label: 'Busy Tavern', url: 'https://www.soundjay.com/ambient/sounds/bar-restaurant-1.mp3' },
+  ],
+  Music: [
+    { label: 'Silence', url: null },
+    { label: 'Combat Loop', url: 'https://www.soundjay.com/ambient/sounds/battle-music-1.mp3' },
+    { label: 'Mystery', url: 'https://www.soundjay.com/ambient/sounds/mystery-music-1.mp3' },
+    { label: 'Tavern Jig', url: 'https://www.soundjay.com/ambient/sounds/tavern-music-1.mp3' },
+  ]
+};
 
 const SHAPES = {
   TOKEN_NPC: {
@@ -202,22 +247,50 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
 
             <div className="space-y-4 pt-4 border-t border-gray-800/50">
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Voice of the World</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                    { label: '⚔️ Sword', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-3.mp3' },
-                    { label: '✨ Magic', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-9.mp3' },
-                    { label: '💀 Doom', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-10.mp3' },
-                    { label: '📢 Shout', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-2.mp3' },
-                    { label: '🧛 Laugh', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-1.mp3' },
-                    { label: '🔔 Bell', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-4.mp3' }
-                ].map(sfx => (
-                    <button 
-                        key={sfx.label}
-                        onClick={() => onPlaySound?.(sfx.url)}
-                        className="bg-gray-900/60 hover:bg-indigo-900/20 border border-gray-800 hover:border-indigo-500/30 text-[9px] font-black uppercase py-2 rounded-lg transition-all active:scale-95 text-gray-400 hover:text-indigo-300"
+              
+              <div className="space-y-4">
+                {/* Background Channels */}
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="space-y-1">
+                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest ml-1">Atmosphere</p>
+                    <select 
+                      onChange={(e) => onUpdateChannelAudio?.('Atmosphere', e.target.value || null)}
+                      className="w-full bg-gray-950 border border-gray-800 rounded-lg px-2 py-2 text-[10px] font-black uppercase text-indigo-400 focus:outline-none focus:border-indigo-500/50"
                     >
-                        {sfx.label}
-                    </button>
+                      {BACKGROUND_TRACKS.Atmosphere.map(t => (
+                        <option key={t.label} value={t.url || ""}>{t.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest ml-1">Music</p>
+                    <select 
+                      onChange={(e) => onUpdateChannelAudio?.('Music', e.target.value || null)}
+                      className="w-full bg-gray-950 border border-gray-800 rounded-lg px-2 py-2 text-[10px] font-black uppercase text-purple-400 focus:outline-none focus:border-purple-500/50"
+                    >
+                      {BACKGROUND_TRACKS.Music.map(t => (
+                        <option key={t.label} value={t.url || ""}>{t.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* One-Shot SFX Categories */}
+                {Object.entries(SOUND_EFFECTS).map(([category, effects]) => (
+                  <div key={category} className="space-y-2">
+                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest ml-1">{category}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {effects.map(sfx => (
+                        <button 
+                          key={sfx.label}
+                          onClick={() => onPlaySound?.(sfx.url)}
+                          className="bg-gray-900/60 hover:bg-indigo-900/20 border border-gray-800 hover:border-indigo-500/30 text-[9px] font-black uppercase py-2 rounded-lg transition-all active:scale-95 text-gray-400 hover:text-indigo-300 truncate px-2"
+                        >
+                          {sfx.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
