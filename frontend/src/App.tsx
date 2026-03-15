@@ -389,6 +389,10 @@ function VTTApp() {
           setCombatants(data.combatants || []);
           setCurrentTurn(data.currentTurn || 0);
         }
+        else if (data.type === "clear_initiative") {
+          setCombatants([]);
+          setCurrentTurn(0);
+        }
         else if (data.type === "whisper") {
           const isFromMe = data.senderId === clientId;
           const targetName = activeUsers.find(u => u.id === data.target_id)?.username || "Unknown";
