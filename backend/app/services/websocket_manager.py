@@ -142,7 +142,8 @@ class ConnectionManager:
             await self.broadcast(json.dumps({
                 "type": "initiative_update",
                 "combatants": init["combatants"],
-                "currentTurn": init["currentTurn"]
+                "currentTurn": init["currentTurn"],
+                "timestamp": asyncio.get_event_loop().time()
             }), room_id)
 
     async def update_user_metadata(self, user_id: str, room_id: str, metadata: Dict[str, Any]):

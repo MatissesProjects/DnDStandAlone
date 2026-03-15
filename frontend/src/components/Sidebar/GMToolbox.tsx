@@ -17,8 +17,6 @@ interface GMToolboxProps {
   onGenerateEnemy: () => void;
   onGenerateLore: () => void;
   onGenerateLoot?: () => void;
-// ... rest of props
-
   isGenerating: boolean;
   generatedEnemy: EnemyData | null;
   generatedLore: string | null;
@@ -58,7 +56,7 @@ interface GMToolboxProps {
   locations: Location[];
   showSpinner: boolean;
   onToggleSpinner: (val: boolean) => void;
-  customForge?: any[];
+  customForge?: CustomToken[];
   onDeleteCustomToken?: (id: string) => void;
   onRenameCustomToken?: (id: string, name: string) => void;
   onInsertElements?: (elements: any[]) => void;
@@ -229,7 +227,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
     if (onInsertElements) {
         onInsertElements(SHAPES[key].elements);
     }
-    // Also copy to clipboard for convenience
     const json = JSON.stringify(SHAPES[key]);
     navigator.clipboard.writeText(json);
   };
@@ -282,7 +279,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Voice of the World</h3>
               
               <div className="space-y-4">
-                {/* Background Channels */}
                 <div className="grid grid-cols-1 gap-2">
                   <div className="space-y-1">
                     <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest ml-1">Atmosphere</p>
@@ -308,7 +304,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                   </div>
                 </div>
 
-                {/* One-Shot SFX Categories */}
                 {Object.entries(SOUND_EFFECTS).map(([category, effects]) => (
                   <div key={category} className="space-y-2">
                     <button 
@@ -343,7 +338,8 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               </div>
             </div>
 
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 pt-4 border-t border-gray-800/50">
+              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Token Forge</h3>
               <div className="grid grid-cols-2 gap-2">
                 <div className="relative group">
                     <button 
@@ -378,15 +374,14 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               </div>
 
               {customForge && customForge.length > 0 && (
-                <div className="space-y-2 mt-4 pt-4 border-t border-gray-800/50">
-                  <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Custom Forge</p>
+                <div className="space-y-2 mt-2">
+                  <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Custom Tokens</p>
                   <div className="grid grid-cols-1 gap-2">
                     {customForge.map(token => (
                       <div key={token.id} className="flex gap-1 group/token items-center">
                         <button 
                           onClick={() => {
                             if (onInsertElements) onInsertElements(token.data.elements);
-                            // Also copy to clipboard
                             navigator.clipboard.writeText(JSON.stringify(token.data));
                           }}
                           className={`flex-1 text-left px-3 py-2 rounded-lg border font-black uppercase text-[8px] tracking-widest transition-all truncate bg-gray-900/40 border-gray-800 text-gray-400 hover:border-indigo-500/50 hover:text-indigo-300 active:scale-95`}
@@ -425,7 +420,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                   </div>
                 </div>
               )}
-              <p className="text-[7px] text-gray-600 italic text-center uppercase tracking-tighter">Click to copy, then Ctrl+V in Map</p>
             </div>
 
             <div className="space-y-4 pt-2">
@@ -441,7 +435,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                       <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>
                     </div>
                     
-                    {/* Location-based Switchboard */}
                     <div className="mb-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Active Reality</span>
@@ -472,6 +465,24 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
             </div>
 
             <div className="space-y-4 pt-2">
+              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Team Injunctions</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={() => onRequestRoll?.('all', 'd20', 'Initiative')}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all active:scale-95"
+                >
+                  Ask for Initiative
+                </button>
+                <button 
+                  onClick={() => onRequestRoll?.('all', 'd20', 'Luck Check')}
+                  className="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all active:scale-95"
+                >
+                  Ask for Luck
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-2 border-t border-gray-800/50">
               <div className="flex justify-between items-center">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">AI Weaver</h3>
                 <div className="flex gap-2">
@@ -494,9 +505,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <div className="grid gap-3">
                 <button onClick={onGenerateEnemy} disabled={isGenerating} className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 text-white font-black py-4 px-4 rounded-2xl shadow-xl transition-all border border-blue-500/20 text-xs uppercase tracking-widest shadow-blue-900/20"> Manifest Enemy </button>
                 <div className="flex gap-2">
-                  <button onClick={() => {
-                    if (!generatedLore) onUpdateGeneratedLore?.("");
-                  }} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-black py-3 rounded-2xl shadow-lg transition-all border border-gray-700 text-[10px] uppercase tracking-widest"> Draft Lore </button>
+                  <button onClick={() => { if (!generatedLore) onUpdateGeneratedLore?.(""); }} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-black py-3 rounded-2xl shadow-lg transition-all border border-gray-700 text-[10px] uppercase tracking-widest"> Draft Lore </button>
                   <button onClick={onGenerateLore} disabled={isGenerating} className="flex-1 bg-indigo-700 hover:bg-indigo-600 active:bg-indigo-800 text-white font-black py-3 rounded-2xl shadow-lg transition-all border border-indigo-500/20 text-[10px] uppercase tracking-widest shadow-indigo-900/20"> {generatedLore ? 'Augment AI' : 'Script Lore'} </button>
                   <button onClick={onGenerateLoot} disabled={isGenerating} className="flex-1 bg-amber-700 hover:bg-amber-600 active:bg-amber-800 text-white font-black py-3 rounded-2xl shadow-lg transition-all border border-amber-500/20 text-[10px] uppercase tracking-widest shadow-amber-900/20"> Forge Loot </button>
                 </div>
@@ -787,7 +796,6 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {/* Compact Ability Scores */}
                     <div className="flex gap-1.5 opacity-60">
                         {['str', 'dex', 'con'].map(s => (
                             <span key={s} className="text-[7px] font-bold text-gray-400 uppercase">{s.substring(0,1)}:{ent.stats?.[s] || 10}</span>
