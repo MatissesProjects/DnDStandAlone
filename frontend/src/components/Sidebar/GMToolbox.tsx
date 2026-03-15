@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { UserPresence, MoveProposal, EnemyData, Location, Entity } from '../../types/vtt';
+import type { UserPresence, MoveProposal, EnemyData, Location, Entity, Poll } from '../../types/vtt';
 interface GMToolboxProps {
   isGM: boolean;
   user: any;
@@ -67,6 +67,9 @@ interface GMToolboxProps {
   onUpdateChannelAudio?: (channelId: string, url: string | null) => void;
   aiPriority?: 'local' | 'gemini';
   onTogglePriority?: () => void;
+  activePoll?: Poll | null;
+  onStartPoll?: (question: string, options: string[]) => void;
+  onEndPoll?: () => void;
 }
 
 const SOUND_EFFECTS = {
@@ -199,11 +202,12 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   activeEntities, onSelectEntity, 
   activeLocation, activeCampaign, onOpenDashboard, playerClass, playerLevel, playerInventory, playerStats, setPlayerStats, isEditingProfile,
   setIsEditingProfile, setPlayerClass, setPlayerLevel, setPlayerInventory, onUpdateProfile, onSummarize, isSummarizing,
-  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, onPromote, targetScene, onSetTargetScene, locations, showSpinner, onToggleSpinner, customForge, onDeleteCustomToken, onRenameCustomToken, onInsertElements, clientId, onPlaySound, onUpdateChannelAudio, aiPriority, onTogglePriority
+  onClearHistory, onMoveToScene, onAddToInitiative, onToggleFog, onPromote, targetScene, onSetTargetScene, locations, showSpinner, onToggleSpinner, customForge, onDeleteCustomToken, onRenameCustomToken, onInsertElements, clientId, onPlaySound, onUpdateChannelAudio, aiPriority, onTogglePriority, activePoll, onStartPoll, onEndPoll
 }) => {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [whisperTarget, setWhisperTarget] = useState<string>('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Alerts']));
+  const [pollDraft, setPollDraft] = useState({ question: '', options: ['', ''] });
 
   const toggleCategory = (category: string) => {
     const next = new Set(expandedCategories);
@@ -234,6 +238,24 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
       setCopyStatus('room_code');
       setTimeout(() => setCopyStatus(null), 2000);
     });
+  };
+
+  const handleStartPoll = () => {
+    if (pollDraft.question && pollDraft.options.every(o => o.trim())) {
+      onStartPoll?.(pollDraft.question, pollDraft.options);
+    }
+  };
+
+  const updatePollOption = (idx: number, val: string) => {
+    const next = [...pollDraft.options];
+    next[idx] = val;
+    setPollDraft({ ...pollDraft, options: next });
+  };
+
+  const addPollOption = () => {
+    if (pollDraft.options.length < 4) {
+      setPollDraft({ ...pollDraft, options: [...pollDraft.options, ''] });
+    }
   };
 
   return (
@@ -556,6 +578,81 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-gray-800/50">
+              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Manifest Fate</h3>
+              {activePoll ? (
+                <div className="bg-indigo-900/10 border border-indigo-500/30 rounded-2xl p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <p className="text-[10px] font-black text-gray-100 uppercase tracking-tight">{activePoll.question}</p>
+                    <div className="flex gap-2">
+                        <button onClick={onEndPoll} className="text-[8px] bg-red-900/20 text-red-400 hover:bg-red-900/40 px-2 py-1 rounded-md border border-red-500/20 font-black uppercase transition-all">End</button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {activePoll.options.map((opt, idx) => {
+                      const voteCount = Object.values(activePoll.votes || {}).filter(v => v === idx).length;
+                      const totalVotes = Object.keys(activePoll.votes || {}).length;
+                      const percent = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
+                      return (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-gray-400">
+                            <span>{opt}</span>
+                            <span>{voteCount}</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-950 rounded-full overflow-hidden border border-gray-800">
+                            <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${percent}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <input 
+                    type="text" 
+                    placeholder="Ask the World..."
+                    value={pollDraft.question}
+                    onChange={(e) => setPollDraft({ ...pollDraft, question: e.target.value })}
+                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-gray-200 focus:outline-none focus:border-indigo-500/50"
+                  />
+                  <div className="space-y-2">
+                    {pollDraft.options.map((opt, idx) => (
+                      <div key={idx} className="flex gap-1">
+                        <input 
+                          type="text"
+                          placeholder={`Option ${idx + 1}`}
+                          value={opt}
+                          onChange={(e) => updatePollOption(idx, e.target.value)}
+                          className="flex-1 bg-gray-950/50 border border-gray-800 rounded-lg px-3 py-1.5 text-[9px] font-black uppercase text-gray-400 focus:outline-none focus:border-indigo-500/50"
+                        />
+                        {pollDraft.options.length > 2 && (
+                            <button 
+                                onClick={() => setPollDraft({ ...pollDraft, options: pollDraft.options.filter((_, i) => i !== idx) })}
+                                className="px-2 text-gray-700 hover:text-red-500 transition-colors"
+                            >
+                                ×
+                            </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    {pollDraft.options.length < 4 && (
+                      <button onClick={addPollOption} className="flex-1 bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-500 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all">Add Option</button>
+                    )}
+                    <button 
+                      onClick={handleStartPoll}
+                      disabled={!pollDraft.question || pollDraft.options.some(o => !o.trim())}
+                      className="flex-[2] bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 text-white py-2 rounded-lg text-[8px] font-black uppercase tracking-[0.2em] transition-all shadow-lg active:scale-95"
+                    >
+                      Manifest Vote
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

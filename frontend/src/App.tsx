@@ -16,7 +16,8 @@ import AmbientPlayer from "./components/Overlay/AmbientPlayer";
 import InitiativeTracker from "./components/Overlay/InitiativeTracker";
 import AccountLogin from "./components/Overlay/AccountLogin";
 import FateSpinner from "./components/Overlay/FateSpinner";
-import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping } from "./types/vtt";
+import PollCard from "./components/Overlay/PollCard";
+import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping, Poll } from "./types/vtt";
 import { resolveConfig, currentConfig } from "./config";
 
 function VTTApp() {
@@ -88,6 +89,7 @@ function VTTApp() {
   }, [vfxTrigger]);
   const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [activePoll, setActivePoll] = useState<Poll | null>(null);
 
   const handleArchiveSummary = async () => {
     if (!campaignSummary || !activeCampaign || !token) return;
@@ -427,6 +429,19 @@ function VTTApp() {
             const channelId = data.channelId || 'Music';
             setAudioChannels(prev => prev.map(c => c.id === channelId ? { ...c, url: data.url } : c));
         }
+        else if (data.type === "poll_update") {
+          setActivePoll(data.poll);
+        }
+        else if (data.type === "poll_vote") {
+          // Received by GM (or all if we want real-time update)
+          setActivePoll(prev => {
+            if (!prev || prev.id !== data.pollId) return prev;
+            return {
+              ...prev,
+              votes: { ...prev.votes, [data.clientId]: data.optionIndex }
+            };
+          });
+        }
         else if (data.type === 'story' || (data.result && data.die)) {
           if (data.result && data.die && !data.isSubtle) { const isD20 = data.die.includes('d20'); setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && isD20, isFail: data.result === 1 && isD20 }); setTimeout(() => setVfxRoll(null), 800); }
           setHistory(prev => [{ id: data.id, type: 'roll' as const, content: `${data.die}: ${data.result}`, user: data.user, timestamp: data.timestamp, isSubtle: data.isSubtle }, ...prev].slice(0, 100));
@@ -513,6 +528,56 @@ function VTTApp() {
     setAudioChannels(prev => prev.map(c => c.id === id ? { ...c, volume } : c));
   }, []);
 
+  const handleStartPoll = useCallback((question: string, options: string[]) => {
+    const newPoll: Poll = {
+      id: `poll-${Date.now()}`,
+      question,
+      options,
+      votes: {},
+      isActive: true
+    };
+    setActivePoll(newPoll);
+    sendMessage(JSON.stringify({ type: 'poll_update', poll: newPoll }));
+  }, [sendMessage]);
+
+  const handleEndPoll = useCallback(() => {
+    if (!activePoll) return;
+    const finalPoll = { ...activePoll, isActive: false };
+    setActivePoll(null);
+    sendMessage(JSON.stringify({ type: 'poll_update', poll: null }));
+    
+    // Announce winner
+    const voteCounts: Record<number, number> = {};
+    Object.values(activePoll.votes).forEach(v => {
+      voteCounts[v] = (voteCounts[v] || 0) + 1;
+    });
+    
+    let winnerIdx = -1;
+    let maxVotes = -1;
+    activePoll.options.forEach((_, idx) => {
+      if ((voteCounts[idx] || 0) > maxVotes) {
+        maxVotes = voteCounts[idx] || 0;
+        winnerIdx = idx;
+      }
+    });
+
+    if (winnerIdx !== -1) {
+      const msg = `THE WORLD HAS SPOKEN: ${activePoll.options[winnerIdx].toUpperCase()} manifests!`;
+      sendMessage(JSON.stringify({ type: 'story', content: msg, user: "Chronicle", timestamp: new Date().toLocaleTimeString(), isSubtle: false }));
+      sendMessage(JSON.stringify({ type: 'vfx_trigger', vfxType: 'cheer', global: true }));
+    }
+  }, [activePoll, sendMessage]);
+
+  const handleVote = useCallback((idx: number) => {
+    if (!activePoll) return;
+    sendMessage(JSON.stringify({ type: 'poll_vote', pollId: activePoll.id, clientId, optionIndex: idx }));
+    // Optimistic local update
+    setActivePoll(prev => {
+      if (!prev) return null;
+      return { ...prev, votes: { ...prev.votes, [clientId]: idx } };
+    });
+  }, [activePoll, clientId, sendMessage]);
+
   if (isConfiguring) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-950 text-white font-sans text-center">
@@ -558,6 +623,14 @@ function VTTApp() {
           options={spinnerData.options} 
           resultIndex={spinnerData.resultIndex} 
           onFinished={() => setSpinnerState(null)} 
+        />
+      )}
+
+      {activePoll && !isGM && (
+        <PollCard 
+          poll={activePoll} 
+          onVote={handleVote} 
+          myVote={activePoll.votes[clientId]} 
         />
       )}
 
@@ -916,6 +989,9 @@ function VTTApp() {
           }}
           aiPriority={aiPriority}
           onTogglePriority={() => setAiPriority(prev => prev === 'local' ? 'gemini' : 'local')}
+          activePoll={activePoll}
+          onStartPoll={handleStartPoll}
+          onEndPoll={handleEndPoll}
           />      )}
     </div>
   );

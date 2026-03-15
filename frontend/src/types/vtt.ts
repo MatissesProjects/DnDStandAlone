@@ -101,3 +101,12 @@ export interface Ping {
   username: string;
   timestamp: number;
 }
+
+export interface Poll {
+  id: string;
+  question: string;
+  options: string[];
+  votes: Record<string, number>; // Maps clientId to option index
+  isActive: boolean;
+  results?: Record<number, number>; // Maps option index to count
+}

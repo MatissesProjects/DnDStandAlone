@@ -40,7 +40,7 @@ const InitiativeTracker: React.FC<InitiativeTrackerProps> = ({ combatants, curre
   if (combatants.length === 0 && !isGM) return null;
 
   return (
-    <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-4">
+    <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-4">
       <div className="flex items-center gap-2 bg-gray-900/80 backdrop-blur-xl border border-white/10 p-2 rounded-2xl shadow-2xl overflow-x-auto max-w-[80vw] custom-scrollbar">
         {sortedCombatants.map((c, idx) => {
           const isCurrent = combatants[currentTurnIndex]?.id === c.id;
