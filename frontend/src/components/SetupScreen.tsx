@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import type { Campaign } from '../types/vtt';
 
 interface SetupScreenProps {
-  onJoin: (campaignId: number, roomId: string, campaign?: any) => void;
+  onJoin: (campaignId: number, roomId: string, campaign?: Campaign) => void;
 }
 
 import { currentConfig } from '../config';
@@ -11,8 +12,8 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onJoin }) => {
   const { isGM, token, logout, user } = useAuth();
   const [roomCode, setRoomCode] = useState('');
   const [campaignName, setCampaignName] = useState('');
-  const [myCampaigns, setMyCampaigns] = useState<any[]>([]);
-  const [activeSessions, setActiveSessions] = useState<any[]>([]);
+  const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
+  const [activeSessions, setActiveSessions] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

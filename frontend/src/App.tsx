@@ -17,7 +17,7 @@ import InitiativeTracker from "./components/Overlay/InitiativeTracker";
 import AccountLogin from "./components/Overlay/AccountLogin";
 import FateSpinner from "./components/Overlay/FateSpinner";
 import PollCard from "./components/Overlay/PollCard";
-import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping, Poll, AudioChannel } from "./types/vtt";
+import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping, Poll, AudioChannel, Combatant, HitZone, CustomToken } from "./types/vtt";
 import { resolveConfig, currentConfig } from "./config";
 import { useVttAudio } from "./hooks/useVttAudio";
 import { useVttPolls } from "./hooks/useVttPolls";
@@ -122,11 +122,11 @@ function VTTApp() {
   const [streamImage, setStreamImage] = useState<string | null>(null);
   const [streamAspectRatio, setStreamAspectRatio] = useState<number | null>(null);
   const [spinnerData, setSpinnerState] = useState<{ options: string[], resultIndex: number } | null>(null);
-  const [hitZones, setHitZones] = useState<any[]>([]);
-  const [pings, setPings] = useState<any[]>([]);
-  const [combatants, setCombatants] = useState<any[]>([]);
+  const [hitZones, setHitZones] = useState<HitZone[]>([]);
+  const [pings, setPings] = useState<Ping[]>([]);
+  const [combatants, setCombatants] = useState<Combatant[]>([]);
   const [currentTurn, setCurrentTurn] = useState(0);
-  const [customForge, setCustomForge] = useState<any[]>(() => {
+  const [customForge, setCustomForge] = useState<CustomToken[]>(() => {
     try {
       const saved = localStorage.getItem("vtt_custom_forge");
       return saved ? JSON.parse(saved) : [];

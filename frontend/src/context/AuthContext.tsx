@@ -1,9 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 
-interface User {
+export interface User {
   username: string;
   role: string;
   discord_id: string;
+  class_name?: string;
+  level?: number;
+  inventory?: string;
+  stats?: Record<string, number>;
 }
 
 interface AuthContextType {

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import type { UserPresence, MoveProposal, EnemyData, Location, Entity, Poll } from '../../types/vtt';
+import type { UserPresence, MoveProposal, EnemyData, Location, Entity, Poll, CustomToken } from '../../types/vtt';
+import type { User } from '../../context/AuthContext';
+
 interface GMToolboxProps {
   isGM: boolean;
-  user: any;
+  user: User | null;
   isAuthenticated: boolean;
   pendingProposals: MoveProposal[];
   onApproveProposal: (prop: MoveProposal) => void;

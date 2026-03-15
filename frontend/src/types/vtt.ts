@@ -60,17 +60,28 @@ export interface Location {
   danger_level: number;
   ambient_audio?: string;
   is_fog_active?: boolean;
-  fog_data?: any;
+  fog_data?: FogZone[];
   x: number;
   y: number;
   zoom: number;
   map_scale?: number;
 }
 
+export interface FogZone {
+  id: string;
+  x: number;
+  y: number;
+  r: number;
+}
+
+export interface EntityStats extends EnemyStats {
+  conditions?: string[];
+}
+
 export interface Entity {
   id: number;
   name: string;
-  stats: any;
+  stats: EntityStats;
   backstory: string;
   notes?: string;
   location_id: number;
@@ -80,7 +91,31 @@ export interface Campaign {
   id: number;
   name: string;
   room_id: string;
-  canvas_state?: any;
+  canvas_state?: any; // Excalidraw state is very complex
+}
+
+export interface Combatant {
+  id: string;
+  name: string;
+  initiative: number;
+  isPlayer: boolean;
+}
+
+export interface HitZone {
+  id: string | number;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export interface CustomToken {
+  id: string;
+  name: string;
+  data: {
+    elements: any[];
+    [key: string]: any;
+  };
 }
 
 export interface Handout {
