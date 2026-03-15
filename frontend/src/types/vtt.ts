@@ -110,3 +110,9 @@ export interface Poll {
   isActive: boolean;
   results?: Record<number, number>; // Maps option index to count
 }
+
+export interface AudioChannel {
+  id: string;
+  url: string | null;
+  volume: number;
+}

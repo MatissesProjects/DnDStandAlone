@@ -17,8 +17,11 @@ import InitiativeTracker from "./components/Overlay/InitiativeTracker";
 import AccountLogin from "./components/Overlay/AccountLogin";
 import FateSpinner from "./components/Overlay/FateSpinner";
 import PollCard from "./components/Overlay/PollCard";
-import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping, Poll } from "./types/vtt";
+import type { HistoryItem, UserPresence, MoveProposal, EnemyData, Location, Entity, Campaign, Handout, Ping, Poll, AudioChannel } from "./types/vtt";
 import { resolveConfig, currentConfig } from "./config";
+import { useVttAudio } from "./hooks/useVttAudio";
+import { useVttPolls } from "./hooks/useVttPolls";
+import { useVttHistory } from "./hooks/useVttHistory";
 
 function VTTApp() {
   const { user, isAuthenticated, logout, isGM, token, login } = useAuth();
@@ -60,6 +63,24 @@ function VTTApp() {
     activeCampaign ? `${currentConfig.WS_BASE}/ws/${encodeURIComponent(activeCampaign.room_id)}/${encodeURIComponent(clientId)}?role=${isGM ? 'gm' : 'player'}&username=${encodeURIComponent(user?.username || 'Guest')}` : ''
   );
 
+  const [targetScene, setTargetScene] = useState<string>("main"); // For GM projection
+
+  // Hooks for modularized logic
+  const { 
+    audioChannels, handlePlaySound, handleUpdateMusic, handleUpdateChannelAudio, 
+    handleUpdateVolume, syncAtmosphere, handleExternalMusicUpdate 
+  } = useVttAudio({ sendMessage, clientId, targetScene });
+
+  const {
+    activePoll, pollDismissed, setPollDismissed, handleStartPoll, handleEndPoll, 
+    handleVote, handleReceivePollUpdate, handleReceiveVote
+  } = useVttPolls({ sendMessage, clientId });
+
+  const {
+    history, setHistory, campaignSummary, setCampaignSummary, isSummarizing,
+    fetchHistory, handleArchiveSummary, handleConsumeHistory, handleClearHistory, handleSummarize
+  } = useVttHistory({ activeCampaign, token, sendMessage });
+
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [activeEntities, setActiveEntities] = useState<Entity[]>([]);
@@ -87,35 +108,9 @@ function VTTApp() {
       return () => clearTimeout(timer);
     }
   }, [vfxTrigger]);
-  const [campaignSummary, setCampaignSummary] = useState<string | null>(null);
-  const [isSummarizing, setIsSummarizing] = useState(false);
-  const [activePoll, setActivePoll] = useState<Poll | null>(null);
-  const [pollDismissed, setPollDismissed] = useState(false);
 
-  const handleArchiveSummary = async () => {
-    if (!campaignSummary || !activeCampaign || !token) return;
-    try {
-      const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/history`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            event_type: 'lore_update', 
-            content: `SESSION RECAP: ${campaignSummary}`, 
-            campaign_id: activeCampaign.id,
-            is_private: false
-        })
-      });
-      if (res.ok) {
-        setCampaignSummary(null);
-        fetchHistory();
-        sendMessage(JSON.stringify({ type: "history_updated" }));
-      }
-    } catch (e) { console.error(e); }
-  };
   const [showSpinner, setShowSpinner] = useState(false);
   const [aiPriority, setAiPriority] = useState<'local' | 'gemini'>('gemini');
-  const [targetScene, setTargetScene] = useState<string>("main"); // For GM projection
-  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isSubtleMode, setIsSubtleMode] = useState(false);
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
   const [rollRequirement, setRollRequirement] = useState<{die: string, label: string} | null>(null);
@@ -129,10 +124,6 @@ function VTTApp() {
   const [spinnerData, setSpinnerState] = useState<{ options: string[], resultIndex: number } | null>(null);
   const [hitZones, setHitZones] = useState<any[]>([]);
   const [pings, setPings] = useState<any[]>([]);
-  const [audioChannels, setAudioChannels] = useState<{id: string, url: string | null, volume: number}[]>([
-    { id: 'Atmosphere', url: null, volume: 0.5 },
-    { id: 'Music', url: null, volume: 0.5 }
-  ]);
   const [combatants, setCombatants] = useState<any[]>([]);
   const [currentTurn, setCurrentTurn] = useState(0);
   const [customForge, setCustomForge] = useState<any[]>(() => {
@@ -161,33 +152,6 @@ function VTTApp() {
     console.log("[Excalidraw] Generated URL:", url);
     return url;
   }, [activeCampaign?.room_id]);
-
-  const fetchHistory = useCallback(() => {
-    if (!activeCampaign || !token) return;
-    fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/history`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(res => res.json()).then(data => {
-        if (Array.isArray(data)) {
-          const formatted = data.map((item: any) => ({ id: item.id.toString(), type: item.event_type === 'dice_roll' ? 'roll' : (item.event_type === 'lore_update' ? 'ai' : 'story'), content: item.content, user: "Chronicle", timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isSubtle: item.is_private }));
-          setHistory(formatted);
-        }
-      }).catch(err => console.error(err));
-  }, [activeCampaign, token]);
-
-  const handleConsumeHistory = useCallback(async (logId: string) => {
-    if (!token || !activeCampaign) return;
-    try {
-      const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/history/${logId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) {
-        sendMessage(JSON.stringify({ type: "history_updated", campaignId: activeCampaign.id }));
-        fetchHistory();
-      }
-    } catch (e) { console.error(e); }
-  }, [token, activeCampaign, fetchHistory, sendMessage]);
-
-  const handleClearHistory = useCallback(async () => {
-    if (!isGM || !token || !activeCampaign || !window.confirm("Clear entire chronicle history?")) return;
-    try { sendMessage(JSON.stringify({ type: "history_cleared" })); setHistory([]); } catch (e) { console.error(e); }
-  }, [isGM, token, activeCampaign, sendMessage]);
 
   const handlePing = useCallback((x: number, y: number) => {
     const ping: Ping = {
@@ -388,9 +352,7 @@ function VTTApp() {
           if (data.global || !targetSid || targetSid === myScene || isGM) {
             setActiveLocation(data.location);
             // Sync Atmosphere channel automatically
-            setAudioChannels(prev => prev.map(c => 
-              c.id === 'Atmosphere' ? { ...c, url: data.location.ambient_audio || null } : c
-            ));
+            syncAtmosphere(data.location.ambient_audio || null);
           }
         }
         else if (data.type === "entities_update") {
@@ -452,7 +414,7 @@ function VTTApp() {
         }
         else if (data.type === "music_update") {
             const channelId = data.channelId || 'Music';
-            setAudioChannels(prev => prev.map(c => c.id === channelId ? { ...c, url: data.url } : c));
+            handleExternalMusicUpdate(channelId, data.url);
         }
         else if (data.type === "request_roll") {
           if (data.target_id === clientId || data.target_id === "all") {
@@ -460,18 +422,10 @@ function VTTApp() {
           }
         }
         else if (data.type === "poll_update") {
-          setActivePoll(data.poll);
-          if (data.poll) setPollDismissed(false); // Reset dismissal for new poll
+          handleReceivePollUpdate(data.poll);
         }
         else if (data.type === "poll_vote") {
-          // Received by GM (or all if we want real-time update)
-          setActivePoll(prev => {
-            if (!prev || prev.id !== data.pollId) return prev;
-            return {
-              ...prev,
-              votes: { ...prev.votes, [data.clientId]: data.optionIndex }
-            };
-          });
+          handleReceiveVote(data.pollId, data.clientId, data.optionIndex);
         }
         else if (data.type === 'story' || (data.result && data.die)) {
           if (data.result && data.die && !data.isSubtle) { const isD20 = data.die.includes('d20'); setVfxRoll({ id: data.id || Math.random().toString(), result: data.result, isCrit: data.result === 20 && isD20, isFail: data.result === 1 && isD20 }); setTimeout(() => setVfxRoll(null), 800); }
@@ -479,7 +433,7 @@ function VTTApp() {
         }
       } catch (e) {}
     }
-  }, [lastMessage, activeLocation?.id, fetchEntities, fetchHistory, activeUsers, clientId, isGM]); // Crucial dependencies for scene-aware logic
+  }, [lastMessage, activeLocation?.id, fetchEntities, fetchHistory, activeUsers, clientId, isGM, syncAtmosphere, handleExternalMusicUpdate, handleReceivePollUpdate, handleReceiveVote]); // Crucial dependencies for scene-aware logic
 
   const handleAddToInitiative = useCallback((name: string, isPlayer: boolean) => {
     if (!isGM) return;
@@ -536,56 +490,6 @@ function VTTApp() {
   const handleUpdateAudioVolume = useCallback((id: string, volume: number) => {
     setAudioChannels(prev => prev.map(c => c.id === id ? { ...c, volume } : c));
   }, []);
-
-  const handleStartPoll = useCallback((question: string, options: string[]) => {
-    const newPoll: Poll = {
-      id: `poll-${Date.now()}`,
-      question,
-      options,
-      votes: {},
-      isActive: true
-    };
-    setActivePoll(newPoll);
-    sendMessage(JSON.stringify({ type: 'poll_update', poll: newPoll, global: true }));
-  }, [sendMessage]);
-
-  const handleEndPoll = useCallback(() => {
-    if (!activePoll) return;
-    const finalPoll = { ...activePoll, isActive: false };
-    setActivePoll(null);
-    sendMessage(JSON.stringify({ type: 'poll_update', poll: null, global: true }));
-    
-    // Announce winner
-    const voteCounts: Record<number, number> = {};
-    Object.values(activePoll.votes).forEach(v => {
-      voteCounts[v] = (voteCounts[v] || 0) + 1;
-    });
-    
-    let winnerIdx = -1;
-    let maxVotes = -1;
-    activePoll.options.forEach((_, idx) => {
-      if ((voteCounts[idx] || 0) > maxVotes) {
-        maxVotes = voteCounts[idx] || 0;
-        winnerIdx = idx;
-      }
-    });
-
-    if (winnerIdx !== -1) {
-      const msg = `THE WORLD HAS SPOKEN: ${activePoll.options[winnerIdx].toUpperCase()} manifests!`;
-      sendMessage(JSON.stringify({ type: 'story', content: msg, user: "Chronicle", timestamp: new Date().toLocaleTimeString(), isSubtle: false, global: true }));
-      sendMessage(JSON.stringify({ type: 'vfx_trigger', vfxType: 'cheer', global: true }));
-    }
-  }, [activePoll, sendMessage]);
-
-  const handleVote = useCallback((idx: number) => {
-    if (!activePoll) return;
-    sendMessage(JSON.stringify({ type: 'poll_vote', pollId: activePoll.id, clientId, optionIndex: idx, global: true }));
-    // Optimistic local update
-    setActivePoll(prev => {
-      if (!prev) return null;
-      return { ...prev, votes: { ...prev.votes, [clientId]: idx } };
-    });
-  }, [activePoll, clientId, sendMessage]);
 
   if (isConfiguring) {
     return (
@@ -912,9 +816,9 @@ function VTTApp() {
                 sendMessage(JSON.stringify({ type: "user_update", class_name: playerClass, level: playerLevel, inventory: playerInventory, stats: playerStats })); 
             } 
           }}
-          onSummarize={async () => { if (!token || !activeCampaign) return; setIsSummarizing(true); try { const res = await fetch(`${currentConfig.API_BASE}/campaigns/${activeCampaign.id}/summarize`, { headers: { 'Authorization': `Bearer ${token}` } }); setCampaignSummary((await res.json()).summary); } catch (e) { console.error(e); } finally { setIsSummarizing(false); } }} 
+          onSummarize={handleSummarize} 
           isSummarizing={isSummarizing}
-          onClearHistory={handleClearHistory}
+          onClearHistory={() => handleClearHistory(isGM)}
           onMoveToScene={(userId, sceneId) => sendMessage(JSON.stringify({ type: 'move_to_scene', target_id: userId, scene_id: sceneId }))}
           onAddToInitiative={handleAddToInitiative}
           targetScene={targetScene}
@@ -981,55 +885,16 @@ function VTTApp() {
           onRenameCustomToken={(id, name) => setCustomForge(prev => prev.map(t => t.id === id ? { ...t, name } : t))}
           onInsertElements={handleInsertElements}
           clientId={clientId}
-          onPlaySound={(url) => {
-            const isExternal = url.startsWith('http');
-            const finalUrl = isExternal 
-              ? `${currentConfig.API_BASE}/proxy-audio?url=${encodeURIComponent(url)}` 
-              : url;
-            const audio = new Audio(finalUrl);
-            audio.crossOrigin = "anonymous";
-            audio.load();
-            audio.play().catch(e => console.warn("Local play failed", e));
-            sendMessage(JSON.stringify({ 
-                type: 'vfx_trigger', 
-                vfxType: 'sound', 
-                soundUrl: finalUrl, 
-                senderId: clientId, 
-                scene_id: targetScene,
-                global: targetScene === "main" || targetScene === "global"
-            }));
-          }}
-          onUpdateMusic={(url) => {
-            const finalUrl = url?.startsWith('http') 
-              ? `${currentConfig.API_BASE}/proxy-audio?url=${encodeURIComponent(url)}` 
-              : url;
-            setAudioChannels(prev => prev.map(c => c.id === 'Music' ? { ...c, url: finalUrl } : c));
-            sendMessage(JSON.stringify({ 
-                type: 'music_update', 
-                url: finalUrl, 
-                scene_id: targetScene,
-                global: targetScene === "main" || targetScene === "global"
-            }));
-          }}
-          onUpdateChannelAudio={(id, url) => {
-            const finalUrl = url?.startsWith('http') 
-              ? `${currentConfig.API_BASE}/proxy-audio?url=${encodeURIComponent(url)}` 
-              : url;
-            setAudioChannels(prev => prev.map(c => c.id === id ? { ...c, url: finalUrl } : c));
-            sendMessage(JSON.stringify({ 
-                type: 'music_update', 
-                channelId: id, 
-                url: finalUrl, 
-                scene_id: targetScene,
-                global: targetScene === "main" || targetScene === "global"
-            }));
-          }}
+          onPlaySound={handlePlaySound}
+          onUpdateMusic={handleUpdateMusic}
+          onUpdateChannelAudio={handleUpdateChannelAudio}
           aiPriority={aiPriority}
           onTogglePriority={() => setAiPriority(prev => prev === 'local' ? 'gemini' : 'local')}
           activePoll={activePoll}
           onStartPoll={handleStartPoll}
           onEndPoll={handleEndPoll}
           />      )}
+
     </div>
   );
 }
