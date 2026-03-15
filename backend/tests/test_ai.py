@@ -58,7 +58,7 @@ async def test_generate_enemy():
         "backstory": "A sneaky mock goblin."
     }
 
-    with patch("app.main.ai_service.generate_enemy", new_callable=AsyncMock) as mock_gen:
+    with patch("app.services.ai_service.ai_service.generate_enemy", new_callable=AsyncMock) as mock_gen:
         mock_gen.return_value = mock_enemy
         
         response = client.post("/campaigns/1/generate-enemy?location_id=1")
@@ -77,7 +77,7 @@ async def test_generate_lore():
     db.commit()
     db.close()
 
-    with patch("app.main.ai_service.generate_lore", new_callable=AsyncMock) as mock_gen:
+    with patch("app.services.ai_service.ai_service.generate_lore", new_callable=AsyncMock) as mock_gen:
         mock_gen.return_value = "Ancient trees whisper secrets."
         
         response = client.post("/campaigns/1/generate-lore?location_id=1")

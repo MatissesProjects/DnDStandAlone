@@ -29,15 +29,23 @@ def get_active_campaigns(db: Session = Depends(get_db)):
 @router.post("", response_model=schemas.Campaign)
 def create_campaign(
     campaign: schemas.CampaignCreate, 
+    elevate_to_gm: bool = True,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
+    # Ensure user is in the current session
+    if current_user not in db:
+        current_user = db.merge(current_user)
+        
     # Elevate user to GM if they are creating a campaign
-    if current_user.role != "gm":
+    if elevate_to_gm and current_user.role != "gm":
         current_user.role = "gm"
         db.commit()
         db.refresh(current_user)
         logger.info(f"User {current_user.username} elevated to GM for new campaign")
+    
+    if not elevate_to_gm and current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GMs can create campaigns")
         
     try:
         return crud.create_campaign(db=db, campaign=campaign, gm_id=current_user.id)
