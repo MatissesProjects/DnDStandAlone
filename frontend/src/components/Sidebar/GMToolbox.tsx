@@ -74,44 +74,44 @@ interface GMToolboxProps {
 
 const SOUND_EFFECTS = {
   Combat: [
-    { label: '⚔️ Sword', url: 'https://www.soundjay.com/buttons/sounds/button-3.mp3' },
-    { label: '🛡️ Shield', url: 'https://www.soundjay.com/buttons/sounds/button-4.mp3' },
-    { label: '🏹 Arrow', url: 'https://www.soundjay.com/buttons/sounds/button-5.mp3' },
-    { label: '💥 Hit', url: 'https://www.soundjay.com/buttons/sounds/button-10.mp3' },
+    { label: '⚔️ Sword', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-3.mp3' },
+    { label: '🛡️ Shield', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-4.mp3' },
+    { label: '🏹 Arrow', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-5.mp3' },
+    { label: '💥 Hit', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-10.mp3' },
   ],
   Magic: [
-    { label: '✨ Spell', url: 'https://www.soundjay.com/buttons/sounds/button-9.mp3' },
-    { label: '🔥 Fire', url: 'https://www.soundjay.com/buttons/sounds/button-2.mp3' },
-    { label: '🌌 Void', url: 'https://www.soundjay.com/buttons/sounds/button-6.mp3' },
-    { label: '⚡ Shock', url: 'https://www.soundjay.com/buttons/sounds/button-11.mp3' },
+    { label: '✨ Spell', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-9.mp3' },
+    { label: '🔥 Fire', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-2.mp3' },
+    { label: '🌌 Void', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-6.mp3' },
+    { label: '⚡ Shock', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-11.mp3' },
   ],
   Atmosphere: [
-    { label: '💀 Doom', url: 'https://www.soundjay.com/buttons/sounds/button-10.mp3' },
-    { label: '🔔 Bell', url: 'https://www.soundjay.com/buttons/sounds/button-1.mp3' },
-    { label: '🧛 Laugh', url: 'https://www.soundjay.com/buttons/sounds/button-7.mp3' },
-    { label: '📢 Shout', url: 'https://www.soundjay.com/buttons/sounds/button-11.mp3' },
+    { label: '💀 Doom', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-10.mp3' },
+    { label: '🔔 Bell', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-1.mp3' },
+    { label: '🧛 Laugh', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-7.mp3' },
+    { label: '📢 Shout', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-11.mp3' },
   ],
   Alerts: [
-    { label: '🌟 Success', url: 'https://www.soundjay.com/buttons/sounds/button-9.mp3' },
-    { label: '💰 Loot', url: 'https://www.soundjay.com/buttons/sounds/button-3.mp3' },
-    { label: '🚪 Secret', url: 'https://www.soundjay.com/buttons/sounds/button-6.mp3' },
-    { label: '⚠️ Alert', url: 'https://www.soundjay.com/buttons/sounds/button-10.mp3' },
+    { label: '🌟 Success', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-9.mp3' },
+    { label: '💰 Loot', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-3.mp3' },
+    { label: '🚪 Secret', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-13.mp3' },
+    { label: '⚠️ Alert', url: 'https://www.soundjay.com/buttons_c2026/sounds/button-10.mp3' },
   ]
 };
 
 const BACKGROUND_TRACKS = {
   Atmosphere: [
     { label: 'Silence', url: null },
-    { label: 'Dark Dungeon', url: 'https://www.soundjay.com/ambient/sounds/wind-howling-01.mp3' },
-    { label: 'Night Forest', url: 'https://www.soundjay.com/nature/sounds/forest-01.mp3' },
-    { label: 'Rainy Mood', url: 'https://www.soundjay.com/nature/sounds/rain-01.mp3' },
-    { label: 'Busy Tavern', url: 'https://www.soundjay.com/ambient/sounds/restaurant-ambience-01.mp3' },
+    { label: 'Dark Dungeon', url: 'https://www.soundjay.com/ambient_c2026/sounds/dungeon-ambience-1.mp3' },
+    { label: 'Night Forest', url: 'https://www.soundjay.com/ambient_c2026/sounds/forest-night-1.mp3' },
+    { label: 'Rainy Mood', url: 'https://www.soundjay.com/ambient_c2026/sounds/rain-01.mp3' },
+    { label: 'Busy Tavern', url: 'https://www.soundjay.com/ambient_c2026/sounds/bar-restaurant-1.mp3' },
   ],
   Music: [
     { label: 'Silence', url: null },
-    { label: 'Combat Loop', url: 'https://www.soundjay.com/ambient/sounds/battle-music-1.mp3' },
-    { label: 'Mystery', url: 'https://www.soundjay.com/ambient/sounds/mystery-music-1.mp3' },
-    { label: 'Tavern Jig', url: 'https://www.soundjay.com/ambient/sounds/tavern-music-1.mp3' },
+    { label: 'Combat Loop', url: 'https://www.soundjay.com/ambient_c2026/sounds/battle-music-1.mp3' },
+    { label: 'Mystery', url: 'https://www.soundjay.com/ambient_c2026/sounds/mystery-music-1.mp3' },
+    { label: 'Tavern Jig', url: 'https://www.soundjay.com/ambient_c2026/sounds/tavern-music-1.mp3' },
   ]
 };
 
