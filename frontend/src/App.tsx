@@ -113,7 +113,7 @@ function VTTApp() {
   const [aiPriority, setAiPriority] = useState<'local' | 'gemini'>('gemini');
   const [isSubtleMode, setIsSubtleMode] = useState(false);
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
-  const [rollRequirement, setRollRequirement] = useState<{die: string, label: string} | null>(null);
+  const [rollRequirement, setRollRequirement] = useState<{die: string, label: string, mode?: 'normal' | 'advantage' | 'disadvantage'} | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEnemy, setGeneratedEnemy] = useState<EnemyData | null>(null);
   const [generatedLore, setGeneratedLore] = useState<string | null>(null);
@@ -212,9 +212,28 @@ function VTTApp() {
 
   const rollDie = useCallback((die: string, label?: string) => {
     const sides = parseInt(die.substring(1));
-    const result = Math.floor(Math.random() * sides) + 1;
+    const isD20 = die === 'd20';
+    
+    let result = Math.floor(Math.random() * sides) + 1;
+    let detail = "";
+
+    // Handle advantage/disadvantage if requested
+    if (isD20 && rollRequirement && rollRequirement.die === 'd20' && rollRequirement.label === label) {
+        if (rollRequirement.mode === 'advantage' || rollRequirement.mode === 'disadvantage') {
+            const r2 = Math.floor(Math.random() * sides) + 1;
+            const original = result;
+            if (rollRequirement.mode === 'advantage') {
+                result = Math.max(original, r2);
+                detail = ` (Adv: ${original}, ${r2})`;
+            } else {
+                result = Math.min(original, r2);
+                detail = ` (Dis: ${original}, ${r2})`;
+            }
+        }
+    }
+
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const content = `${label ? `${die} (${label})` : die}: ${result}${isSubtleMode ? ' (Subtle)' : ''}`;
+    const content = `${label ? `${die} (${label})` : die}: ${result}${detail}${isSubtleMode ? ' (Subtle)' : ''}`;
     
     // Clear requirement if it matches
     if (rollRequirement && rollRequirement.die === die && rollRequirement.label === label) {
@@ -422,7 +441,7 @@ function VTTApp() {
         }
         else if (data.type === "request_roll") {
           if (data.target_id === clientId || data.target_id === "all") {
-            setRollRequirement({ die: data.die, label: data.label });
+            setRollRequirement({ die: data.die, label: data.label, mode: data.mode });
           }
         }
         else if (data.type === "poll_update") {
@@ -753,7 +772,7 @@ function VTTApp() {
         <GMToolbox 
           isGM={isGM} user={user} isAuthenticated={isAuthenticated} pendingProposals={[]} onApproveProposal={()=>{}} onRejectProposal={()=>{}}
           isRecording={false} onToggleRecording={()=>{}}
-          activeUsers={activeUsers} onRequestRoll={(targetId, die, lbl) => sendMessage(JSON.stringify({ type: "request_roll", target_id: targetId, die, label: lbl }))}
+          activeUsers={activeUsers} onRequestRoll={(targetId, die, lbl, mode) => sendMessage(JSON.stringify({ type: "request_roll", target_id: targetId, die, label: lbl, mode }))}
           onWhisper={(targetId, msg) => sendMessage(JSON.stringify({ type: 'whisper', target_id: targetId, content: msg, user: user?.username || 'Guest', senderId: clientId, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), id: `whisper-${Date.now()}` }))}
           onGenerateEnemy={async () => { 
             if (!token || !activeCampaign) return; 

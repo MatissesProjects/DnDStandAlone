@@ -12,7 +12,7 @@ interface GMToolboxProps {
   isRecording: boolean;
   onToggleRecording: () => void;
   activeUsers: UserPresence[];
-  onRequestRoll: (targetId: string, die: string, label: string) => void;
+  onRequestRoll: (targetId: string, die: string, label: string, mode: 'normal' | 'advantage' | 'disadvantage') => void;
   onWhisper?: (targetId: string, msg: string) => void;
   onGenerateEnemy: () => void;
   onGenerateLore: () => void;
@@ -207,6 +207,7 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   const [whisperTarget, setWhisperTarget] = useState<string>('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Alerts']));
   const [pollDraft, setPollDraft] = useState({ question: '', options: ['', ''] });
+  const [rollMode, setRollMode] = useState<'normal' | 'advantage' | 'disadvantage'>('normal');
 
   const toggleCategory = (category: string) => {
     const next = new Set(expandedCategories);
@@ -465,16 +466,33 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
             </div>
 
             <div className="space-y-4 pt-2">
-              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Team Injunctions</h3>
+              <div className="flex justify-between items-center">
+                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Team Injunctions</h3>
+                <div className="flex bg-gray-950 rounded-lg p-0.5 border border-gray-800">
+                  {(['advantage', 'normal', 'disadvantage'] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setRollMode(m)}
+                      className={`px-2 py-1 rounded text-[7px] font-black uppercase transition-all ${
+                        rollMode === m 
+                          ? 'bg-indigo-600 text-white shadow-lg' 
+                          : 'text-gray-600 hover:text-gray-400'
+                      }`}
+                    >
+                      {m === 'normal' ? 'Norm' : m === 'advantage' ? 'Adv' : 'Dis'}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <button 
-                  onClick={() => onRequestRoll?.('all', 'd20', 'Initiative')}
+                  onClick={() => onRequestRoll?.('all', 'd20', 'Initiative', rollMode)}
                   className="bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all active:scale-95"
                 >
                   Ask for Initiative
                 </button>
                 <button 
-                  onClick={() => onRequestRoll?.('all', 'd20', 'Luck Check')}
+                  onClick={() => onRequestRoll?.('all', 'd20', 'Luck Check', rollMode)}
                   className="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all active:scale-95"
                 >
                   Ask for Luck

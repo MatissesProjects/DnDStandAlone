@@ -5,7 +5,7 @@ interface ChronicleSidebarProps {
   isConnected: boolean;
   onLogout: () => void;
   onLeave: () => void;
-  rollRequirement: { die: string, label: string } | null;
+  rollRequirement: { die: string, label: string, mode?: 'normal' | 'advantage' | 'disadvantage' } | null;
   isGM: boolean;
   onRoll: (die: string, label?: string) => void;
   history: HistoryItem[];
@@ -67,6 +67,11 @@ const ChronicleSidebar: React.FC<ChronicleSidebarProps> = ({
       {!isGM && rollRequirement && (
         <div className="mt-3 p-3 bg-indigo-900/20 border border-indigo-500/40 rounded-xl animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl">
           <p className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2 text-center">Injunction</p>
+          {rollRequirement.mode && rollRequirement.mode !== 'normal' && (
+            <p className={`text-[9px] font-black uppercase text-center mb-2 tracking-widest ${rollRequirement.mode === 'advantage' ? 'text-green-400' : 'text-red-400'}`}>
+              With {rollRequirement.mode}
+            </p>
+          )}
           <button onClick={() => onRoll(rollRequirement.die, rollRequirement.label)} className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black py-2 rounded-lg uppercase text-[10px] tracking-wider transition-all border border-indigo-400/20 active:scale-95">
             Roll {rollRequirement.die} <span className="opacity-60 ml-1">[{rollRequirement.label}]</span>
           </button>
