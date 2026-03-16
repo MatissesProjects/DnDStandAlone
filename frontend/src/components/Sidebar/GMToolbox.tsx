@@ -238,10 +238,17 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const label = window.prompt("Enter a label for this track:", file.name.split('.')[0].replace(/_/g, ' ').replace(/-/g, ' '));
+    if (label === null) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', file);
     formData.append('category', uploadCategory);
+    formData.append('label', label);
 
     try {
       const token = localStorage.getItem('token');
