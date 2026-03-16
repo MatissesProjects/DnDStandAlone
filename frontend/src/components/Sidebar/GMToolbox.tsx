@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { UserPresence, MoveProposal, EnemyData, Location, Entity, Poll, CustomToken } from '../../types/vtt';
 import type { User } from '../../context/AuthContext';
+import { currentConfig } from '../../config';
 
 interface GMToolboxProps {
   isGM: boolean;
@@ -98,19 +99,12 @@ const SOUND_EFFECTS = {
   ]
 };
 
-const BACKGROUND_TRACKS = {
+const DEFAULT_BACKGROUND_TRACKS = {
   Atmosphere: [
-    { label: 'Silence', url: null },
-    { label: 'Dark Dungeon', url: 'https://www.soundjay.com/ambient_c2026/sounds/dungeon-ambience-1.mp3' },
-    { label: 'Night Forest', url: 'https://www.soundjay.com/ambient_c2026/sounds/forest-night-1.mp3' },
-    { label: 'Rainy Mood', url: 'https://www.soundjay.com/ambient_c2026/sounds/rain-01.mp3' },
-    { label: 'Busy Tavern', url: 'https://www.soundjay.com/ambient_c2026/sounds/bar-restaurant-1.mp3' },
+    { label: 'Silence', url: null }, //'/sounds/cave-ambience.mp3'
   ],
   Music: [
     { label: 'Silence', url: null },
-    { label: 'Combat Loop', url: 'https://www.soundjay.com/ambient_c2026/sounds/battle-music-1.mp3' },
-    { label: 'Mystery', url: 'https://www.soundjay.com/ambient_c2026/sounds/mystery-music-1.mp3' },
-    { label: 'Tavern Jig', url: 'https://www.soundjay.com/ambient_c2026/sounds/tavern-music-1.mp3' },
   ]
 };
 
@@ -209,6 +203,74 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
   const [pollDraft, setPollDraft] = useState({ question: '', options: ['', ''] });
   const [rollMode, setRollMode] = useState<'normal' | 'advantage' | 'disadvantage'>('normal');
 
+  const [uploadedTracks, setUploadedTracks] = useState<{atmosphere: any[], music: any[]}>({ atmosphere: [], music: [] });
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadCategory, setUploadCategory] = useState<'atmosphere' | 'music'>('atmosphere');
+
+  const fetchAudioList = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${currentConfig.API_BASE}/audio/list`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUploadedTracks(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch audio list:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchAudioList();
+    }
+  }, [isAuthenticated]);
+
+  const handleUploadClick = (cat: 'atmosphere' | 'music') => {
+    setUploadCategory(cat);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', uploadCategory);
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${currentConfig.API_BASE}/audio/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+
+      if (res.ok) {
+        await fetchAudioList();
+      } else {
+        const err = await res.json();
+        alert(`Upload failed: ${err.detail || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Upload failed due to network error.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const backgroundTracks = {
+    Atmosphere: [...DEFAULT_BACKGROUND_TRACKS.Atmosphere, ...uploadedTracks.atmosphere],
+    Music: [...DEFAULT_BACKGROUND_TRACKS.Music, ...uploadedTracks.music]
+  };
+
   const toggleCategory = (category: string) => {
     const next = new Set(expandedCategories);
     if (next.has(category)) next.delete(category);
@@ -266,6 +328,13 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
       <div className="flex-1 overflow-y-auto space-y-8 pr-1 custom-scrollbar">
         {isGM ? (
           <>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="audio/*"
+              onChange={handleFileChange} 
+            />
             <div className="space-y-4 pt-4">
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">World Tools</h3>
               <div className="grid gap-2">
@@ -282,24 +351,42 @@ const GMToolbox: React.FC<GMToolboxProps> = ({
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-2">
                   <div className="space-y-1">
-                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest ml-1">Atmosphere</p>
+                    <div className="flex justify-between items-center px-1">
+                      <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Atmosphere</p>
+                      <button 
+                        disabled={isUploading}
+                        onClick={() => handleUploadClick('atmosphere')}
+                        className="text-[7px] font-black uppercase text-indigo-500 hover:text-indigo-400 transition-colors"
+                      >
+                        {isUploading ? 'Uploading...' : '+ Upload'}
+                      </button>
+                    </div>
                     <select 
                       onChange={(e) => onUpdateChannelAudio?.('Atmosphere', e.target.value || null)}
                       className="w-full bg-gray-950 border border-gray-800 rounded-lg px-2 py-2 text-[10px] font-black uppercase text-indigo-400 focus:outline-none focus:border-indigo-500/50"
                     >
-                      {BACKGROUND_TRACKS.Atmosphere.map(t => (
-                        <option key={t.label} value={t.url || ""}>{t.label}</option>
+                      {backgroundTracks.Atmosphere.map((t, i) => (
+                        <option key={`${t.label}-${i}`} value={t.url || ""}>{t.label}</option>
                       ))}
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest ml-1">Music</p>
+                    <div className="flex justify-between items-center px-1">
+                      <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Music</p>
+                      <button 
+                        disabled={isUploading}
+                        onClick={() => handleUploadClick('music')}
+                        className="text-[7px] font-black uppercase text-purple-500 hover:text-purple-400 transition-colors"
+                      >
+                        {isUploading ? 'Uploading...' : '+ Upload'}
+                      </button>
+                    </div>
                     <select 
                       onChange={(e) => onUpdateChannelAudio?.('Music', e.target.value || null)}
                       className="w-full bg-gray-950 border border-gray-800 rounded-lg px-2 py-2 text-[10px] font-black uppercase text-purple-400 focus:outline-none focus:border-purple-500/50"
                     >
-                      {BACKGROUND_TRACKS.Music.map(t => (
-                        <option key={t.label} value={t.url || ""}>{t.label}</option>
+                      {backgroundTracks.Music.map((t, i) => (
+                        <option key={`${t.label}-${i}`} value={t.url || ""}>{t.label}</option>
                       ))}
                     </select>
                   </div>
